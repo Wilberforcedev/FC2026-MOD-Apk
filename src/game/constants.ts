@@ -1,0 +1,50 @@
+export const PITCH = {
+  // Pitch dimensions in canvas coordinate space
+  LENGTH: 1400,
+  WIDTH: 880,
+  MARGIN_X: 90,
+  MARGIN_Y: 70,
+  
+  // Goal specifications
+  GOAL_WIDTH: 150,
+  GOAL_DEPTH: 55,
+  GOAL_POST_RADIUS: 4,
+  
+  // Boxes & markings
+  CENTER_RADIUS: 110,
+  PENALTY_BOX_WIDTH: 220,
+  PENALTY_BOX_LENGTH: 380,
+  GOAL_BOX_WIDTH: 80,
+  GOAL_BOX_LENGTH: 180,
+  PENALTY_SPOT_DIST: 140,
+  CORNER_RADIUS: 25,
+};
+
+export const PHYSICS = {
+  BALL_RADIUS: 6.5,
+  PLAYER_RADIUS: 15,
+  BALL_FRICTION_GROUND: 0.984,
+  BALL_FRICTION_AIR: 0.992,
+  BALL_GRAVITY: 0.38,
+  BALL_BOUNCE_DAMPING: 0.65,
+  
+  // Player mechanics
+  PLAYER_BASE_SPEED: 3.4,
+  PLAYER_SPRINT_MULTIPLIER: 1.55,
+  STAMINA_DRAIN_SPRINT: 0.28,
+  STAMINA_RECOVERY: 0.12,
+  
+  // Tackle
+  TACKLE_SPEED: 7.2,
+  TACKLE_DURATION: 18, // Frames
+  TACKLE_COOLDOWN: 55,
+  TACKLE_REACH: 30,
+  
+  // Ball kick powers
+  PASS_POWER: 8.5,
+  THROUGH_BALL_POWER: 11.5,
+  SHOT_MIN_POWER: 9.0,
+  SHOT_MAX_POWER: 19.5,
+  LOB_POWER: 9.0,
+  LOB_Z_VELOCITY: 7.5,
+};

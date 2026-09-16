@@ -1,0 +1,6 @@
+{
+  "name": "FC 2026 Soccer",
+  "description": "High-octane offline soccer game featuring realistic match simulation, star squads, tournament cup, penalty duels, sound commentary, and smooth tactical controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
