@@ -16,8 +16,10 @@ import {
   Settings,
   Check,
   UserPlus,
-  Edit3
+  Edit3,
+  Zap
 } from 'lucide-react';
+import { PlayerDevelopmentModal } from './PlayerDevelopmentModal';
 
 interface SquadManagementProps {
   team: Team;
@@ -42,7 +44,17 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
   const [showTacticsModal, setShowTacticsModal] = useState(false);
   const [showPlaystylesModal, setShowPlaystylesModal] = useState(false);
   const [showPlayerEditor, setShowPlayerEditor] = useState(false);
+  const [showDevelopmentModal, setShowDevelopmentModal] = useState(false);
   const [isCreateMode, setIsCreateMode] = useState(false);
+
+  const handlePlayerDevelopmentUpdated = (updatedPlayer: Player) => {
+    const updatedPlayers = team.players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p);
+    onUpdateTeam({
+      ...team,
+      players: updatedPlayers,
+    });
+    setSelectedPlayer(updatedPlayer);
+  };
 
   const handleEditPlayer = () => {
     setIsCreateMode(false);

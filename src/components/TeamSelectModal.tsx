@@ -11,6 +11,8 @@ import { FCHeaderBar } from './FCHeaderBar';
 import { ClubEmblem } from './ClubEmblem';
 import { LeagueEmblem } from './LeagueEmblem';
 import { LEAGUES } from '../data/emblems';
+import { getStadiumForTeam } from '../data/stadiums';
+import { MapPin, Users, Sparkles } from 'lucide-react';
 
 interface TeamSelectModalProps {
   onStartMatch: (config: {
@@ -277,6 +279,54 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Stadium Likeness Banner */}
+        {(() => {
+          const stadium = getStadiumForTeam(homeTeam.id);
+          return (
+            <div className="bg-gradient-to-r from-slate-900/90 via-slate-950/90 to-slate-900/90 border border-cyan-500/30 rounded-3xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl backdrop-blur-md">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(6,182,212,0.25)]">
+                  🏟️
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-['Chakra_Petch'] font-bold uppercase tracking-widest text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">
+                      Official Venue
+                    </span>
+                    <span className="text-[11px] text-white/50 flex items-center gap-1 font-['Outfit']">
+                      <MapPin className="w-3 h-3 text-cyan-400" />
+                      {stadium.city}, {stadium.country}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-black font-['Chakra_Petch'] text-white uppercase tracking-wide mt-0.5">
+                    {stadium.name}
+                  </h3>
+                  <p className="text-xs text-white/60 font-['Outfit']">
+                    {stadium.architecturalStyle} • Pitch: {stadium.lawnPattern.toUpperCase()} TURF
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="px-4 py-2 rounded-xl bg-slate-900/80 border border-white/10 text-center">
+                  <span className="text-[10px] text-white/50 block font-['Chakra_Petch'] uppercase">Capacity</span>
+                  <span className="text-sm font-black text-white font-['Chakra_Petch'] flex items-center justify-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-cyan-400" />
+                    {stadium.capacity.toLocaleString()}
+                  </span>
+                </div>
+                <div className="px-4 py-2 rounded-xl bg-slate-900/80 border border-white/10 text-center">
+                  <span className="text-[10px] text-white/50 block font-['Chakra_Petch'] uppercase">Atmosphere</span>
+                  <span className="text-sm font-black text-amber-400 font-['Chakra_Petch'] flex items-center justify-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Electrifying
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Match Parameters: Difficulty, Length, Weather */}
         <div className="bg-slate-950/80 border border-cyan-500/30 rounded-3xl p-6 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-xl">

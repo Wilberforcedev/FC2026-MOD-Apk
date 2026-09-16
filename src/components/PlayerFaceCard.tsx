@@ -79,8 +79,10 @@ const CARD_THEMES: Record<
 };
 
 /**
- * Procedural SVG Avatar Portrait Generator
- * Generates custom human face based on player's likeness parameters
+ * Realistic Procedural Vector Portrait Generator
+ * Generates authentic human facial likeness with anatomical contours,
+ * directional lighting, realistic eyes with reflections, sculpted noses,
+ * natural lips, and layered hairstyles.
  */
 export const PlayerFaceAvatar: React.FC<{
   skinTone: string;
@@ -97,6 +99,9 @@ export const PlayerFaceAvatar: React.FC<{
   jerseyColor = '#0284c7',
   size = 120,
 }) => {
+  // Generate unique ID suffix to avoid gradient collision if multiple avatars render
+  const idSuffix = React.useId().replace(/[:]/g, '');
+
   return (
     <svg
       width={size}
@@ -104,184 +109,394 @@ export const PlayerFaceAvatar: React.FC<{
       viewBox="0 0 100 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="drop-shadow-lg"
+      className="drop-shadow-xl"
     >
       <defs>
-        <radialGradient id="faceShade" cx="50%" cy="45%" r="50%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.2" />
-          <stop offset="100%" stopColor="#000000" stopOpacity="0.25" />
+        {/* 3D Facial Lighting: Forehead & Cheekbone Specular to Jaw Shading */}
+        <radialGradient id={`faceLight_${idSuffix}`} cx="48%" cy="40%" r="52%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.32" />
+          <stop offset="60%" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.45" />
         </radialGradient>
+
+        {/* Neck Ambient Occlusion under Chin */}
+        <linearGradient id={`neckShadow_${idSuffix}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#000000" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.1" />
+        </linearGradient>
+
+        {/* Realistic Hair Directional Sheen */}
+        <linearGradient id={`hairShine_${idSuffix}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.28" />
+          <stop offset="45%" stopColor="#ffffff" stopOpacity="0.08" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.45" />
+        </linearGradient>
+
+        {/* Iris Radial Depth */}
+        <radialGradient id={`irisGlow_${idSuffix}`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#78350f" />
+          <stop offset="65%" stopColor="#451a03" />
+          <stop offset="100%" stopColor="#1c1917" />
+        </radialGradient>
+
+        {/* Jersey Fabric Shading */}
+        <linearGradient id={`jerseyShade_${idSuffix}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.22" />
+          <stop offset="60%" stopColor="#000000" stopOpacity="0.1" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.5" />
+        </linearGradient>
       </defs>
 
-      {/* Jersey Shoulders / Collar */}
+      {/* -------------------------------------------------------------
+          1. ATHLETIC JERSEY & COLLAR
+      ------------------------------------------------------------- */}
+      {/* Jersey Shoulders & Chest Trapezius */}
       <path
-        d="M 15 95 C 20 72, 35 68, 50 68 C 65 68, 80 72, 85 95 Z"
+        d="M 12 96 C 16 75, 32 67, 50 67 C 68 67, 84 75, 88 96 Z"
         fill={jerseyColor}
       />
-      {/* Jersey Inner V-Neck */}
-      <polygon points="40,68 60,68 50,82" fill={skinTone} />
       <path
-        d="M 38 68 L 50 82 L 62 68"
+        d="M 12 96 C 16 75, 32 67, 50 67 C 68 67, 84 75, 88 96 Z"
+        fill={`url(#jerseyShade_${idSuffix})`}
+      />
+
+      {/* Shoulder Seam Stitching */}
+      <path d="M 28 72 L 18 96" stroke="#ffffff" strokeWidth="0.75" strokeOpacity="0.4" />
+      <path d="M 72 72 L 82 96" stroke="#ffffff" strokeWidth="0.75" strokeOpacity="0.4" />
+
+      {/* Collar & V-Neck Opening */}
+      <polygon points="38,67 62,67 50,83" fill={skinTone} />
+      <polygon points="38,67 62,67 50,83" fill={`url(#neckShadow_${idSuffix})`} />
+      <path
+        d="M 37 67 L 50 83 L 63 67"
         stroke="#ffffff"
         strokeWidth="2"
         fill="none"
         strokeLinecap="round"
+        strokeLinejoin="round"
+        className="drop-shadow-sm"
       />
 
-      {/* Neck */}
-      <rect x="42" y="52" width="16" height="18" fill={skinTone} rx="2" />
-      <rect x="42" y="52" width="16" height="18" fill="url(#faceShade)" rx="2" />
+      {/* -------------------------------------------------------------
+          2. ANATOMICAL NECK & THROAT
+      ------------------------------------------------------------- */}
+      <rect x="41" y="49" width="18" height="22" fill={skinTone} rx="3" />
+      {/* Sternocleidomastoid Muscle Shadows */}
+      <path d="M 43 51 L 47 70" stroke="#000000" strokeWidth="1.2" strokeOpacity="0.22" strokeLinecap="round" />
+      <path d="M 57 51 L 53 70" stroke="#000000" strokeWidth="1.2" strokeOpacity="0.22" strokeLinecap="round" />
+      {/* Jawline Ambient Shadow over Neck */}
+      <path d="M 32 50 Q 50 62 68 50 L 68 58 Q 50 68 32 58 Z" fill={`url(#neckShadow_${idSuffix})`} />
 
-      {/* Ears */}
-      <circle cx="28" cy="45" r="5" fill={skinTone} />
-      <circle cx="72" cy="45" r="5" fill={skinTone} />
+      {/* -------------------------------------------------------------
+          3. EARS WITH ANATOMICAL CARTILAGE
+      ------------------------------------------------------------- */}
+      {/* Left Ear */}
+      <ellipse cx="27.5" cy="44" rx="4.5" ry="7" fill={skinTone} />
+      <path d="M 28 40 Q 25 44 28 47" stroke="#000000" strokeWidth="1.2" strokeOpacity="0.3" fill="none" strokeLinecap="round" />
+      {/* Right Ear */}
+      <ellipse cx="72.5" cy="44" rx="4.5" ry="7" fill={skinTone} />
+      <path d="M 72 40 Q 75 44 72 47" stroke="#000000" strokeWidth="1.2" strokeOpacity="0.3" fill="none" strokeLinecap="round" />
 
-      {/* Head Base */}
+      {/* -------------------------------------------------------------
+          4. HEAD & SCULPTED JAWLINE
+      ------------------------------------------------------------- */}
+      {/* Contoured Cranium and Jaw */}
       <path
-        d="M 30 35 C 30 20, 70 20, 70 35 C 70 54, 62 62, 50 62 C 38 62, 30 54, 30 35 Z"
+        d="M 29 35 C 29 18, 71 18, 71 35 C 71 47, 65 57, 56 60.5 C 52 62, 48 62, 44 60.5 C 35 57, 29 47, 29 35 Z"
         fill={skinTone}
       />
+      {/* 3D Directional Light Shading */}
       <path
-        d="M 30 35 C 30 20, 70 20, 70 35 C 70 54, 62 62, 50 62 C 38 62, 30 54, 30 35 Z"
-        fill="url(#faceShade)"
+        d="M 29 35 C 29 18, 71 18, 71 35 C 71 47, 65 57, 56 60.5 C 52 62, 48 62, 44 60.5 C 35 57, 29 47, 29 35 Z"
+        fill={`url(#faceLight_${idSuffix})`}
       />
 
-      {/* Eyebrows */}
+      {/* Cheekbone & Temple Highlights */}
+      <ellipse cx="36" cy="41" rx="4" ry="2.5" fill="#ffffff" fillOpacity="0.12" />
+      <ellipse cx="64" cy="41" rx="4" ry="2.5" fill="#ffffff" fillOpacity="0.12" />
+
+      {/* -------------------------------------------------------------
+          5. REALISTIC EYES & DETAILED IRISES
+      ------------------------------------------------------------- */}
+      {/* Left Eye Socket & Sclera */}
+      <g>
+        {/* Upper eyelid crease */}
+        <path d="M 36 34 Q 41.5 31.5 47 34" stroke="#000000" strokeWidth="0.8" strokeOpacity="0.35" fill="none" />
+        {/* Sclera Eyeball */}
+        <path d="M 37 37 Q 42 34 47 37 Q 42 41 37 37 Z" fill="#f8fafc" />
+        {/* Upper Eye Shadow inside eyeball */}
+        <path d="M 37 37 Q 42 34 47 37 Q 42 36 37 37 Z" fill="#000000" fillOpacity="0.25" />
+        {/* Iris */}
+        <circle cx="42" cy="37" r="2.4" fill={`url(#irisGlow_${idSuffix})`} />
+        {/* Pupil */}
+        <circle cx="42" cy="37" r="1.1" fill="#09090b" />
+        {/* Specular Catchlight Reflection */}
+        <circle cx="42.6" cy="36.4" r="0.6" fill="#ffffff" />
+        {/* Upper lash line */}
+        <path d="M 36.5 37 Q 42 33.8 47.5 37" stroke="#18181b" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+      </g>
+
+      {/* Right Eye Socket & Sclera */}
+      <g>
+        {/* Upper eyelid crease */}
+        <path d="M 53 34 Q 58.5 31.5 64 34" stroke="#000000" strokeWidth="0.8" strokeOpacity="0.35" fill="none" />
+        {/* Sclera Eyeball */}
+        <path d="M 53 37 Q 58 34 63 37 Q 58 41 53 37 Z" fill="#f8fafc" />
+        {/* Upper Eye Shadow inside eyeball */}
+        <path d="M 53 37 Q 58 34 63 37 Q 58 36 53 37 Z" fill="#000000" fillOpacity="0.25" />
+        {/* Iris */}
+        <circle cx="58" cy="37" r="2.4" fill={`url(#irisGlow_${idSuffix})`} />
+        {/* Pupil */}
+        <circle cx="58" cy="37" r="1.1" fill="#09090b" />
+        {/* Specular Catchlight Reflection */}
+        <circle cx="58.6" cy="36.4" r="0.6" fill="#ffffff" />
+        {/* Upper lash line */}
+        <path d="M 52.5 37 Q 58 33.8 63.5 37" stroke="#18181b" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+      </g>
+
+      {/* -------------------------------------------------------------
+          6. SCULPTED EYEBROWS (MULTI-STROKE)
+      ------------------------------------------------------------- */}
+      {/* Left Eyebrow */}
       <path
-        d="M 36 34 Q 42 32 46 34"
+        d="M 34.5 33.5 Q 40.5 30.5 47 32.5"
         stroke={hairColor}
-        strokeWidth="2.5"
+        strokeWidth="2.4"
         strokeLinecap="round"
       />
       <path
-        d="M 54 34 Q 58 32 64 34"
+        d="M 36 32.5 Q 41 30 46 32"
+        stroke="#ffffff"
+        strokeWidth="0.6"
+        strokeOpacity="0.2"
+        fill="none"
+      />
+      {/* Right Eyebrow */}
+      <path
+        d="M 53 32.5 Q 59.5 30.5 65.5 33.5"
         stroke={hairColor}
-        strokeWidth="2.5"
+        strokeWidth="2.4"
         strokeLinecap="round"
       />
-
-      {/* Eyes */}
-      <ellipse cx="41" cy="38" rx="3.5" ry="2.2" fill="#ffffff" />
-      <circle cx="41.5" cy="38" r="1.6" fill="#1e293b" />
-      <circle cx="42" cy="37.5" r="0.5" fill="#ffffff" />
-
-      <ellipse cx="59" cy="38" rx="3.5" ry="2.2" fill="#ffffff" />
-      <circle cx="58.5" cy="38" r="1.6" fill="#1e293b" />
-      <circle cx="58" cy="37.5" r="0.5" fill="#ffffff" />
-
-      {/* Nose */}
       <path
-        d="M 50 38 L 48.5 46 L 52 46"
-        stroke="#000000"
-        strokeWidth="1.2"
-        strokeOpacity="0.35"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {/* Mouth / Smile */}
-      <path
-        d="M 44 52 Q 50 56 56 52"
-        stroke="#000000"
-        strokeWidth="1.5"
-        strokeOpacity="0.4"
-        strokeLinecap="round"
+        d="M 54 32 Q 59 30 64 32.5"
+        stroke="#ffffff"
+        strokeWidth="0.6"
+        strokeOpacity="0.2"
         fill="none"
       />
 
-      {/* Facial Hair */}
+      {/* -------------------------------------------------------------
+          7. 3D NOSE WITH BRIDGE, NOSTRILS & HIGHLIGHT
+      ------------------------------------------------------------- */}
+      {/* Nose Bridge Contour */}
+      <path
+        d="M 48.5 34 L 48 44 Q 48 46.5 50 46.8 Q 52 46.5 52 44 L 51.5 34"
+        stroke="#000000"
+        strokeWidth="0.8"
+        strokeOpacity="0.22"
+        fill="none"
+      />
+      {/* Nose Bridge Highlight */}
+      <line x1="50" y1="35" x2="50" y2="44.5" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.28" strokeLinecap="round" />
+      {/* Rounded Nose Tip */}
+      <ellipse cx="50" cy="45" rx="2.4" ry="1.6" fill={skinTone} />
+      <circle cx="50" cy="44.5" r="0.9" fill="#ffffff" fillOpacity="0.32" />
+      {/* Shaded Nostrils */}
+      <path d="M 46.5 46 Q 48 45.2 49 46.4" stroke="#000000" strokeWidth="1.1" strokeOpacity="0.45" fill="none" strokeLinecap="round" />
+      <path d="M 53.5 46 Q 52 45.2 51 46.4" stroke="#000000" strokeWidth="1.1" strokeOpacity="0.45" fill="none" strokeLinecap="round" />
+
+      {/* Philtrum Groove */}
+      <line x1="49.3" y1="47.5" x2="49.3" y2="50.2" stroke="#000000" strokeWidth="0.7" strokeOpacity="0.2" />
+      <line x1="50.7" y1="47.5" x2="50.7" y2="50.2" stroke="#000000" strokeWidth="0.7" strokeOpacity="0.2" />
+
+      {/* -------------------------------------------------------------
+          8. NATURAL LIPS & CHIN CONTOUR
+      ------------------------------------------------------------- */}
+      {/* Upper Lip Shadow & Cupid's Bow */}
+      <path
+        d="M 43.5 51.2 Q 47 50.4 50 51.2 Q 53 50.4 56.5 51.2 Q 50 53 43.5 51.2 Z"
+        fill="#000000"
+        fillOpacity="0.3"
+      />
+      {/* Mouth Separation Line */}
+      <path
+        d="M 43 51.8 Q 50 53.2 57 51.8"
+        stroke="#1c1917"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        fill="none"
+      />
+      {/* Lower Lip Fullness & Highlight */}
+      <path
+        d="M 44.5 52 Q 50 56.5 55.5 52 Q 50 53.5 44.5 52 Z"
+        fill="#000000"
+        fillOpacity="0.22"
+      />
+      <ellipse cx="50" cy="53.8" rx="3.2" ry="1.1" fill="#ffffff" fillOpacity="0.18" />
+
+      {/* Chin Indentation Dimple/Shadow */}
+      <path d="M 47.5 57.5 Q 50 58.5 52.5 57.5" stroke="#000000" strokeWidth="1" strokeOpacity="0.25" fill="none" strokeLinecap="round" />
+
+      {/* -------------------------------------------------------------
+          9. FACIAL HAIR (STUBBLE / GOATEE / BEARD)
+      ------------------------------------------------------------- */}
       {facialHair === 'stubble' && (
-        <path
-          d="M 38 48 C 42 58, 58 58, 62 48"
-          stroke={hairColor}
-          strokeWidth="3"
-          strokeDasharray="1 2"
-          strokeOpacity="0.5"
-          fill="none"
-        />
+        <g stroke={hairColor} strokeWidth="1.2" strokeOpacity="0.45" strokeDasharray="1 1.8" fill="none">
+          <path d="M 35 48 C 39 58, 61 58, 65 48" />
+          <path d="M 38 52 C 43 60, 57 60, 62 52" />
+          <path d="M 44 49.5 Q 50 49 56 49.5" />
+        </g>
       )}
+
       {facialHair === 'goatee' && (
-        <path
-          d="M 45 50 Q 50 51 55 50 Q 50 59 45 50 Z"
-          fill={hairColor}
-          fillOpacity="0.75"
-        />
+        <g fill={hairColor} fillOpacity="0.88">
+          {/* Mustache */}
+          <path d="M 43.5 49.8 Q 50 48.8 56.5 49.8 Q 50 52 43.5 49.8 Z" />
+          {/* Soul patch & Chin goatee */}
+          <path d="M 47.5 54.5 L 52.5 54.5 L 51.5 60 Q 50 61.5 48.5 60 Z" />
+        </g>
       )}
+
       {facialHair === 'beard' && (
-        <path
-          d="M 33 44 C 33 60, 42 63, 50 63 C 58 63, 67 60, 67 44 C 64 54, 58 56, 50 56 C 42 56, 36 54, 33 44 Z"
-          fill={hairColor}
-          fillOpacity="0.85"
-        />
-      )}
-
-      {/* Hair Styles */}
-      {hairStyle === 'buzz' && (
-        <path
-          d="M 29 33 C 29 18, 71 18, 71 33 C 71 28, 65 24, 50 24 C 35 24, 29 28, 29 33 Z"
-          fill={hairColor}
-          fillOpacity="0.7"
-        />
-      )}
-
-      {hairStyle === 'short' && (
-        <path
-          d="M 28 32 C 28 15, 72 15, 72 32 C 68 26, 60 25, 50 26 C 40 25, 32 26, 28 32 Z"
-          fill={hairColor}
-        />
-      )}
-
-      {hairStyle === 'fade' && (
-        <g>
-          {/* Shaved sides */}
-          <path d="M 28 36 C 28 26, 33 24, 35 24 L 32 36 Z" fill={hairColor} fillOpacity="0.4" />
-          <path d="M 72 36 C 72 26, 67 24, 65 24 L 68 36 Z" fill={hairColor} fillOpacity="0.4" />
-          {/* Voluminous top */}
+        <g fill={hairColor} fillOpacity="0.92">
+          {/* Full Jawline & Chin Beard */}
           <path
-            d="M 32 26 C 32 12, 68 12, 68 26 C 62 21, 56 20, 50 21 C 44 20, 38 21, 32 26 Z"
-            fill={hairColor}
+            d="M 31 43 C 31 59, 41 62.5, 50 62.5 C 59 62.5, 69 59, 69 43 C 66 52, 60 55.5, 50 55.5 C 40 55.5, 34 52, 31 43 Z"
+          />
+          {/* Mustache */}
+          <path d="M 42.5 50 Q 50 48.5 57.5 50 Q 50 52.5 42.5 50 Z" />
+          {/* Beard Texture Highlights */}
+          <path
+            d="M 35 48 C 37 57, 43 60, 50 60 C 57 60, 63 57, 65 48"
+            stroke="#ffffff"
+            strokeWidth="0.8"
+            strokeOpacity="0.15"
+            fill="none"
           />
         </g>
       )}
 
-      {hairStyle === 'curly' && (
+      {/* -------------------------------------------------------------
+          10. LAYERED REALISTIC HAIRSTYLES
+      ------------------------------------------------------------- */}
+      {/* BUZZ CUT */}
+      {hairStyle === 'buzz' && (
+        <g>
+          <path
+            d="M 28 34 C 28 17, 72 17, 72 34 C 71 27, 63 22, 50 22 C 37 22, 29 27, 28 34 Z"
+            fill={hairColor}
+            fillOpacity="0.75"
+          />
+          <path
+            d="M 28 34 C 28 17, 72 17, 72 34 C 71 27, 63 22, 50 22 C 37 22, 29 27, 28 34 Z"
+            fill={`url(#hairShine_${idSuffix})`}
+          />
+        </g>
+      )}
+
+      {/* SHORT ATHLETIC CROP */}
+      {hairStyle === 'short' && (
+        <g>
+          <path
+            d="M 27 34 C 27 15, 73 15, 73 34 C 69 24, 61 21, 50 22 C 39 21, 31 24, 27 34 Z"
+            fill={hairColor}
+          />
+          <path
+            d="M 27 34 C 27 15, 73 15, 73 34 C 69 24, 61 21, 50 22 C 39 21, 31 24, 27 34 Z"
+            fill={`url(#hairShine_${idSuffix})`}
+          />
+          {/* Hair locks & separation */}
+          <path d="M 36 21 Q 42 17 48 23" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.25" fill="none" />
+          <path d="M 52 22 Q 58 17 64 22" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.25" fill="none" />
+        </g>
+      )}
+
+      {/* SKIN FADE WITH TEXTURED TOP */}
+      {hairStyle === 'fade' && (
+        <g>
+          {/* Shaved Temple & Side Fade Gradients */}
+          <path d="M 28 36 C 28 25, 34 23, 36 23 L 33 36 Z" fill={hairColor} fillOpacity="0.35" />
+          <path d="M 72 36 C 72 25, 66 23, 64 23 L 67 36 Z" fill={hairColor} fillOpacity="0.35" />
+          {/* Voluminous Pompadour / Textured Crop Top */}
+          <path
+            d="M 32 25 C 32 11, 68 11, 68 25 C 62 19, 56 18, 50 19 C 44 18, 38 19, 32 25 Z"
+            fill={hairColor}
+          />
+          <path
+            d="M 32 25 C 32 11, 68 11, 68 25 C 62 19, 56 18, 50 19 C 44 18, 38 19, 32 25 Z"
+            fill={`url(#hairShine_${idSuffix})`}
+          />
+          {/* Directional Pomade Texture */}
+          <path d="M 38 18 Q 45 14 54 18" stroke="#ffffff" strokeWidth="1.2" strokeOpacity="0.3" fill="none" />
+          <path d="M 44 16 Q 51 13 60 16" stroke="#ffffff" strokeWidth="1.2" strokeOpacity="0.3" fill="none" />
+        </g>
+      )}
+
+      {/* TEXTURED CURLS / AFRO COILS */}
+      {(hairStyle === 'curly' || hairStyle === 'afro') && (
         <g fill={hairColor}>
-          <circle cx="34" cy="22" r="5.5" />
-          <circle cx="43" cy="18" r="6" />
-          <circle cx="52" cy="17" r="6" />
-          <circle cx="61" cy="18" r="6" />
-          <circle cx="68" cy="23" r="5.5" />
-          <circle cx="30" cy="28" r="4.5" />
-          <circle cx="70" cy="28" r="4.5" />
+          {/* Multi-layered curly clusters */}
+          <circle cx="34" cy="21" r="6" />
+          <circle cx="42" cy="16" r="6.5" />
+          <circle cx="50" cy="15" r="7" />
+          <circle cx="58" cy="16" r="6.5" />
+          <circle cx="66" cy="21" r="6" />
+          <circle cx="28" cy="28" r="5" />
+          <circle cx="72" cy="28" r="5" />
+          <circle cx="38" cy="20" r="4" fill="#ffffff" fillOpacity="0.15" />
+          <circle cx="50" cy="18" r="4.5" fill="#ffffff" fillOpacity="0.15" />
+          <circle cx="62" cy="20" r="4" fill="#ffffff" fillOpacity="0.15" />
         </g>
       )}
 
+      {/* BRAIDED DREADLOCKS */}
       {hairStyle === 'dreads' && (
-        <g fill={hairColor} stroke="#111827" strokeWidth="0.5">
-          <rect x="30" y="18" width="4.5" height="18" rx="2" transform="rotate(-15 30 18)" />
-          <rect x="38" y="16" width="4.5" height="20" rx="2" transform="rotate(-6 38 16)" />
-          <rect x="47" y="15" width="4.5" height="22" rx="2" />
-          <rect x="56" y="16" width="4.5" height="20" rx="2" transform="rotate(6 56 16)" />
-          <rect x="64" y="18" width="4.5" height="18" rx="2" transform="rotate(15 64 18)" />
+        <g fill={hairColor} stroke="#09090b" strokeWidth="0.6">
+          <rect x="29" y="17" width="5" height="19" rx="2.5" transform="rotate(-18 29 17)" />
+          <rect x="37" y="14" width="5.2" height="22" rx="2.6" transform="rotate(-8 37 14)" />
+          <rect x="47.5" y="13" width="5.4" height="24" rx="2.7" />
+          <rect x="58" y="14" width="5.2" height="22" rx="2.6" transform="rotate(8 58 14)" />
+          <rect x="66" y="17" width="5" height="19" rx="2.5" transform="rotate(18 66 17)" />
+          {/* Gold Hair Cuffs on select dreadlocks */}
+          <rect x="38" y="24" width="5.4" height="2.5" rx="0.8" fill="#facc15" stroke="none" transform="rotate(-8 37 14)" />
+          <rect x="58.5" y="22" width="5.4" height="2.5" rx="0.8" fill="#facc15" stroke="none" transform="rotate(8 58 14)" />
         </g>
       )}
 
+      {/* SLICK BACK WITH POMADE SHINE */}
       {hairStyle === 'slick' && (
-        <path
-          d="M 28 32 C 28 14, 72 14, 72 32 C 70 20, 60 17, 50 18 C 40 17, 30 20, 28 32 Z"
-          fill={hairColor}
-        />
+        <g>
+          <path
+            d="M 27 34 C 27 13, 73 13, 73 34 C 69 21, 60 18, 50 19 C 40 18, 31 21, 27 34 Z"
+            fill={hairColor}
+          />
+          <path
+            d="M 27 34 C 27 13, 73 13, 73 34 C 69 21, 60 18, 50 19 C 40 18, 31 21, 27 34 Z"
+            fill={`url(#hairShine_${idSuffix})`}
+          />
+          {/* Comb Grooves */}
+          <path d="M 33 24 Q 42 16 50 17 Q 58 16 67 24" stroke="#ffffff" strokeWidth="1.2" strokeOpacity="0.35" fill="none" />
+          <path d="M 36 21 Q 44 14 50 15 Q 56 14 64 21" stroke="#ffffff" strokeWidth="0.9" strokeOpacity="0.25" fill="none" />
+        </g>
       )}
 
-      {hairStyle === 'afro' && (
-        <circle cx="50" cy="30" r="23" fill={hairColor} />
-      )}
-
+      {/* MOHAWK / MODERN CREST */}
       {hairStyle === 'mohawk' && (
-        <path
-          d="M 44 26 C 44 8, 56 8, 56 26 Z"
-          fill={hairColor}
-        />
+        <g>
+          {/* Shaved Temples */}
+          <path d="M 28 36 C 28 25, 38 23, 40 23 L 34 36 Z" fill={hairColor} fillOpacity="0.3" />
+          <path d="M 72 36 C 72 25, 62 23, 60 23 L 66 36 Z" fill={hairColor} fillOpacity="0.3" />
+          {/* Styled Center Crest */}
+          <path
+            d="M 41 26 C 42 10, 48 8, 50 8 C 52 8, 58 10, 59 26 C 56 22, 53 21, 50 21 C 47 21, 44 22, 41 26 Z"
+            fill={hairColor}
+          />
+          <path
+            d="M 41 26 C 42 10, 48 8, 50 8 C 52 8, 58 10, 59 26 C 56 22, 53 21, 50 21 C 47 21, 44 22, 41 26 Z"
+            fill={`url(#hairShine_${idSuffix})`}
+          />
+        </g>
       )}
     </svg>
   );

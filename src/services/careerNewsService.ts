@@ -6,6 +6,8 @@
 import { CareerNewsItem, PlayerInjury, Team, Player, CareerState } from '../types/soccer';
 import { TEAMS } from '../data/teams';
 
+export type { CareerNewsItem };
+
 /**
  * Initial news feed at season start
  */

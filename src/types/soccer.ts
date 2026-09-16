@@ -55,6 +55,13 @@ export interface Player {
   staminaCondition?: number; // 0 - 100 for career mode fatigue
   isInjured?: boolean;
   injuryRoundsLeft?: number;
+  potential?: number;   // Potential ceiling e.g. 94
+  development?: {
+    xp: number;
+    level: number;
+    drillsCompleted: number;
+    form?: string;
+  };
 }
 
 export type KitPattern = 'solid' | 'stripes' | 'hoops' | 'sash' | 'split' | 'chevron';
@@ -175,7 +182,7 @@ export interface SeasonFixture {
   isPlayed: boolean;
 }
 
-export type NewsCategory = 'TRANSFER' | 'INJURY' | 'RECOVERY' | 'RUMOR' | 'LEAGUE';
+export type NewsCategory = 'TRANSFER' | 'INJURY' | 'RECOVERY' | 'RUMOR' | 'LEAGUE' | 'DEVELOPMENT';
 
 export interface PlayerInjury {
   id: string;
@@ -189,7 +196,7 @@ export interface PlayerInjury {
 
 export interface CareerNewsItem {
   id: string;
-  type: 'transfer' | 'injury' | 'recovery' | 'headline' | 'rumor';
+  type: 'transfer' | 'injury' | 'recovery' | 'headline' | 'rumor' | 'development';
   title: string;
   summary: string;
   fullBody: string;

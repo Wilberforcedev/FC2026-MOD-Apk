@@ -24,16 +24,20 @@ import {
   Shield,
   Globe,
   UserPlus,
-  Edit3
+  Edit3,
+  Zap,
+  MapPin
 } from 'lucide-react';
 import { FCHeaderBar } from './FCHeaderBar';
 import { ClubEmblem } from './ClubEmblem';
 import { LeagueEmblem } from './LeagueEmblem';
 import { LEAGUES } from '../data/emblems';
 import { initializeCareer } from '../services/careerService';
-import { createPlayerSigningNews } from '../services/careerNewsService';
+import { createPlayerSigningNews, CareerNewsItem } from '../services/careerNewsService';
 import { PlayerFaceCard, PlayerFaceAvatar } from './PlayerFaceCard';
 import { PlayerEditorModal } from './PlayerEditorModal';
+import { PlayerDevelopmentModal } from './PlayerDevelopmentModal';
+import { getStadiumForTeam } from '../data/stadiums';
 
 interface CareerModeProps {
   career: CareerState;
@@ -63,6 +67,38 @@ export const CareerMode: React.FC<CareerModeProps> = ({
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
   const [showPlayerEditorModal, setShowPlayerEditorModal] = useState(false);
+
+  // Player Development & Training Academy
+  const [developingPlayer, setDevelopingPlayer] = useState<Player | null>(null);
+  const [showDevelopmentModal, setShowDevelopmentModal] = useState(false);
+
+  const handleOpenDevelopment = (player?: Player) => {
+    const target = player || userTeam.players[0];
+    setDevelopingPlayer(target);
+    setShowDevelopmentModal(true);
+  };
+
+  const handlePlayerDevelopmentUpdated = (updatedPlayer: Player, newsItem?: CareerNewsItem) => {
+    userTeam.players = userTeam.players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p);
+    
+    // Also sync in TEAMS array so match engine reflects upgraded stats
+    const teamInList = TEAMS.find(t => t.id === userTeam.id);
+    if (teamInList) {
+      teamInList.players = userTeam.players;
+    }
+
+    let updatedNews = career.newsFeed;
+    if (newsItem) {
+      updatedNews = [newsItem, ...(career.newsFeed || [])];
+    }
+
+    onUpdateCareer({
+      ...career,
+      newsFeed: updatedNews,
+    });
+    setTransferFeedback(`Training Complete! ${updatedPlayer.name} boosted attributes!`);
+    setTimeout(() => setTransferFeedback(null), 3500);
+  };
 
   // Transfer Market Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -429,15 +465,29 @@ export const CareerMode: React.FC<CareerModeProps> = ({
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-cyan-900/40">
-                  <span className="text-xs text-white/50 font-mono">
-                    Stadium: {userTeam.stadium}
-                  </span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-cyan-900/40">
+                  {(() => {
+                    const stadium = getStadiumForTeam(userTeam.id);
+                    return (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🏟️</span>
+                        <div>
+                          <span className="text-xs text-white/90 font-['Chakra_Petch'] font-black uppercase tracking-wider block">
+                            {stadium.name}
+                          </span>
+                          <span className="text-[10px] text-cyan-400 font-mono flex items-center gap-1">
+                            <MapPin className="w-2.5 h-2.5" />
+                            {stadium.city}, {stadium.country} • {stadium.capacity.toLocaleString()} Seats • {stadium.lawnPattern.toUpperCase()} TURF
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {nextFixture && opponentTeam && (
                     <button
                       onClick={() => onPlayNextMatch(nextFixture, userTeam, opponentTeam)}
-                      className="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-['Chakra_Petch'] font-black text-sm uppercase tracking-wider flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] transition scale-105 cursor-pointer"
+                      className="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-['Chakra_Petch'] font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] transition scale-105 cursor-pointer shrink-0"
                     >
                       <Play className="w-4 h-4 fill-slate-950" />
                       PLAY MATCH
@@ -479,25 +529,25 @@ export const CareerMode: React.FC<CareerModeProps> = ({
 
               {/* TILE: TRAINING CENTRE (Bottom-Left Tile, 6 Cols) */}
               <div 
-                onClick={() => setActiveOfficeModal('training')}
+                onClick={() => handleOpenDevelopment()}
                 className="md:col-span-6 bg-slate-950/80 border border-cyan-500/30 hover:border-cyan-400 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between cursor-pointer group transition"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-['Chakra_Petch'] font-black text-cyan-400 uppercase tracking-wider">
-                    TRAINING CENTRE
+                    TRAINING CENTRE & DEVELOPMENT
                   </span>
                   <div className="w-10 h-10 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-300">
-                    <Target className="w-5 h-5" />
+                    <Zap className="w-5 h-5" />
                   </div>
                 </div>
 
                 <div className="my-3 flex items-center justify-between">
                   <div>
                     <h3 className="text-xl font-black font-['Chakra_Petch'] text-white uppercase tracking-wider group-hover:text-cyan-300 transition">
-                      DRILL SELECTION
+                      PLAYER ACADEMY DRILLS
                     </h3>
                     <p className="text-xs text-white/60 mt-1">
-                      Target passing accuracy, chip shooting, and stamina sharpening drills.
+                      Execute precision passing, power finishing, agility dribbling, and fitness drills to gain permanent XP and attribute boosts.
                     </p>
                   </div>
 
@@ -510,7 +560,7 @@ export const CareerMode: React.FC<CareerModeProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between pt-3 border-t border-cyan-900/30 text-xs text-cyan-400 font-['Chakra_Petch'] font-bold uppercase tracking-wider">
-                  <span>Start Skill Drills</span>
+                  <span>Launch Training Academy</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition" />
                 </div>
               </div>
@@ -784,14 +834,23 @@ export const CareerMode: React.FC<CareerModeProps> = ({
                     />
                   </div>
 
-                  {/* Quick Action Button: Edit Attributes & Face */}
-                  <button
-                    onClick={() => handleEditSquadPlayer(player)}
-                    className="w-full py-2 rounded-xl bg-slate-900 border border-cyan-500/40 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow group/btn"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>EDIT ATTRIBUTES & FACE</span>
-                  </button>
+                  {/* Quick Action Buttons: Train Drills & Edit Attributes */}
+                  <div className="grid grid-cols-2 gap-2 w-full">
+                    <button
+                      onClick={() => handleOpenDevelopment(player)}
+                      className="py-2 px-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>TRAIN</span>
+                    </button>
+                    <button
+                      onClick={() => handleEditSquadPlayer(player)}
+                      className="py-2 px-2 rounded-xl bg-slate-900 border border-cyan-500/40 hover:bg-slate-800 text-cyan-300 font-['Chakra_Petch'] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer shadow"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>EDIT</span>
+                    </button>
+                  </div>
                 </div>
               ))}
 
@@ -1387,6 +1446,18 @@ export const CareerMode: React.FC<CareerModeProps> = ({
         teamName={userTeam.name}
         onClose={() => setShowPlayerEditorModal(false)}
         onSave={handleSaveSquadPlayer}
+      />
+
+      {/* =========================================================================
+          PLAYER DEVELOPMENT & TRAINING MODAL
+      ========================================================================= */}
+      <PlayerDevelopmentModal
+        isOpen={showDevelopmentModal}
+        player={developingPlayer}
+        team={userTeam}
+        matchday={career.currentMatchday}
+        onClose={() => setShowDevelopmentModal(false)}
+        onPlayerUpdated={handlePlayerDevelopmentUpdated}
       />
     </div>
   );

@@ -3,6 +3,7 @@ import { MatchEngine } from '../game/engine';
 import { PITCH } from '../game/constants';
 import { MatchPlayerEntity, ReplayPlayerState } from '../types/soccer';
 import { Camera, FastForward, Play, Pause, X, Sparkles } from 'lucide-react';
+import { getStadiumForTeam, StadiumLikeness } from '../data/stadiums';
 
 interface PitchCanvasProps {
   engine: MatchEngine;
@@ -100,8 +101,10 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({ engine, weather = 'Nig
         shakeOffsetY = (Math.random() - 0.5) * engine.cameraShake * 16;
       }
 
+      const stadium = getStadiumForTeam(engine.homeTeam?.id);
+
       // Background Fill (Stadium Atmosphere)
-      ctx.fillStyle = weather === 'Night' ? '#070b14' : weather === 'Sunset' ? '#1c1024' : '#0d1829';
+      ctx.fillStyle = weather === 'Night' ? stadium.ambientSky : weather === 'Sunset' ? '#1c1024' : '#0d1829';
       ctx.fillRect(0, 0, width, height);
 
       // Center camera transformation
@@ -110,11 +113,11 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({ engine, weather = 'Nig
       ctx.scale(cameraRef.current.zoom, cameraRef.current.zoom);
       ctx.translate(-cameraRef.current.x, -cameraRef.current.y);
 
-      // Draw Stadium Surroundings & Stands
-      drawStadiumSurroundings(ctx, weather);
+      // Draw Stadium Surroundings & Stands with stadium likeness
+      drawStadiumSurroundings(ctx, weather, stadium, engine);
 
-      // Draw Pitch Grass & Lines
-      drawPitch(ctx);
+      // Draw Pitch Grass & Lines with authentic lawn pattern
+      drawPitch(ctx, stadium);
 
       // Draw Goal Nets
       drawGoalNets(ctx);
@@ -269,79 +272,338 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({ engine, weather = 'Nig
 };
 
 // -------------------------------------------------------------
-// STADIUM & PITCH GRAPHICS
+// STADIUM & PITCH GRAPHICS (Authentic Stadium Likeness)
 // -------------------------------------------------------------
 
-function drawStadiumSurroundings(ctx: CanvasRenderingContext2D, weather: string) {
-  const stadiumMargin = 170;
+function drawStadiumSurroundings(
+  ctx: CanvasRenderingContext2D,
+  weather: string,
+  stadium: StadiumLikeness,
+  engine: MatchEngine
+) {
+  const stadiumMargin = 220;
   const left = PITCH.MARGIN_X - stadiumMargin;
   const top = PITCH.MARGIN_Y - stadiumMargin;
   const right = PITCH.MARGIN_X + PITCH.LENGTH + stadiumMargin;
   const bottom = PITCH.MARGIN_Y + PITCH.WIDTH + stadiumMargin;
 
-  // Outer turf/stadium apron
-  ctx.fillStyle = '#143820';
+  // 1. Stadium Seating Tiers & Grandstands
+  const crowdColors = stadium.crowdColors || ['#ffffff', '#0ea5e9', '#0284c7', '#0f172a'];
+  
+  // Upper Grandstand Bowl Background
+  ctx.fillStyle = '#080d18';
   ctx.fillRect(left, top, right - left, bottom - top);
 
-  // LED Perimeter Boards with neon animations
-  const drawLedBoard = (x: number, y: number, w: number, h: number) => {
+  // Grandstand Tier Stepping (North, South, East, West stands)
+  const drawGrandstand = (gx: number, gy: number, gw: number, gh: number, orientation: 'horizontal' | 'vertical') => {
+    // Stepped concrete terraces
+    const numTiers = 6;
+    const tierSize = orientation === 'horizontal' ? gh / numTiers : gw / numTiers;
+
+    for (let t = 0; t < numTiers; t++) {
+      ctx.fillStyle = t % 2 === 0 ? '#111827' : '#0b1120';
+      if (orientation === 'horizontal') {
+        ctx.fillRect(gx, gy + t * tierSize, gw, tierSize);
+      } else {
+        ctx.fillRect(gx + t * tierSize, gy, tierSize, gh);
+      }
+
+      // Populate supporters/spectators in seats
+      const numSupporters = Math.floor((orientation === 'horizontal' ? gw : gh) / 14);
+      for (let s = 0; s < numSupporters; s++) {
+        const colorIdx = (t * 7 + s * 13) % crowdColors.length;
+        ctx.fillStyle = crowdColors[colorIdx];
+        
+        // Supporter shirt & head
+        if (orientation === 'horizontal') {
+          const sx = gx + s * 14 + (t % 2) * 4;
+          const sy = gy + t * tierSize + tierSize * 0.4;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          const sx = gx + t * tierSize + tierSize * 0.4;
+          const sy = gy + s * 14 + (t % 2) * 4;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+  };
+
+  // Top North Stand
+  drawGrandstand(left, top, right - left, stadiumMargin - 45, 'horizontal');
+  // Bottom South Stand
+  drawGrandstand(left, PITCH.MARGIN_Y + PITCH.WIDTH + 45, right - left, stadiumMargin - 45, 'horizontal');
+  // Left West Stand
+  drawGrandstand(left, PITCH.MARGIN_Y - 40, stadiumMargin - 45, PITCH.WIDTH + 80, 'vertical');
+  // Right East Stand
+  drawGrandstand(PITCH.MARGIN_X + PITCH.LENGTH + 45, PITCH.MARGIN_Y - 40, stadiumMargin - 45, PITCH.WIDTH + 80, 'vertical');
+
+  // 2. Supporter Ultras Banners & Tifos
+  const drawBanner = (bx: number, by: number, bw: number, bh: number, text: string, bgColor: string, textColor: string) => {
+    ctx.save();
+    ctx.fillStyle = bgColor;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 3);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = textColor;
+    ctx.font = '900 10px "Chakra Petch", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, bx + bw / 2, by + bh / 2);
+    ctx.restore();
+  };
+
+  // West End Ultra Banner (Home Team)
+  drawBanner(
+    PITCH.MARGIN_X - 120,
+    PITCH.MARGIN_Y + PITCH.WIDTH / 2 - 35,
+    70,
+    18,
+    engine.homeTeam.shortName.toUpperCase(),
+    engine.homeTeam.kit.primary,
+    '#ffffff'
+  );
+  drawBanner(
+    PITCH.MARGIN_X - 120,
+    PITCH.MARGIN_Y + PITCH.WIDTH / 2 + 15,
+    70,
+    18,
+    'ULTRAS 1902',
+    '#0f172a',
+    '#38bdf8'
+  );
+
+  // East End Ultra Banner (Away Team or Stadium Heritage)
+  drawBanner(
+    PITCH.MARGIN_X + PITCH.LENGTH + 50,
+    PITCH.MARGIN_Y + PITCH.WIDTH / 2 - 10,
+    70,
+    18,
+    engine.awayTeam.shortName.toUpperCase(),
+    engine.awayTeam.kit.primary,
+    '#ffffff'
+  );
+
+  // 3. Outer Turf Apron & Technical Dugouts
+  ctx.fillStyle = stadium.grassColorDark || '#143820';
+  ctx.fillRect(PITCH.MARGIN_X - 45, PITCH.MARGIN_Y - 35, PITCH.LENGTH + 90, PITCH.WIDTH + 70);
+
+  // 4. Team Technical Areas & Dugouts
+  const drawDugout = (dx: number, dy: number, teamName: string, teamColor: string) => {
+    ctx.save();
     ctx.fillStyle = '#0a0f1d';
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = '#22c55e';
+    ctx.strokeStyle = teamColor;
     ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(dx, dy, 70, 14, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px "Chakra Petch", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${teamName} BENCH`, dx + 35, dy + 9);
+    ctx.restore();
+  };
+
+  drawDugout(PITCH.MARGIN_X + PITCH.LENGTH * 0.28, PITCH.MARGIN_Y - 32, engine.homeTeam.shortName, engine.homeTeam.kit.primary);
+  drawDugout(PITCH.MARGIN_X + PITCH.LENGTH * 0.62, PITCH.MARGIN_Y - 32, engine.awayTeam.shortName, engine.awayTeam.kit.primary);
+
+  // 5. Authentic Stadium Animated LED Perimeter Boards
+  const drawLedBoard = (x: number, y: number, w: number, h: number) => {
+    ctx.fillStyle = '#060a12';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#06b6d4';
+    ctx.lineWidth = 1.2;
     ctx.strokeRect(x, y, w, h);
 
+    const banners = stadium.ledBanners && stadium.ledBanners.length > 0 
+      ? stadium.ledBanners 
+      : ['EA SPORTS FC 26', 'HYPERMOTION V', 'OFFICIAL MATCHDAY'];
+
     ctx.save();
-    ctx.font = 'bold 11px "Chakra Petch", sans-serif';
-    ctx.fillStyle = '#4ade80';
-    ctx.shadowColor = '#22c55e';
-    ctx.shadowBlur = 6;
-    const count = Math.floor(w / 180);
+    ctx.font = '900 9px "Chakra Petch", sans-serif';
+    ctx.fillStyle = '#38bdf8';
+    ctx.shadowColor = '#06b6d4';
+    ctx.shadowBlur = 4;
+    const bannerSpacing = 220;
+    const count = Math.ceil(w / bannerSpacing) + 1;
     for (let i = 0; i < count; i++) {
-      ctx.fillText('EA SPORTS FC 26 • HYPERMOTION', x + 15 + i * 180, y + h - 4);
+      const bannerText = banners[i % banners.length];
+      ctx.fillText(bannerText, x + 10 + i * bannerSpacing, y + h - 4);
     }
     ctx.restore();
   };
 
-  drawLedBoard(PITCH.MARGIN_X - 40, PITCH.MARGIN_Y - 26, PITCH.LENGTH + 80, 18);
-  drawLedBoard(PITCH.MARGIN_X - 40, PITCH.MARGIN_Y + PITCH.WIDTH + 8, PITCH.LENGTH + 80, 18);
+  // Top and Bottom LED boards
+  drawLedBoard(PITCH.MARGIN_X - 40, PITCH.MARGIN_Y - 18, PITCH.LENGTH + 80, 14);
+  drawLedBoard(PITCH.MARGIN_X - 40, PITCH.MARGIN_Y + PITCH.WIDTH + 4, PITCH.LENGTH + 80, 14);
 
-  // Stadium lights ambient glow
+  // 6. Stadium Marquee Arch (Center Top Banner)
+  ctx.save();
+  const marqueeW = 380;
+  const marqueeH = 22;
+  const marqueeX = PITCH.MARGIN_X + (PITCH.LENGTH - marqueeW) / 2;
+  const marqueeY = PITCH.MARGIN_Y - stadiumMargin + 10;
+  ctx.fillStyle = 'rgba(6, 10, 20, 0.92)';
+  ctx.strokeStyle = 'rgba(6, 182, 212, 0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(marqueeX, marqueeY, marqueeW, marqueeH, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 9.5px "Chakra Petch", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#06b6d4';
+  ctx.shadowBlur = 6;
+  ctx.fillText(
+    `🏟️ ${stadium.name.toUpperCase()} • ${stadium.capacity.toLocaleString()} SEATS`,
+    marqueeX + marqueeW / 2,
+    marqueeY + 14
+  );
+  ctx.restore();
+
+  // 7. Corner Stadium Floodlight Towers with Volumetric Night Beams
+  const cornerLights = [
+    { x: PITCH.MARGIN_X - 60, y: PITCH.MARGIN_Y - 60, aimX: PITCH.MARGIN_X + 150, aimY: PITCH.MARGIN_Y + 150 },
+    { x: PITCH.MARGIN_X + PITCH.LENGTH + 60, y: PITCH.MARGIN_Y - 60, aimX: PITCH.MARGIN_X + PITCH.LENGTH - 150, aimY: PITCH.MARGIN_Y + 150 },
+    { x: PITCH.MARGIN_X - 60, y: PITCH.MARGIN_Y + PITCH.WIDTH + 60, aimX: PITCH.MARGIN_X + 150, aimY: PITCH.MARGIN_Y + PITCH.WIDTH - 150 },
+    { x: PITCH.MARGIN_X + PITCH.LENGTH + 60, y: PITCH.MARGIN_Y + PITCH.WIDTH + 60, aimX: PITCH.MARGIN_X + PITCH.LENGTH - 150, aimY: PITCH.MARGIN_Y + PITCH.WIDTH - 150 },
+  ];
+
+  cornerLights.forEach(light => {
+    // Pylon Base & Tower
+    ctx.save();
+    ctx.fillStyle = '#334155';
+    ctx.beginPath();
+    ctx.arc(light.x, light.y, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(light.x, light.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Night Volumetric Floodlight Cone
+    if (weather === 'Night') {
+      const coneGrad = ctx.createRadialGradient(light.x, light.y, 5, light.x, light.y, 320);
+      coneGrad.addColorStop(0, 'rgba(235, 245, 255, 0.22)');
+      coneGrad.addColorStop(0.5, 'rgba(215, 240, 255, 0.06)');
+      coneGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = coneGrad;
+      ctx.beginPath();
+      ctx.moveTo(light.x, light.y);
+      ctx.arc(light.x, light.y, 320, Math.atan2(light.aimY - light.y, light.aimX - light.x) - 0.5, Math.atan2(light.aimY - light.y, light.aimX - light.x) + 0.5);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  });
+
+  // Overall Stadium Night Center Glow
   if (weather === 'Night') {
     ctx.save();
     const grad = ctx.createRadialGradient(
       PITCH.MARGIN_X + PITCH.LENGTH / 2,
       PITCH.MARGIN_Y + PITCH.WIDTH / 2,
-      120,
+      100,
       PITCH.MARGIN_X + PITCH.LENGTH / 2,
       PITCH.MARGIN_Y + PITCH.WIDTH / 2,
-      950
+      900
     );
-    grad.addColorStop(0, 'rgba(255, 255, 255, 0.09)');
-    grad.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+    grad.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
     ctx.fillStyle = grad;
     ctx.fillRect(left, top, right - left, bottom - top);
     ctx.restore();
   }
 }
 
-function drawPitch(ctx: CanvasRenderingContext2D) {
+function drawPitch(ctx: CanvasRenderingContext2D, stadium: StadiumLikeness) {
   const x = PITCH.MARGIN_X;
   const y = PITCH.MARGIN_Y;
   const w = PITCH.LENGTH;
   const h = PITCH.WIDTH;
 
-  // Authentic lawn pattern stripes
-  const numStripes = 18;
-  const stripeW = w / numStripes;
+  const darkGrass = stadium.grassColorDark || '#16652b';
+  const lightGrass = stadium.grassColorLight || '#1f7a37';
+  const pattern = stadium.lawnPattern || 'stripes';
 
-  for (let i = 0; i < numStripes; i++) {
-    ctx.fillStyle = i % 2 === 0 ? '#1f7a37' : '#1a6f31';
-    ctx.fillRect(x + i * stripeW, y, stripeW, h);
+  // Base grass fill
+  ctx.fillStyle = darkGrass;
+  ctx.fillRect(x, y, w, h);
+
+  // Authentic lawn mowing patterns
+  if (pattern === 'checkerboard') {
+    const cols = 18;
+    const rows = 12;
+    const cw = w / cols;
+    const ch = h / rows;
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        if ((c + r) % 2 === 0) {
+          ctx.fillStyle = lightGrass;
+          ctx.fillRect(x + c * cw, y + r * ch, cw, ch);
+        }
+      }
+    }
+  } else if (pattern === 'diagonal') {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    const stripeW = 45;
+    const diagonalCount = Math.ceil((w + h) / stripeW);
+    for (let i = 0; i < diagonalCount; i += 2) {
+      ctx.fillStyle = lightGrass;
+      ctx.beginPath();
+      ctx.moveTo(x + i * stripeW - h, y + h);
+      ctx.lineTo(x + (i + 1) * stripeW - h, y + h);
+      ctx.lineTo(x + (i + 1) * stripeW, y);
+      ctx.lineTo(x + i * stripeW, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  } else if (pattern === 'concentric') {
+    const midX = x + w / 2;
+    const midY = y + h / 2;
+    const maxRadius = Math.hypot(w / 2, h / 2);
+    const ringW = 40;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    for (let r = ringW; r < maxRadius; r += ringW * 2) {
+      ctx.fillStyle = lightGrass;
+      ctx.beginPath();
+      ctx.arc(midX, midY, r + ringW, 0, Math.PI * 2);
+      ctx.arc(midX, midY, r, Math.PI * 2, 0, true);
+      ctx.fill();
+    }
+    ctx.restore();
+  } else {
+    // Default vertical lawn stripes
+    const numStripes = 18;
+    const stripeW = w / numStripes;
+    for (let i = 0; i < numStripes; i++) {
+      if (i % 2 === 0) {
+        ctx.fillStyle = lightGrass;
+        ctx.fillRect(x + i * stripeW, y, stripeW, h);
+      }
+    }
   }
 
-  // Pitch boundary lines
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+  // Pitch boundary lines (crisp regulation white lines)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)';
   ctx.lineWidth = 3.5;
   ctx.lineCap = 'round';
   ctx.strokeRect(x, y, w, h);
@@ -444,7 +706,7 @@ function drawCornerFlags(ctx: CanvasRenderingContext2D) {
 }
 
 // -------------------------------------------------------------
-// REALISTIC 2.5D PLAYER AVATAR RENDERER
+// REALISTIC ATHLETIC PLAYER LIKENESS RENDERER
 // -------------------------------------------------------------
 
 function drawPlayerAvatar(
@@ -462,9 +724,10 @@ function drawPlayerAvatar(
   const teamObj = p.team === 'home' ? engine.homeTeam : engine.awayTeam;
   const kit = teamObj.kit;
   const likeness = p.player.likeness || {
-    skinTone: '#e0ac69',
+    skinTone: '#d49b6a',
     hairStyle: 'short',
-    hairColor: '#261b11',
+    hairColor: '#1a1412',
+    facialHair: 'none',
     bootColor: '#22c55e',
   };
 
@@ -472,76 +735,105 @@ function drawPlayerAvatar(
   const isTackling = animState === 'tackling' || p.isTackling;
   const isCelebrating = animState === 'celebrating';
 
-  // 1. Slide Tackle Skid Marks & Particles
+  // 1. Slide Tackle Skid Marks & Realistic Turf Kick-Up
   if (isTackling) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.lineWidth = 6;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(x - Math.cos(facingAngle) * 32, y - Math.sin(facingAngle) * 32);
+    ctx.moveTo(x - Math.cos(facingAngle) * 34, y - Math.sin(facingAngle) * 34);
     ctx.lineTo(x, y);
     ctx.stroke();
 
-    // Turf kick-up specks
-    ctx.fillStyle = '#155724';
-    for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = '#14532d';
+    for (let i = 0; i < 5; i++) {
       ctx.beginPath();
-      ctx.arc(x + (Math.random() - 0.5) * 16, y + (Math.random() - 0.5) * 10, 2, 0, Math.PI * 2);
+      ctx.arc(x + (Math.random() - 0.5) * 18, y + (Math.random() - 0.5) * 12, 2.2, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
   }
 
-  // 2. Realistic Dynamic Drop Shadow
+  // 2. Realistic Anisotropic Ground Drop Shadow
   ctx.save();
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
   ctx.beginPath();
-  const shadowLength = isTackling ? 22 : 14;
-  ctx.ellipse(x, y + 4, shadowLength, 7, 0, 0, Math.PI * 2);
+  const shadowLength = isTackling ? 24 : 15;
+  ctx.ellipse(x, y + 4, shadowLength, 8, facingAngle * 0.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
-  // 3. Render Animated Limbs, Torso & Head
+  // 3. Render Animated Realistic Human Athlete
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(facingAngle);
 
-  // Leg Swing Strides based on runCycle
-  const legSwing = isTackling ? 10 : isCelebrating ? 0 : Math.sin(runCycle) * 6;
-  const armSwing = isTackling ? -6 : isCelebrating ? 12 : Math.cos(runCycle) * 5;
+  // Stride calculations
+  const legSwing = isTackling ? 11 : isCelebrating ? 0 : Math.sin(runCycle) * 7;
+  const armSwing = isTackling ? -7 : isCelebrating ? 14 : Math.cos(runCycle) * 6;
 
-  // --- LEGS & BOOTS ---
-  const drawLeg = (sideY: number, swing: number) => {
-    // Shorts
-    ctx.fillStyle = isGK ? '#111827' : kit.shorts;
+  // --- LEGS, SOCKS & PROFESSIONAL FOOTBALL CLEATS ---
+  const drawLeg = (sideY: number, swing: number, isLeft: boolean) => {
+    // Athletic Shorts with Realistic Cut
+    ctx.fillStyle = isGK ? '#0f172a' : kit.shorts;
     ctx.beginPath();
-    ctx.roundRect(-4, sideY - 3, 7, 6, 2);
+    ctx.roundRect(-5, sideY - 3.5, 8, 7, 2.5);
     ctx.fill();
 
-    // Socks
-    ctx.fillStyle = isGK ? '#eab308' : kit.socks;
+    // Leg shadow/inner seam
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.fillRect(-1, sideY - (isLeft ? 0 : 3.5), 4, 3.5);
+
+    // Socks with Realistic Muscle Curvature
+    ctx.fillStyle = isGK ? '#f59e0b' : kit.socks;
     ctx.beginPath();
-    ctx.roundRect(swing, sideY - 2, 8, 4, 1.5);
+    ctx.roundRect(swing - 1, sideY - 2.5, 9, 5, 2);
     ctx.fill();
 
-    // Boots (Player Likeness Boot Color)
-    ctx.fillStyle = likeness.bootColor;
+    // Sock Ring/Trim
+    ctx.fillStyle = kit.secondary;
+    ctx.fillRect(swing + 5, sideY - 2.5, 1.5, 5);
+
+    // Realistic Football Boot / Cleat
+    ctx.save();
+    ctx.fillStyle = likeness.bootColor || '#22c55e';
     ctx.beginPath();
-    ctx.roundRect(swing + 6, sideY - 2.5, 6, 5, 2);
+    // Cleat silhouette: tapered toe and heel counter
+    ctx.roundRect(swing + 6, sideY - 3, 7.5, 6, [2, 4, 4, 2]);
     ctx.fill();
+
+    // Cleat side stripes (branded aerodynamic detail)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(swing + 8, sideY - 1, 3.5, 1.2);
+
+    // Cleat Studs shadow on turf
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(swing + 11, sideY - 2, 2, 4);
+    ctx.restore();
   };
 
-  drawLeg(-6, legSwing);
-  drawLeg(6, -legSwing);
+  drawLeg(-7, legSwing, true);
+  drawLeg(7, -legSwing, false);
 
-  // --- TORSO / JERSEY ---
+  // --- ATHLETIC TORSO & FITTED MATCH JERSEY ---
   ctx.save();
-  const jerseyW = 18;
-  const jerseyH = 20;
+  const jerseyW = 20;
+  const jerseyH = 22;
 
-  // Base jersey fill
+  // Base jersey fill with ergonomic fit
   ctx.fillStyle = isGK ? '#06b6d4' : kit.primary;
+  ctx.beginPath();
+  // Trapezius and shoulder taper
+  ctx.roundRect(-jerseyW / 2, -jerseyH / 2, jerseyW, jerseyH, 4);
+  ctx.fill();
+
+  // Subtle Jersey Fabric Highlight & Crease Shading
+  const jerseyShade = ctx.createLinearGradient(-jerseyW / 2, 0, jerseyW / 2, 0);
+  jerseyShade.addColorStop(0, 'rgba(0, 0, 0, 0.25)');
+  jerseyShade.addColorStop(0.5, 'rgba(255, 255, 255, 0.15)');
+  jerseyShade.addColorStop(1, 'rgba(0, 0, 0, 0.25)');
+  ctx.fillStyle = jerseyShade;
   ctx.beginPath();
   ctx.roundRect(-jerseyW / 2, -jerseyH / 2, jerseyW, jerseyH, 4);
   ctx.fill();
@@ -550,102 +842,214 @@ function drawPlayerAvatar(
   if (!isGK && kit.pattern) {
     ctx.fillStyle = kit.secondary;
     if (kit.pattern === 'stripes') {
-      ctx.fillRect(-jerseyW / 2 + 4, -jerseyH / 2, 4, jerseyH);
-      ctx.fillRect(-jerseyW / 2 + 11, -jerseyH / 2, 4, jerseyH);
+      ctx.fillRect(-jerseyW / 2 + 5, -jerseyH / 2, 4, jerseyH);
+      ctx.fillRect(-jerseyW / 2 + 12, -jerseyH / 2, 4, jerseyH);
     } else if (kit.pattern === 'hoops') {
-      ctx.fillRect(-jerseyW / 2, -jerseyH / 2 + 4, jerseyW, 4);
-      ctx.fillRect(-jerseyW / 2, -jerseyH / 2 + 12, jerseyW, 4);
+      ctx.fillRect(-jerseyW / 2, -jerseyH / 2 + 5, jerseyW, 4);
+      ctx.fillRect(-jerseyW / 2, -jerseyH / 2 + 13, jerseyW, 4);
     } else if (kit.pattern === 'split') {
       ctx.fillRect(0, -jerseyH / 2, jerseyW / 2, jerseyH);
     }
   }
 
-  // Collar trim
+  // Club Crest Patch on Left Chest
+  ctx.fillStyle = kit.secondary;
+  ctx.beginPath();
+  ctx.arc(3, -5, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sponsor Branding Bar across chest
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.fillRect(-1, -4, 2, 8);
+
+  // V-Neck Collar Trim
   ctx.strokeStyle = isGK ? '#ffffff' : kit.secondary;
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(-jerseyW / 2, -jerseyH / 2, jerseyW, jerseyH);
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(jerseyW / 2 - 2, -3);
+  ctx.lineTo(jerseyW / 2 + 2, 0);
+  ctx.lineTo(jerseyW / 2 - 2, 3);
+  ctx.stroke();
   ctx.restore();
 
-  // --- ARMS & HANDS / GOALIE GLOVES ---
-  const drawArm = (sideY: number, swing: number) => {
+  // --- ARMS, MUSCULATURE & HANDS / GOALKEEPER GLOVES ---
+  const drawArm = (sideY: number, swing: number, isLeft: boolean) => {
+    // Upper Arm Sleeve
     ctx.fillStyle = isGK ? '#06b6d4' : kit.primary;
     ctx.beginPath();
-    ctx.roundRect(-2, sideY - 2.5, 8 + swing, 5, 2);
+    ctx.roundRect(-3, sideY - 3, 6, 6, 2);
     ctx.fill();
 
-    // Hand / Gloves
+    // Forearm with natural skin tone
+    ctx.fillStyle = likeness.skinTone;
+    ctx.beginPath();
+    ctx.roundRect(2, sideY - 2.5, 7 + swing * 0.8, 5, 2);
+    ctx.fill();
+
+    // Wristband / Athletic Tape
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(7 + swing * 0.8, sideY - 2.5, 1.5, 5);
+
+    // Hands or Goalkeeper Gloves
     if (isGK) {
-      // Padded neon goalkeeper gloves
-      ctx.fillStyle = '#facc15';
+      // Pro Padded Goalkeeper Gloves
+      ctx.fillStyle = '#eab308';
       ctx.beginPath();
-      ctx.arc(6 + swing, sideY, 4, 0, Math.PI * 2);
+      ctx.arc(10 + swing * 0.8, sideY, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(10 + swing * 0.8, sideY, 2, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      // Skin tone hand
+      // Natural Anatomical Hand
       ctx.fillStyle = likeness.skinTone;
       ctx.beginPath();
-      ctx.arc(6 + swing, sideY, 2.5, 0, Math.PI * 2);
+      ctx.arc(9.5 + swing * 0.8, sideY, 2.6, 0, Math.PI * 2);
       ctx.fill();
     }
   };
 
-  drawArm(-11, armSwing);
-  drawArm(11, -armSwing);
+  drawArm(-12, armSwing, true);
+  drawArm(12, -armSwing, false);
 
-  // --- HEAD & HAIRSTYLE ---
-  // Skin tone base head
+  // --- ANATOMICAL HEAD & AUTHENTIC REALISTIC HAIRSTYLE ---
+  ctx.save();
+  // Realistic neck connection
   ctx.fillStyle = likeness.skinTone;
+  ctx.fillRect(0, -3, 5, 6);
+
+  // Cranium base
   ctx.beginPath();
-  ctx.arc(2, 0, 6.5, 0, Math.PI * 2);
+  ctx.ellipse(3, 0, 7.2, 6.2, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Hairstyle rendering (crew cut, fade, afro/curly, dreads, slick, buzz)
-  ctx.fillStyle = likeness.hairColor;
-  if (likeness.hairStyle === 'fade') {
+  // Natural Ears
+  ctx.fillStyle = likeness.skinTone;
+  ctx.beginPath();
+  ctx.arc(2, -6.6, 1.6, 0, Math.PI * 2);
+  ctx.arc(2, 6.6, 1.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Realistic Hairstyle with Volume, Directional Lighting & Taper Fade
+  ctx.fillStyle = likeness.hairColor || '#1a1412';
+  const hair = likeness.hairStyle || 'short';
+
+  if (hair === 'fade') {
+    // Scalp taper fade gradient on back & sides
+    ctx.save();
+    ctx.fillStyle = likeness.hairColor;
     ctx.beginPath();
-    ctx.arc(0, 0, 5.5, Math.PI * 0.4, Math.PI * 1.6);
+    ctx.ellipse(1.5, 0, 6.2, 5.8, 0, 0, Math.PI * 2);
     ctx.fill();
-  } else if (likeness.hairStyle === 'curly' || likeness.hairStyle === 'dreads') {
-    for (let h = -4; h <= 4; h += 2.5) {
+
+    // High textured top
+    ctx.fillStyle = likeness.hairColor;
+    ctx.beginPath();
+    ctx.ellipse(3.5, 0, 4.5, 4.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else if (hair === 'curly' || hair === 'dreads') {
+    // Volumetric 3D curls / textured locks
+    ctx.save();
+    for (let angle = -Math.PI * 0.8; angle <= Math.PI * 0.8; angle += 0.35) {
+      const hx = 2 + Math.cos(angle) * 5.8;
+      const hy = Math.sin(angle) * 5.8;
+      ctx.fillStyle = likeness.hairColor;
       ctx.beginPath();
-      ctx.arc(-1, h, 3, 0, Math.PI * 2);
+      ctx.arc(hx, hy, 2.5, 0, Math.PI * 2);
       ctx.fill();
     }
-  } else if (likeness.hairStyle === 'slick') {
+    // Crown volume
     ctx.beginPath();
-    ctx.ellipse(-2, 0, 5, 6, 0, 0, Math.PI * 2);
+    ctx.arc(1.5, 0, 5, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+  } else if (hair === 'slick') {
+    // Directional Pompadour / Swept Back
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(1, 0, 6.5, 5.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Hairline shine streak
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(2, 0, 4.5, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else if (hair === 'afro') {
+    // Volumetric afro silhouette
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(1.5, 0, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else if (hair === 'mohawk') {
+    // Sculpted mohawk ridge
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(3, 0, 6.5, 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else if (hair === 'buzz') {
+    // Buzz cut / close shave shadow
+    ctx.save();
+    ctx.fillStyle = likeness.hairColor;
+    ctx.beginPath();
+    ctx.arc(2, 0, 6.8, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.fill();
+    ctx.restore();
   } else {
-    // Classic short/buzz cut
+    // Classic athletic crop with natural side parting
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(0, 0, 6.5, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.arc(2, 0, 6.8, Math.PI * 0.45, Math.PI * 1.55);
     ctx.fill();
+    ctx.restore();
   }
 
-  // Facing Nose/Visor indicator
+  // Facial Hair (Beard, Stubble, Goatee)
+  if (likeness.facialHair && likeness.facialHair !== 'none') {
+    ctx.save();
+    ctx.fillStyle = likeness.hairColor;
+    if (likeness.facialHair === 'stubble') {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    }
+    // Chin and jawline beard shadow
+    ctx.beginPath();
+    ctx.ellipse(7.2, 0, 2.5, 4.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Natural Brow & Nose Bridge (Realistic Facing Profile)
   ctx.fillStyle = likeness.skinTone;
   ctx.beginPath();
-  ctx.arc(7.5, 0, 2.2, 0, Math.PI * 2);
+  ctx.arc(8.2, 0, 2.1, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.restore(); // End rotation
+  ctx.restore(); // End head
 
-  // 4. Squad Number on Jersey Back
+  ctx.restore(); // End player translation/rotation
+
+  // 4. Squad Number on Jersey Back (Crisp Athletic Typography)
+  ctx.save();
   ctx.fillStyle = kit.numberColor || '#ffffff';
-  ctx.font = '900 8px "Chakra Petch", sans-serif';
+  ctx.font = '900 9px "Chakra Petch", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(p.player.number.toString(), x - 2, y);
+  ctx.restore();
 
-  // 5. Overhead Indicator & Name Plate for User Controlled Player
+  // 5. Overhead Tactical Indicator & Name Plate for User Controlled Player
   if (isUserControlled) {
     const overheadY = y - 26;
 
-    // Glowing Inverted Triangle
+    // Glowing Tactical Reticle Triangle
     ctx.save();
-    ctx.fillStyle = '#22c55e';
-    ctx.shadowColor = '#4ade80';
-    ctx.shadowBlur = 8;
+    ctx.fillStyle = '#06b6d4';
+    ctx.shadowColor = '#22d3ee';
+    ctx.shadowBlur = 9;
     ctx.beginPath();
     ctx.moveTo(x, overheadY + 8);
     ctx.lineTo(x - 5, overheadY);
@@ -653,35 +1057,35 @@ function drawPlayerAvatar(
     ctx.closePath();
     ctx.fill();
 
-    // Player Pill Tag with PlayStyle Icon
+    // High-Fidelity Player Name Tag with Rating & PlayStyle
     ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(10, 15, 29, 0.88)';
-    ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth = 1;
+    ctx.fillStyle = 'rgba(6, 10, 20, 0.92)';
+    ctx.strokeStyle = '#06b6d4';
+    ctx.lineWidth = 1.2;
 
-    const playStyleBadge = p.player.playStyles?.[0] ? ' ⭐' : '';
+    const playStyleBadge = p.player.playStyles?.[0] ? ' ⚡' : '';
     const labelText = `${p.player.shortName}${playStyleBadge}`;
-    ctx.font = 'bold 9px "Outfit", sans-serif';
-    const tagW = ctx.measureText(labelText).width + 16;
-    ctx.roundRect(x - tagW / 2, overheadY - 16, tagW, 14, 4);
+    ctx.font = '900 9.5px "Chakra Petch", sans-serif';
+    const tagW = ctx.measureText(labelText).width + 18;
+    ctx.roundRect(x - tagW / 2, overheadY - 16, tagW, 15, 4);
     ctx.fill();
     ctx.stroke();
 
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(labelText, x, overheadY - 8);
+    ctx.fillText(labelText, x, overheadY - 6.5);
 
     // Chargeable Power Shot Meter
     if (shootCharge > 0) {
-      const barW = 36;
+      const barW = 38;
       const barH = 5;
       const barX = x - barW / 2;
       const barY = overheadY - 24;
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
       ctx.fillRect(barX, barY, barW, barH);
 
       const fillW = barW * shootCharge;
-      ctx.fillStyle = shootCharge > 0.85 ? '#ef4444' : shootCharge > 0.5 ? '#f59e0b' : '#22c55e';
+      ctx.fillStyle = shootCharge > 0.85 ? '#ef4444' : shootCharge > 0.5 ? '#f59e0b' : '#06b6d4';
       ctx.fillRect(barX, barY, fillW, barH);
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 0.8;
