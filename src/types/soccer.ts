@@ -22,11 +22,18 @@ export interface PlayerStats {
   physical?: number;
 }
 
+export type HairStyle = 'short' | 'fade' | 'curly' | 'dreads' | 'slick' | 'buzz' | 'afro' | 'mohawk';
+export type FacialHair = 'none' | 'stubble' | 'beard' | 'goatee';
+export type FaceCardTheme = 'gold' | 'tots' | 'totw' | 'future_stars' | 'icon';
+
 export interface PlayerLikeness {
   skinTone: string;     // Hex e.g. '#f5d0b0'
-  hairStyle: 'short' | 'fade' | 'curly' | 'dreads' | 'slick' | 'buzz';
+  hairStyle: HairStyle;
   hairColor: string;    // Hex e.g. '#261b11'
   bootColor: string;    // Hex e.g. '#e11d48' or '#22c55e'
+  facialHair?: FacialHair;
+  faceCardTheme?: FaceCardTheme;
+  cardTier?: 'bronze' | 'silver' | 'gold' | 'special';
 }
 
 export interface Player {

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Team, Player } from '../types/soccer';
 import { FORMATION_SLOTS } from '../game/formations';
+import { PlayerFaceCard, PlayerFaceAvatar } from './PlayerFaceCard';
+import { PlayerEditorModal } from './PlayerEditorModal';
 import { 
   ChevronLeft, 
   ArrowRightLeft, 
@@ -12,7 +14,9 @@ import {
   Mail, 
   Bell, 
   Settings,
-  Check
+  Check,
+  UserPlus,
+  Edit3
 } from 'lucide-react';
 
 interface SquadManagementProps {
@@ -37,6 +41,40 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
   const [showFormationModal, setShowFormationModal] = useState(false);
   const [showTacticsModal, setShowTacticsModal] = useState(false);
   const [showPlaystylesModal, setShowPlaystylesModal] = useState(false);
+  const [showPlayerEditor, setShowPlayerEditor] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
+
+  const handleEditPlayer = () => {
+    setIsCreateMode(false);
+    setShowPlayerEditor(true);
+  };
+
+  const handleCreatePlayer = () => {
+    setIsCreateMode(true);
+    setShowPlayerEditor(true);
+  };
+
+  const handleSavePlayer = (updatedOrNewPlayer: Player) => {
+    if (isCreateMode) {
+      // Add newly created custom player to squad
+      const newPlayers = [...team.players, updatedOrNewPlayer];
+      onUpdateTeam({
+        ...team,
+        players: newPlayers,
+      });
+      setSelectedPlayer(updatedOrNewPlayer);
+    } else {
+      // Update existing player's stats, likeness, attributes
+      const newPlayers = team.players.map((p) =>
+        p.id === updatedOrNewPlayer.id ? updatedOrNewPlayer : p
+      );
+      onUpdateTeam({
+        ...team,
+        players: newPlayers,
+      });
+      setSelectedPlayer(updatedOrNewPlayer);
+    }
+  };
 
   const formationsList = Object.keys(FORMATION_SLOTS);
   const tacticsList: Team['tactic'][] = [
@@ -117,6 +155,14 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
 
         {/* Top Right Quick Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={handleCreatePlayer}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition shadow-[0_0_12px_rgba(16,185,129,0.35)] cursor-pointer"
+            title="Create Custom Player"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span className="hidden sm:inline">CREATE PLAYER</span>
+          </button>
           <button
             onClick={onOpenInbox}
             className="w-9 h-9 rounded-xl bg-slate-900/90 border border-cyan-500/30 hover:border-cyan-400 flex items-center justify-center text-cyan-300 transition"
@@ -220,12 +266,16 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
                       </span>
                     </div>
 
-                    {/* Likeness Portrait Circle */}
-                    <div
-                      className="w-6 h-6 md:w-7 md:h-7 rounded-full border border-white/20 flex items-center justify-center text-xs shadow-inner"
-                      style={{ backgroundColor: player.likeness?.skinTone || '#d49b6a' }}
-                    >
-                      ⚽
+                    {/* Likeness Portrait Avatar */}
+                    <div className="w-7 h-7 rounded-full border border-white/20 flex items-center justify-center overflow-hidden shadow-inner bg-slate-900">
+                      <PlayerFaceAvatar
+                        skinTone={player.likeness?.skinTone || '#d49b6a'}
+                        hairStyle={player.likeness?.hairStyle || 'short'}
+                        hairColor={player.likeness?.hairColor || '#111827'}
+                        facialHair={player.likeness?.facialHair || 'none'}
+                        jerseyColor={team.kit.primary}
+                        size={28}
+                      />
                     </div>
 
                     {/* Surname Banner */}
@@ -269,11 +319,15 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
                         : 'bg-slate-900/70 border-white/10 text-white/80 hover:border-cyan-500/40 hover:bg-slate-900'
                     }`}
                   >
-                    <div
-                      className="w-7 h-7 rounded-full border border-white/20 flex items-center justify-center text-[10px] font-black"
-                      style={{ backgroundColor: player.likeness?.skinTone || '#d49b6a' }}
-                    >
-                      {player.position}
+                    <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center overflow-hidden shadow bg-slate-950 shrink-0">
+                      <PlayerFaceAvatar
+                        skinTone={player.likeness?.skinTone || '#d49b6a'}
+                        hairStyle={player.likeness?.hairStyle || 'short'}
+                        hairColor={player.likeness?.hairColor || '#111827'}
+                        facialHair={player.likeness?.facialHair || 'none'}
+                        jerseyColor={team.kit.primary}
+                        size={32}
+                      />
                     </div>
 
                     <div className="text-left">
@@ -322,19 +376,22 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
               </div>
             </div>
 
-            {/* Star Player Cutout Visual Representation */}
-            <div className="my-4 p-4 rounded-2xl bg-gradient-to-b from-cyan-950/40 to-slate-900/60 border border-cyan-500/20 flex items-center justify-center relative overflow-hidden">
-              <div className="w-28 h-28 rounded-2xl bg-slate-900/80 border-2 border-cyan-400/50 flex flex-col items-center justify-center text-4xl shadow-[0_0_25px_rgba(6,182,212,0.3)] relative">
-                <div 
-                  className="w-16 h-16 rounded-full border-2 border-white/40 flex items-center justify-center text-2xl shadow-lg"
-                  style={{ backgroundColor: selectedPlayer.likeness?.skinTone || '#d49b6a' }}
-                >
-                  ⚽
-                </div>
-                <span className="text-[10px] font-mono font-bold text-cyan-300 mt-1">
-                  {selectedPlayer.position} • #{selectedPlayer.number}
-                </span>
-              </div>
+            {/* Real-time Dynamic Face Card & Edit Trigger */}
+            <div className="my-3 flex flex-col items-center justify-center">
+              <PlayerFaceCard
+                player={selectedPlayer}
+                team={team}
+                size="md"
+                onClick={handleEditPlayer}
+                className="cursor-pointer"
+              />
+              <button
+                onClick={handleEditPlayer}
+                className="mt-2.5 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-[0_0_15px_rgba(6,182,212,0.35)] cursor-pointer"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                EDIT ATTRIBUTES & FACE CARD
+              </button>
             </div>
 
             {/* Core Stats Progress Bars (matches image.png) */}
@@ -506,6 +563,18 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
           </div>
         </div>
       )}
+
+      {/* =========================================================================
+          PLAYER ATTRIBUTE & FACE CARD CUSTOMIZER MODAL
+      ========================================================================= */}
+      <PlayerEditorModal
+        isOpen={showPlayerEditor}
+        onClose={() => setShowPlayerEditor(false)}
+        onSavePlayer={handleSavePlayer}
+        initialPlayer={isCreateMode ? null : selectedPlayer}
+        team={team}
+        isCreateMode={isCreateMode}
+      />
     </div>
   );
 };
