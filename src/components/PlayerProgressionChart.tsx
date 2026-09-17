@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Player, Team } from '../types/soccer';
 import {
   ResponsiveContainer,
@@ -95,6 +96,8 @@ interface PlayerProgressionChartProps {
   currentMatchday?: number;
   onApplyIntensity?: (intensity: TrainingIntensityLevel) => void;
   onOpenTrainingAcademy?: () => void;
+  onOpenDrills?: () => void;
+  isCompact?: boolean;
 }
 
 export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
@@ -103,6 +106,8 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
   currentMatchday = 12,
   onApplyIntensity,
   onOpenTrainingAcademy,
+  onOpenDrills,
+  isCompact = false,
 }) => {
   const [selectedIntensity, setSelectedIntensity] = useState<TrainingIntensityLevel>('balanced');
   const [showAllIntensities, setShowAllIntensities] = useState<boolean>(true);
@@ -181,8 +186,129 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
   const projectedFinalOvr = chartData[chartData.length - 1]?.overall || player.rating;
   const totalGrowth = projectedFinalOvr - baselineRating;
 
+  // Compact Mode for Squad Management Inspector Side Panel
+  if (isCompact) {
+    return (
+      <motion.div
+        key={`compact-${player.id}`}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, ease: 'easeOut' }}
+        className="bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-3 flex flex-col gap-2.5 relative overflow-hidden shadow-lg"
+      >
+        {/* Subtle Ambient Glow */}
+        <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+
+        {/* Compact Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+              {player.position}
+            </span>
+            <span className="text-xs font-bold text-white font-['Chakra_Petch'] truncate max-w-[110px]">
+              {player.shortName || player.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 text-[11px] font-mono">
+            <span className="text-white/50 text-[10px]">OVR</span>
+            <span className="text-cyan-300 font-bold">{player.rating}</span>
+            <span className="text-white/40">➔</span>
+            <span className="text-emerald-400 font-bold">{projectedFinalOvr}</span>
+            <span className="text-[10px] text-amber-400 font-bold ml-0.5">
+              (+{Math.max(0, projectedFinalOvr - player.rating)})
+            </span>
+          </div>
+        </div>
+
+        {/* Mini Intensity Selector Pills */}
+        <div className="grid grid-cols-4 gap-1">
+          {(Object.values(TRAINING_INTENSITY_CONFIGS) as TrainingIntensityConfig[]).map((cfg) => {
+            const isSelected = selectedIntensity === cfg.id;
+            return (
+              <motion.button
+                key={cfg.id}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => {
+                  setSelectedIntensity(cfg.id);
+                  if (onApplyIntensity) onApplyIntensity(cfg.id);
+                }}
+                className={`py-1 px-0.5 rounded-lg text-[9px] font-['Chakra_Petch'] font-bold uppercase tracking-wider text-center transition border cursor-pointer truncate ${
+                  isSelected
+                    ? 'bg-slate-950 border-emerald-400 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                    : 'bg-slate-950/40 border-white/5 text-white/50 hover:text-white'
+                }`}
+              >
+                {cfg.id}
+              </motion.button>
+            );
+          })}
+        </div>
+
+        {/* Mini Progression Chart with Subtle Scale & Opacity Entry */}
+        <motion.div
+          key={`mini-chart-${player.id}-${selectedIntensity}`}
+          initial={{ opacity: 0.6, scale: 0.985 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.25 }}
+          className="w-full h-36 bg-slate-950/90 rounded-xl p-1 border border-cyan-500/10 relative"
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={chartData} margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
+              <defs>
+                <linearGradient id="compactActiveGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={activeConfig.color} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={activeConfig.color} stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+              <XAxis dataKey="matchday" stroke="rgba(255,255,255,0.3)" fontSize={9} tickLine={false} />
+              <YAxis
+                domain={[Math.max(40, baselineRating - 2), Math.min(99, potential + 2)]}
+                stroke="rgba(255,255,255,0.3)"
+                fontSize={9}
+                tickLine={false}
+              />
+              <Tooltip content={<CustomChartTooltip currentMatchday={currentMatchday} />} />
+              <ReferenceLine y={potential} stroke="#a855f7" strokeDasharray="3 3" />
+              <ReferenceLine x={`MD ${currentMatchday}`} stroke="#22d3ee" strokeDasharray="3 3" />
+              <Area
+                type="monotone"
+                dataKey="overall"
+                stroke={activeConfig.color}
+                strokeWidth={2.2}
+                fill="url(#compactActiveGrad)"
+                dot={{ r: 2, fill: activeConfig.color }}
+                activeDot={{ r: 4 }}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </motion.div>
+
+        {/* Action Link to drills or academy */}
+        {(onOpenDrills || onOpenTrainingAcademy) && (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => (onOpenDrills ? onOpenDrills() : onOpenTrainingAcademy?.())}
+            className="w-full py-1.5 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-['Chakra_Petch'] font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer"
+          >
+            <Zap className="w-3 h-3 text-emerald-400" />
+            <span>LAUNCH FOCUSED TRAINING DRILL</span>
+          </motion.button>
+        )}
+      </motion.div>
+    );
+  }
+
   return (
-    <div className="bg-slate-950/90 border border-cyan-500/30 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col gap-5 relative overflow-hidden backdrop-blur-md">
+    <motion.div
+      key={`full-${player.id}`}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      className="bg-slate-950/90 border border-cyan-500/30 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col gap-5 relative overflow-hidden backdrop-blur-md"
+    >
       {/* Background Decorative Energy Lines */}
       <div className="absolute top-0 right-1/4 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -192,7 +318,12 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
       ========================================================================= */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-cyan-900/40 pb-4 relative z-10">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl border-2 border-cyan-400/40 bg-slate-900 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.3)] overflow-hidden shrink-0">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.25 }}
+            className="w-12 h-12 rounded-2xl border-2 border-cyan-400/40 bg-slate-900 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.3)] overflow-hidden shrink-0"
+          >
             <PlayerFaceAvatar
               skinTone={player.likeness?.skinTone || '#d49b6a'}
               hairStyle={player.likeness?.hairStyle || 'short'}
@@ -201,7 +332,7 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
               jerseyColor={team.kit.primary}
               size={48}
             />
-          </div>
+          </motion.div>
 
           <div>
             <div className="flex items-center gap-2">
@@ -222,37 +353,54 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
           </div>
         </div>
 
-        {/* Quick KPI Stat Pills */}
+        {/* Quick KPI Stat Pills with Staggered Motion */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.05, duration: 0.22 }}
+            className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-center"
+          >
             <span className="text-[9px] text-white/40 block font-mono uppercase">CURRENT</span>
             <span className="text-lg font-black font-['Chakra_Petch'] text-cyan-300">
               {player.rating}
             </span>
-          </div>
+          </motion.div>
 
-          <div className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, duration: 0.22 }}
+            className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-center"
+          >
             <span className="text-[9px] text-white/40 block font-mono uppercase">PROJECTED</span>
             <span className="text-lg font-black font-['Chakra_Petch'] text-emerald-400">
               {projectedFinalOvr}
             </span>
-          </div>
+          </motion.div>
 
-          <div className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.15, duration: 0.22 }}
+            className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-center"
+          >
             <span className="text-[9px] text-white/40 block font-mono uppercase">NET GAIN</span>
             <span className="text-lg font-black font-['Chakra_Petch'] text-amber-400">
               +{Math.max(0, projectedFinalOvr - player.rating)}
             </span>
-          </div>
+          </motion.div>
 
-          {onOpenTrainingAcademy && (
-            <button
-              onClick={onOpenTrainingAcademy}
+          {(onOpenDrills || onOpenTrainingAcademy) && (
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => (onOpenDrills ? onOpenDrills() : onOpenTrainingAcademy?.())}
               className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.35)] transition cursor-pointer"
             >
               <Zap className="w-3.5 h-3.5" />
               <span>DRILL ACADEMY</span>
-            </button>
+            </motion.button>
           )}
         </div>
       </div>
@@ -272,12 +420,17 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-          {(Object.values(TRAINING_INTENSITY_CONFIGS) as TrainingIntensityConfig[]).map((cfg) => {
+          {(Object.values(TRAINING_INTENSITY_CONFIGS) as TrainingIntensityConfig[]).map((cfg, index) => {
             const isSelected = selectedIntensity === cfg.id;
 
             return (
-              <button
+              <motion.button
                 key={cfg.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.04 * index, duration: 0.2 }}
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   setSelectedIntensity(cfg.id);
                   if (onApplyIntensity) onApplyIntensity(cfg.id);
@@ -313,7 +466,7 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
                     Risk: {cfg.injuryRiskPercent}%
                   </span>
                 </div>
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -325,36 +478,39 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-cyan-900/30 rounded-2xl p-2.5">
         {/* Metric Switcher */}
         <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-white/10">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.97 }}
             onClick={() => setViewMetric('overall')}
-            className={`px-3 py-1.5 rounded-lg font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition ${
+            className={`px-3 py-1.5 rounded-lg font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition cursor-pointer ${
               viewMetric === 'overall'
                 ? 'bg-cyan-500 text-slate-950 shadow-[0_0_10px_rgba(6,182,212,0.4)]'
                 : 'text-white/60 hover:text-white'
             }`}
           >
             OVERALL RATING
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
             onClick={() => setViewMetric('attributes')}
-            className={`px-3 py-1.5 rounded-lg font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition ${
+            className={`px-3 py-1.5 rounded-lg font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition cursor-pointer ${
               viewMetric === 'attributes'
                 ? 'bg-cyan-500 text-slate-950 shadow-[0_0_10px_rgba(6,182,212,0.4)]'
                 : 'text-white/60 hover:text-white'
             }`}
           >
             6 CORE ATTRIBUTES
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
             onClick={() => setViewMetric('stamina')}
-            className={`px-3 py-1.5 rounded-lg font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition ${
+            className={`px-3 py-1.5 rounded-lg font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition cursor-pointer ${
               viewMetric === 'stamina'
                 ? 'bg-cyan-500 text-slate-950 shadow-[0_0_10px_rgba(6,182,212,0.4)]'
                 : 'text-white/60 hover:text-white'
             }`}
           >
             STAMINA & FATIGUE
-          </button>
+          </motion.button>
         </div>
 
         {/* Recharts Compare All Toggle */}
@@ -372,9 +528,15 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
       </div>
 
       {/* =========================================================================
-          RECHARTS VISUALIZATION CONTAINER
+          RECHARTS VISUALIZATION CONTAINER WITH SUBTLE MOTION TRANSITION
       ========================================================================= */}
-      <div className="w-full h-72 sm:h-80 bg-slate-950/80 border border-cyan-500/20 rounded-2xl p-2 sm:p-4 relative">
+      <motion.div
+        key={`chart-container-${player.id}-${viewMetric}-${selectedIntensity}`}
+        initial={{ opacity: 0.65, scale: 0.995 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.28, ease: 'easeOut' }}
+        className="w-full h-72 sm:h-80 bg-slate-950/80 border border-cyan-500/20 rounded-2xl p-2 sm:p-4 relative"
+      >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}
@@ -595,15 +757,20 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
             )}
           </ComposedChart>
         </ResponsiveContainer>
-      </div>
+      </motion.div>
 
       {/* =========================================================================
           BOTTOM SUMMARY INSIGHTS: Manager Tactical Report
       ========================================================================= */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-slate-900/70 border border-white/10 rounded-2xl p-3.5">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.25 }}
+          className="bg-slate-900/70 border border-white/10 rounded-2xl p-3.5"
+        >
           <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider block mb-1">
-            PROJECTED CEILING CEILING
+            PROJECTED CEILING
           </span>
           <div className="flex items-center justify-between">
             <span className="text-xl font-black font-['Chakra_Petch'] text-white">
@@ -616,9 +783,14 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
           <p className="text-[11px] text-white/50 mt-1 leading-relaxed">
             Under <strong>{activeConfig.name}</strong>, {player.shortName || player.name} reaches peak form around Matchday 28.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="bg-slate-900/70 border border-white/10 rounded-2xl p-3.5">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.25 }}
+          className="bg-slate-900/70 border border-white/10 rounded-2xl p-3.5"
+        >
           <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wider block mb-1">
             FATIGUE & ROTATION IMPACT
           </span>
@@ -633,9 +805,14 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
           <p className="text-[11px] text-white/50 mt-1 leading-relaxed">
             Maintain squad rotation in cup matches to mitigate hamstring fatigue.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="bg-slate-900/70 border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.25 }}
+          className="bg-slate-900/70 border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between"
+        >
           <div>
             <span className="text-[10px] font-mono text-teal-400 uppercase tracking-wider block mb-1">
               PRIMARY UPGRADE VECTORS
@@ -654,9 +831,9 @@ export const PlayerProgressionChart: React.FC<PlayerProgressionChartProps> = ({
           <span className="text-[10px] text-white/40 mt-2 font-mono">
             Updated dynamically based on training intensity
           </span>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

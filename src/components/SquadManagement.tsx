@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Team, Player } from '../types/soccer';
 import { FORMATION_SLOTS } from '../game/formations';
 import { PlayerFaceCard, PlayerFaceAvatar } from './PlayerFaceCard';
@@ -528,52 +529,67 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
               </button>
             </div>
 
-            {inspectorTab === 'stats' ? (
-              <>
-                {/* Core Stats Progress Bars (matches image.png) */}
-                <div className="space-y-1.5 py-1">
-                  <StatBar label="AVR" value={selectedPlayer.rating} color="cyan" />
-                  <StatBar label="Pace" value={selectedPlayer.stats.pace} color="teal" />
-                  <StatBar label="Shooting" value={selectedPlayer.stats.shooting} color="amber" />
-                  <StatBar label="Passing" value={selectedPlayer.stats.passing} color="cyan" />
-                  <StatBar label="Dribbling" value={selectedPlayer.stats.dribbling} color="teal" />
-                  <StatBar label="Defending" value={selectedPlayer.stats.defending} color="emerald" />
-                  <StatBar label="Physical" value={selectedPlayer.stats.physicality} color="amber" />
-                </div>
-
-                {/* Shortcut button to Full Progression Studio */}
-                <button
-                  onClick={() => setViewMode('progression')}
-                  className="w-full mt-2 py-2 px-3 rounded-xl bg-slate-900 border border-emerald-500/40 hover:bg-emerald-500/20 text-emerald-300 font-['Chakra_Petch'] font-bold text-xs uppercase tracking-wider flex items-center justify-between transition shadow group cursor-pointer"
+            <AnimatePresence mode="wait">
+              {inspectorTab === 'stats' ? (
+                <motion.div
+                  key="inspector-stats"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18 }}
                 >
-                  <span className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-400" />
-                    CAREER PROGRESSION (RECHARTS)
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-emerald-400/60 group-hover:text-emerald-300 transition" />
-                </button>
-              </>
-            ) : (
-              /* Compact Recharts Progression View in Inspector */
-              <div className="space-y-2 py-1">
-                <PlayerProgressionChart
-                  player={selectedPlayer}
-                  team={team}
-                  currentMatchday={currentMatchday}
-                  onApplyIntensity={handleApplyIntensity}
-                  onOpenDrills={() => setShowDevelopmentModal(true)}
-                  isCompact={true}
-                />
+                  {/* Core Stats Progress Bars (matches image.png) */}
+                  <div className="space-y-1.5 py-1">
+                    <StatBar label="AVR" value={selectedPlayer.rating} color="cyan" />
+                    <StatBar label="Pace" value={selectedPlayer.stats.pace} color="teal" />
+                    <StatBar label="Shooting" value={selectedPlayer.stats.shooting} color="amber" />
+                    <StatBar label="Passing" value={selectedPlayer.stats.passing} color="cyan" />
+                    <StatBar label="Dribbling" value={selectedPlayer.stats.dribbling} color="teal" />
+                    <StatBar label="Defending" value={selectedPlayer.stats.defending} color="emerald" />
+                    <StatBar label="Physical" value={selectedPlayer.stats.physicality} color="amber" />
+                  </div>
 
-                <button
-                  onClick={() => setViewMode('progression')}
-                  className="w-full mt-1 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition shadow-[0_0_12px_rgba(16,185,129,0.35)] cursor-pointer"
+                  {/* Shortcut button to Full Progression Studio */}
+                  <button
+                    onClick={() => setViewMode('progression')}
+                    className="w-full mt-2 py-2 px-3 rounded-xl bg-slate-900 border border-emerald-500/40 hover:bg-emerald-500/20 text-emerald-300 font-['Chakra_Petch'] font-bold text-xs uppercase tracking-wider flex items-center justify-between transition shadow group cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-emerald-400" />
+                      CAREER PROGRESSION (RECHARTS)
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-emerald-400/60 group-hover:text-emerald-300 transition" />
+                  </button>
+                </motion.div>
+              ) : (
+                /* Compact Recharts Progression View in Inspector */
+                <motion.div
+                  key="inspector-progression"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-2 py-1"
                 >
-                  <Maximize2 className="w-3.5 h-3.5" />
-                  EXPAND FULL PROGRESSION STUDIO
-                </button>
-              </div>
-            )}
+                  <PlayerProgressionChart
+                    player={selectedPlayer}
+                    team={team}
+                    currentMatchday={currentMatchday}
+                    onApplyIntensity={handleApplyIntensity}
+                    onOpenDrills={() => setShowDevelopmentModal(true)}
+                    isCompact={true}
+                  />
+
+                  <button
+                    onClick={() => setViewMode('progression')}
+                    className="w-full mt-1 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition shadow-[0_0_12px_rgba(16,185,129,0.35)] cursor-pointer"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    EXPAND FULL PROGRESSION STUDIO
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* =========================================================================
@@ -689,15 +705,25 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
             </div>
           </div>
 
-          {/* Full-size PlayerProgressionChart using Recharts */}
+          {/* Full-size PlayerProgressionChart using Recharts with subtle motion entry */}
           <div className="flex-1 overflow-y-auto">
-            <PlayerProgressionChart
-              player={selectedPlayer}
-              team={team}
-              currentMatchday={currentMatchday}
-              onApplyIntensity={handleApplyIntensity}
-              onOpenDrills={() => setShowDevelopmentModal(true)}
-            />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`studio-chart-${selectedPlayer.id}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+              >
+                <PlayerProgressionChart
+                  player={selectedPlayer}
+                  team={team}
+                  currentMatchday={currentMatchday}
+                  onApplyIntensity={handleApplyIntensity}
+                  onOpenDrills={() => setShowDevelopmentModal(true)}
+                />
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       )}
