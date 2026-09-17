@@ -815,6 +815,7 @@ export default function App() {
               onOpenInbox={handleOpenInbox}
               onOpenSocial={handleOpenSocial}
               onOpenSettings={handleOpenSettings}
+              currentMatchday={careerState?.currentMatchday || 12}
             />
           </div>
           <FCBottomNav activeTab={navTab} onSelectTab={handleSelectNavTab} />

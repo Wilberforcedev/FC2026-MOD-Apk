@@ -17,9 +17,13 @@ import {
   Check,
   UserPlus,
   Edit3,
-  Zap
+  Zap,
+  TrendingUp,
+  Activity,
+  Maximize2
 } from 'lucide-react';
 import { PlayerDevelopmentModal } from './PlayerDevelopmentModal';
+import { PlayerProgressionChart, TrainingIntensityLevel } from './PlayerProgressionChart';
 
 interface SquadManagementProps {
   team: Team;
@@ -28,6 +32,7 @@ interface SquadManagementProps {
   onOpenInbox?: () => void;
   onOpenSocial?: () => void;
   onOpenSettings?: () => void;
+  currentMatchday?: number;
 }
 
 export const SquadManagement: React.FC<SquadManagementProps> = ({
@@ -37,6 +42,7 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
   onOpenInbox,
   onOpenSocial,
   onOpenSettings,
+  currentMatchday = 12,
 }) => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player>(team.players[0]);
   const [swapSourceIndex, setSwapSourceIndex] = useState<number | null>(null);
@@ -46,6 +52,9 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
   const [showPlayerEditor, setShowPlayerEditor] = useState(false);
   const [showDevelopmentModal, setShowDevelopmentModal] = useState(false);
   const [isCreateMode, setIsCreateMode] = useState(false);
+  const [viewMode, setViewMode] = useState<'pitch' | 'progression'>('pitch');
+  const [inspectorTab, setInspectorTab] = useState<'stats' | 'progression'>('stats');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const handlePlayerDevelopmentUpdated = (updatedPlayer: Player) => {
     const updatedPlayers = team.players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p);
@@ -54,6 +63,21 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
       players: updatedPlayers,
     });
     setSelectedPlayer(updatedPlayer);
+  };
+
+  const handleApplyIntensity = (intensity: TrainingIntensityLevel) => {
+    const updatedPlayer: Player = {
+      ...selectedPlayer,
+      development: {
+        xp: selectedPlayer.development?.xp || 0,
+        level: selectedPlayer.development?.level || 1,
+        drillsCompleted: selectedPlayer.development?.drillsCompleted || 0,
+        form: selectedPlayer.development?.form || 'Good',
+      },
+    };
+    handlePlayerDevelopmentUpdated(updatedPlayer);
+    setToastMessage(`Training intensity set to ${intensity.toUpperCase()} for ${selectedPlayer.shortName || selectedPlayer.name}!`);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const handleEditPlayer = () => {
@@ -137,13 +161,13 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
       <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* =========================================================================
-          TOP HEADER: Back, Title, Formation Badge, Status Icons
+          TOP HEADER: Back, Title, Formation Badge, View Switcher & Action Icons
       ========================================================================= */}
       <div className="h-16 px-4 md:px-8 bg-slate-950/90 backdrop-blur-md border-b border-cyan-900/40 flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="w-10 h-10 rounded-xl bg-slate-900 border border-cyan-500/30 hover:border-cyan-400 hover:bg-slate-800 text-cyan-300 flex items-center justify-center transition shadow"
+            className="w-10 h-10 rounded-xl bg-slate-900 border border-cyan-500/30 hover:border-cyan-400 hover:bg-slate-800 text-cyan-300 flex items-center justify-center transition shadow cursor-pointer"
             title="Return to Main Menu"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -161,19 +185,53 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
                 OVR {team.overallRating}
               </span>
             </div>
-            <p className="text-[11px] text-white/50">{team.name} • Tactical Blueprint & Lineup</p>
+            <p className="text-[11px] text-white/50">{team.name} • Matchday {currentMatchday}</p>
           </div>
+        </div>
+
+        {/* Central View Switcher: Pitch & Lineup vs Progression Analytics */}
+        <div className="hidden md:flex items-center gap-1 bg-slate-900/90 p-1 rounded-2xl border border-cyan-500/30 shadow">
+          <button
+            onClick={() => setViewMode('pitch')}
+            className={`px-3.5 py-1.5 rounded-xl font-['Chakra_Petch'] font-bold text-xs uppercase tracking-wider transition flex items-center gap-1.5 cursor-pointer ${
+              viewMode === 'pitch'
+                ? 'bg-gradient-to-r from-cyan-500 to-teal-400 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                : 'text-white/60 hover:text-white'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>PITCH & LINEUP</span>
+          </button>
+          <button
+            onClick={() => setViewMode('progression')}
+            className={`px-3.5 py-1.5 rounded-xl font-['Chakra_Petch'] font-bold text-xs uppercase tracking-wider transition flex items-center gap-1.5 cursor-pointer ${
+              viewMode === 'progression'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                : 'text-white/60 hover:text-white'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>PROGRESSION (RECHARTS)</span>
+          </button>
         </div>
 
         {/* Top Right Quick Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
           <button
+            onClick={() => setShowDevelopmentModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition shadow-[0_0_12px_rgba(6,182,212,0.35)] cursor-pointer"
+            title="Train Drills & Boost Attributes"
+          >
+            <Zap className="w-4 h-4" />
+            <span className="hidden sm:inline">TRAIN SQUAD</span>
+          </button>
+          <button
             onClick={handleCreatePlayer}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition shadow-[0_0_12px_rgba(16,185,129,0.35)] cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-emerald-500/40 hover:bg-slate-800 text-emerald-300 font-['Chakra_Petch'] font-bold text-xs uppercase tracking-wider transition cursor-pointer"
             title="Create Custom Player"
           >
             <UserPlus className="w-4 h-4" />
-            <span className="hidden sm:inline">CREATE PLAYER</span>
+            <span className="hidden lg:inline">CREATE</span>
           </button>
           <button
             onClick={onOpenInbox}
@@ -200,6 +258,43 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
         </div>
       </div>
 
+      {/* Mobile Sub-Navigation Bar */}
+      <div className="flex md:hidden items-center justify-around bg-slate-950 border-b border-cyan-900/30 px-3 py-1.5">
+        <button
+          onClick={() => setViewMode('pitch')}
+          className={`flex-1 py-1 px-2 rounded-lg font-['Chakra_Petch'] font-bold text-xs uppercase text-center transition ${
+            viewMode === 'pitch' ? 'bg-cyan-500 text-slate-950 font-black' : 'text-white/60'
+          }`}
+        >
+          Pitch & Lineup
+        </button>
+        <button
+          onClick={() => setViewMode('progression')}
+          className={`flex-1 py-1 px-2 rounded-lg font-['Chakra_Petch'] font-bold text-xs uppercase text-center transition flex items-center justify-center gap-1 ${
+            viewMode === 'progression' ? 'bg-emerald-500 text-slate-950 font-black' : 'text-emerald-400'
+          }`}
+        >
+          <TrendingUp className="w-3.5 h-3.5" />
+          Progression (Recharts)
+        </button>
+      </div>
+
+      {/* Dynamic Toast Feedback Banner */}
+      {toastMessage && (
+        <div className="bg-emerald-950/90 border-b border-emerald-400/50 px-6 py-2 text-emerald-200 text-xs flex items-center justify-between z-30 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-400" />
+            <span>{toastMessage}</span>
+          </div>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="text-white/60 hover:text-white text-[11px]"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Active Swap Alert Banner */}
       {swapSourceIndex !== null && (
         <div className="bg-gradient-to-r from-cyan-950/80 via-teal-950/80 to-slate-950 border-b border-cyan-400/40 px-6 py-2 text-cyan-300 text-xs flex items-center justify-between z-20 animate-pulse">
@@ -220,10 +315,12 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
 
       {/* =========================================================================
           MAIN BODY: Pitch Lineup + Bench (Left) & Star Player Inspector (Right)
+          OR Full Progression & Training Analytics Studio (Recharts)
       ========================================================================= */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-3 md:p-6 overflow-hidden">
-        {/* Left 8 Cols: 3D Tactical Pitch & Substitute Bar */}
-        <div className="lg:col-span-8 flex flex-col justify-between overflow-hidden bg-slate-950/70 border border-cyan-900/40 rounded-3xl p-4 shadow-2xl relative">
+      {viewMode === 'pitch' ? (
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-3 md:p-6 overflow-hidden">
+          {/* Left 8 Cols: 3D Tactical Pitch & Substitute Bar */}
+          <div className="lg:col-span-8 flex flex-col justify-between overflow-hidden bg-slate-950/70 border border-cyan-900/40 rounded-3xl p-4 shadow-2xl relative">
           {/* Tactical Pitch Surface */}
           <div className="flex-1 w-full bg-gradient-to-b from-[#061824] via-[#05141f] to-[#04101a] border border-cyan-500/30 rounded-2xl relative overflow-hidden shadow-inner flex items-center justify-center min-h-[360px]">
             {/* Perspective Turf Grid & Glowing Lines */}
@@ -406,16 +503,77 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
               </button>
             </div>
 
-            {/* Core Stats Progress Bars (matches image.png) */}
-            <div className="space-y-2 py-1">
-              <StatBar label="AVR" value={selectedPlayer.rating} color="cyan" />
-              <StatBar label="Pace" value={selectedPlayer.stats.pace} color="teal" />
-              <StatBar label="Shooting" value={selectedPlayer.stats.shooting} color="amber" />
-              <StatBar label="Passing" value={selectedPlayer.stats.passing} color="cyan" />
-              <StatBar label="Dribbling" value={selectedPlayer.stats.dribbling} color="teal" />
-              <StatBar label="Defending" value={selectedPlayer.stats.defending} color="emerald" />
-              <StatBar label="Physical" value={selectedPlayer.stats.physicality} color="amber" />
+            {/* Inspector Tab Switcher */}
+            <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-cyan-500/30 my-2.5">
+              <button
+                onClick={() => setInspectorTab('stats')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-['Chakra_Petch'] font-bold text-xs uppercase tracking-wider transition cursor-pointer ${
+                  inspectorTab === 'stats'
+                    ? 'bg-cyan-500 text-slate-950 shadow font-black'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Attributes
+              </button>
+              <button
+                onClick={() => setInspectorTab('progression')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-['Chakra_Petch'] font-bold text-xs uppercase tracking-wider transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  inspectorTab === 'progression'
+                    ? 'bg-emerald-500 text-slate-950 shadow font-black'
+                    : 'text-emerald-400 hover:text-emerald-300'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                Progression (Recharts)
+              </button>
             </div>
+
+            {inspectorTab === 'stats' ? (
+              <>
+                {/* Core Stats Progress Bars (matches image.png) */}
+                <div className="space-y-1.5 py-1">
+                  <StatBar label="AVR" value={selectedPlayer.rating} color="cyan" />
+                  <StatBar label="Pace" value={selectedPlayer.stats.pace} color="teal" />
+                  <StatBar label="Shooting" value={selectedPlayer.stats.shooting} color="amber" />
+                  <StatBar label="Passing" value={selectedPlayer.stats.passing} color="cyan" />
+                  <StatBar label="Dribbling" value={selectedPlayer.stats.dribbling} color="teal" />
+                  <StatBar label="Defending" value={selectedPlayer.stats.defending} color="emerald" />
+                  <StatBar label="Physical" value={selectedPlayer.stats.physicality} color="amber" />
+                </div>
+
+                {/* Shortcut button to Full Progression Studio */}
+                <button
+                  onClick={() => setViewMode('progression')}
+                  className="w-full mt-2 py-2 px-3 rounded-xl bg-slate-900 border border-emerald-500/40 hover:bg-emerald-500/20 text-emerald-300 font-['Chakra_Petch'] font-bold text-xs uppercase tracking-wider flex items-center justify-between transition shadow group cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-400" />
+                    CAREER PROGRESSION (RECHARTS)
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-emerald-400/60 group-hover:text-emerald-300 transition" />
+                </button>
+              </>
+            ) : (
+              /* Compact Recharts Progression View in Inspector */
+              <div className="space-y-2 py-1">
+                <PlayerProgressionChart
+                  player={selectedPlayer}
+                  team={team}
+                  currentMatchday={currentMatchday}
+                  onApplyIntensity={handleApplyIntensity}
+                  onOpenDrills={() => setShowDevelopmentModal(true)}
+                  isCompact={true}
+                />
+
+                <button
+                  onClick={() => setViewMode('progression')}
+                  className="w-full mt-1 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition shadow-[0_0_12px_rgba(16,185,129,0.35)] cursor-pointer"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  EXPAND FULL PROGRESSION STUDIO
+                </button>
+              </div>
+            )}
           </div>
 
           {/* =========================================================================
@@ -457,6 +615,92 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
           </div>
         </div>
       </div>
+      ) : (
+        <div className="flex-1 flex flex-col p-3 md:p-6 overflow-hidden gap-4">
+          {/* Squad Roster Horizontal Selection Strip */}
+          <div className="bg-slate-950/85 border border-cyan-900/40 rounded-2xl p-3 flex flex-col gap-2 shrink-0 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 font-bold">
+                  SQUAD ROSTER
+                </span>
+                <span className="text-xs text-white/70 font-['Chakra_Petch'] font-bold">
+                  Select player to analyze attribute curves & training load:
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setViewMode('pitch')}
+                  className="text-xs text-cyan-400 hover:text-cyan-300 underline font-mono flex items-center gap-1 cursor-pointer"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  Back to Pitch View
+                </button>
+                <span className="text-xs text-white/40 hidden sm:inline">
+                  {team.players.length} Players Available
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-cyan-500/20">
+              {team.players.map((p, idx) => {
+                const isSelected = p.id === selectedPlayer.id;
+                const isStarter = idx < 11;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedPlayer(p)}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border shrink-0 transition text-left cursor-pointer ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-emerald-950 to-teal-950 border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                        : 'bg-slate-900/90 border-white/10 text-white/70 hover:bg-slate-800 hover:border-cyan-500/40'
+                    }`}
+                  >
+                    <div className="relative">
+                      <PlayerFaceAvatar player={p} team={team} size="sm" />
+                      {isStarter && (
+                        <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-cyan-500 border border-slate-950 text-[8px] flex items-center justify-center font-black text-slate-950">
+                          S
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-['Chakra_Petch'] font-bold text-white whitespace-nowrap">
+                          {p.shortName || p.name}
+                        </span>
+                        <span className={`text-[9px] font-mono px-1 rounded font-bold ${
+                          p.position === 'ST' || p.position === 'RW' || p.position === 'LW' || p.position === 'CF' ? 'bg-red-500/20 text-red-300' :
+                          p.position === 'CAM' || p.position === 'CM' || p.position === 'CDM' ? 'bg-amber-500/20 text-amber-300' :
+                          p.position === 'GK' ? 'bg-purple-500/20 text-purple-300' : 'bg-cyan-500/20 text-cyan-300'
+                        }`}>
+                          {p.position}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-white/50">
+                        <span className="text-cyan-400 font-bold">OVR {p.rating}</span>
+                        <span>•</span>
+                        <span className="text-emerald-400 font-bold">POT {p.potential || Math.min(99, p.rating + 8)}</span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Full-size PlayerProgressionChart using Recharts */}
+          <div className="flex-1 overflow-y-auto">
+            <PlayerProgressionChart
+              player={selectedPlayer}
+              team={team}
+              currentMatchday={currentMatchday}
+              onApplyIntensity={handleApplyIntensity}
+              onOpenDrills={() => setShowDevelopmentModal(true)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           CHANGE FORMATION MODAL
@@ -586,6 +830,18 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
         initialPlayer={isCreateMode ? null : selectedPlayer}
         team={team}
         isCreateMode={isCreateMode}
+      />
+
+      {/* =========================================================================
+          PLAYER DEVELOPMENT & TRAINING DRILL MODAL
+      ========================================================================= */}
+      <PlayerDevelopmentModal
+        isOpen={showDevelopmentModal}
+        player={selectedPlayer}
+        team={team}
+        matchday={currentMatchday}
+        onClose={() => setShowDevelopmentModal(false)}
+        onPlayerUpdated={(updatedP) => handlePlayerDevelopmentUpdated(updatedP)}
       />
     </div>
   );
