@@ -1,5 +1,7 @@
-import React from 'react';
-import { X, Volume2, VolumeX, Monitor, Shield, Gamepad2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Volume2, VolumeX, Monitor, Shield, Gamepad2, Download, WifiOff } from 'lucide-react';
+import { PWAInstallModal } from './PWAInstallModal';
+import { usePWAInstall } from './usePWAInstall';
 
 interface FCSettingsModalProps {
   isOpen: boolean;
@@ -14,6 +16,9 @@ export const FCSettingsModal: React.FC<FCSettingsModalProps> = ({
   onToggleMute,
   onClose,
 }) => {
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const { isInstalled, isInstallable, os } = usePWAInstall();
+
   if (!isOpen) return null;
 
   return (
@@ -100,18 +105,53 @@ export const FCSettingsModal: React.FC<FCSettingsModalProps> = ({
               ULTRA 60FPS
             </span>
           </div>
+
+          {/* Progressive Web App & Multi-OS Installation */}
+          <div className="bg-gradient-to-r from-slate-900 via-cyan-950/30 to-slate-900 border border-cyan-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300 flex-shrink-0">
+                <Download className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-white">Universal PWA & Offline Play</span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded font-mono font-bold">
+                    ALL OPERATING SYSTEMS
+                  </span>
+                </div>
+                <div className="text-xs text-white/60 mt-0.5 font-['Outfit']">
+                  Install as a native desktop or mobile app on Windows, macOS, Linux, ChromeOS, Android, and iOS. Service worker offline caching enabled.
+                </div>
+              </div>
+            </div>
+
+            <button
+              id="settings-pwa-install-btn"
+              onClick={() => setShowInstallModal(true)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-['Chakra_Petch'] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/20 transition active:scale-95 flex-shrink-0 cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>{isInstalled ? 'VIEW APP INFO' : 'INSTALL APP'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
         <div className="px-6 py-3 bg-slate-900/60 border-t border-white/10 flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition shadow-lg shadow-cyan-500/20"
+            className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition shadow-lg shadow-cyan-500/20 cursor-pointer"
           >
             Save & Close
           </button>
         </div>
       </div>
+
+      {/* PWA Multi-OS Install Modal */}
+      <PWAInstallModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+      />
     </div>
   );
 };

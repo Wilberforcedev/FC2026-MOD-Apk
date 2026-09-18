@@ -3,6 +3,7 @@ import { Mail, Bell, Settings, User } from 'lucide-react';
 import { Team } from '../types/soccer';
 import { ClubEmblem } from './ClubEmblem';
 import { LeagueEmblem } from './LeagueEmblem';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface FCHeaderBarProps {
   team?: Team;
@@ -84,8 +85,11 @@ export const FCHeaderBar: React.FC<FCHeaderBarProps> = ({
           </div>
         </div>
 
-        {/* Right: Currency, Inbox, Notifications, Settings */}
+        {/* Right: Install PWA, Currency, Inbox, Notifications, Settings */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Universal PWA Install Button */}
+          <PWAInstallButton />
+
           {/* Gold Coin Pill */}
           <div 
             id="fc-coin-pill"

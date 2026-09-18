@@ -20,7 +20,7 @@ export default defineConfig(() => {
           theme_color: '#0a0d14',
           background_color: '#0a0d14',
           display: 'standalone',
-          orientation: 'landscape-primary',
+          categories: ['games', 'sports', 'entertainment'],
           start_url: '/',
           scope: '/',
           icons: [
@@ -43,9 +43,32 @@ export default defineConfig(() => {
               purpose: 'maskable',
             },
           ],
+          shortcuts: [
+            {
+              name: 'Kick Off Match',
+              short_name: 'Kick Off',
+              description: 'Quick Exhibition Soccer Match',
+              url: '/?mode=kickoff',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }],
+            },
+            {
+              name: 'Tournament Cup',
+              short_name: 'Tournament',
+              description: 'Play Championship Tournament',
+              url: '/?mode=tournament',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }],
+            },
+            {
+              name: 'Penalty Shootout',
+              short_name: 'Penalties',
+              description: 'Sudden Death Penalty Duel',
+              url: '/?mode=penalties',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }],
+            },
+          ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json}'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/crests\.football-data\.org\/.*/i,

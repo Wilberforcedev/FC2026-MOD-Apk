@@ -1,21 +1,55 @@
 import React, { useState } from 'react';
 import { usePWAInstall } from './usePWAInstall';
-import { Download, Smartphone } from 'lucide-react';
-import { AndroidAPKModal } from './AndroidAPKModal';
+import { Download, CheckCircle, Monitor, Apple, Smartphone, Laptop, Cpu } from 'lucide-react';
+import { PWAInstallModal } from './PWAInstallModal';
 
-export const PWAInstallButton: React.FC = () => {
-  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
-  const [showIOSGuide, setShowIOSGuide] = useState(false);
-  const [showAPKModal, setShowAPKModal] = useState(false);
+interface PWAInstallButtonProps {
+  variant?: 'header' | 'compact' | 'full' | 'pill';
+  className?: string;
+  showIconOnlyOnMobile?: boolean;
+}
 
-  const handleInstallClick = async () => {
+export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
+  variant = 'header',
+  className = '',
+  showIconOnlyOnMobile = true,
+}) => {
+  const { isInstallable, isInstalled, os, install } = usePWAInstall();
+  const [showModal, setShowModal] = useState(false);
+
+  const handleInstallClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (isInstallable) {
       const success = await install();
       if (!success) {
-        setShowAPKModal(true);
+        setShowModal(true);
       }
     } else {
-      setShowAPKModal(true);
+      setShowModal(true);
+    }
+  };
+
+  const getOSIcon = () => {
+    switch (os) {
+      case 'windows': return <Monitor className="w-3.5 h-3.5" />;
+      case 'mac': return <Apple className="w-3.5 h-3.5" />;
+      case 'ios': return <Apple className="w-3.5 h-3.5" />;
+      case 'android': return <Smartphone className="w-3.5 h-3.5" />;
+      case 'linux': return <Laptop className="w-3.5 h-3.5" />;
+      case 'chromeos': return <Cpu className="w-3.5 h-3.5" />;
+      default: return <Download className="w-3.5 h-3.5" />;
+    }
+  };
+
+  const getLabel = () => {
+    switch (os) {
+      case 'windows': return 'INSTALL FOR WINDOWS';
+      case 'mac': return 'INSTALL FOR MAC';
+      case 'ios': return 'INSTALL ON IOS';
+      case 'android': return 'INSTALL FOR ANDROID';
+      case 'linux': return 'INSTALL FOR LINUX';
+      case 'chromeos': return 'INSTALL ON CHROMEBOOK';
+      default: return 'INSTALL APP (ALL OS)';
     }
   };
 
@@ -23,63 +57,42 @@ export const PWAInstallButton: React.FC = () => {
     <>
       {isInstalled ? (
         <button
-          onClick={() => setShowAPKModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold hover:bg-emerald-500/25 transition cursor-pointer"
-          title="Installed on Android / PWA. Click for APK details."
+          id="pwa-installed-badge"
+          onClick={() => setShowModal(true)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold hover:bg-emerald-500/25 transition cursor-pointer ${className}`}
+          title="Running in Standalone Mode • 100% Offline Cache Active"
         >
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>APK READY</span>
+          <span className={showIconOnlyOnMobile ? 'hidden sm:inline' : ''}>PWA INSTALLED</span>
+          <span className={showIconOnlyOnMobile ? 'sm:hidden' : 'hidden'}>PWA</span>
         </button>
       ) : isInstallable ? (
         <button
           id="pwa-install-btn"
           onClick={handleInstallClick}
-          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-3.5 py-1.5 text-xs font-black text-slate-950 shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition font-['Chakra_Petch'] uppercase tracking-wider cursor-pointer"
+          className={`flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 px-3 py-1.5 text-xs font-black text-slate-950 shadow-lg shadow-emerald-500/20 active:scale-95 transition font-['Chakra_Petch'] uppercase tracking-wider cursor-pointer ${className}`}
+          title="Install FC 2026 as a standalone offline desktop/mobile application"
         >
           <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>INSTALL APK</span>
-        </button>
-      ) : isIOS ? (
-        <button
-          onClick={() => setShowIOSGuide(true)}
-          className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-white/80 hover:bg-slate-800 transition cursor-pointer"
-        >
-          <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Install iOS</span>
+          <span className={showIconOnlyOnMobile ? 'hidden sm:inline' : ''}>INSTALL APP</span>
+          <span className={showIconOnlyOnMobile ? 'sm:hidden' : 'hidden'}>INSTALL</span>
         </button>
       ) : (
         <button
-          onClick={() => setShowAPKModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-['Chakra_Petch'] font-bold hover:bg-emerald-500/25 transition cursor-pointer uppercase tracking-wider"
-          title="Get Android APK or install WebAPK on your phone"
+          id="pwa-install-guide-btn"
+          onClick={() => setShowModal(true)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-['Chakra_Petch'] font-bold hover:bg-cyan-500/25 transition cursor-pointer uppercase tracking-wider ${className}`}
+          title="Install FC 2026 on Windows, macOS, Linux, Android, or iOS"
         >
-          <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-          <span>ANDROID APK</span>
+          {getOSIcon()}
+          <span className={showIconOnlyOnMobile ? 'hidden sm:inline' : ''}>{getLabel()}</span>
+          <span className={showIconOnlyOnMobile ? 'sm:hidden' : 'hidden'}>INSTALL</span>
         </button>
       )}
 
-      {/* Android APK Modal */}
-      <AndroidAPKModal isOpen={showAPKModal} onClose={() => setShowAPKModal(false)} />
-
-      {/* iOS Guide Modal */}
-      {showIOSGuide && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl bg-slate-900 border border-white/20 p-6 shadow-2xl text-white">
-            <h3 className="text-lg font-black font-['Chakra_Petch'] text-emerald-400">Install FC 2026 on iOS</h3>
-            <p className="mt-3 text-sm text-white/80 leading-relaxed font-['Outfit']">
-              1. Tap the <strong>Share</strong> button in Safari toolbar.<br />
-              2. Scroll down and select <strong>Add to Home Screen</strong>.<br />
-              3. Enjoy full-screen offline gameplay!
-            </p>
-            <button
-              onClick={() => setShowIOSGuide(false)}
-              className="mt-5 w-full rounded-xl bg-emerald-500 py-2.5 text-xs font-black text-slate-950 uppercase tracking-wider font-['Chakra_Petch'] hover:bg-emerald-400 transition"
-            >
-              Got It
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Cross-Platform PWA Install Modal */}
+      <PWAInstallModal isOpen={showModal} onClose={() => setShowModal(false)} />
     </>
   );
 };
+
