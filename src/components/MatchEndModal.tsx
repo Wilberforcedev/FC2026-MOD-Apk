@@ -17,10 +17,12 @@ import {
   Trash2, 
   Sparkles,
   Shield,
-  Flame
+  Flame,
+  FileText
 } from 'lucide-react';
 import { HighlightReplayModal } from './HighlightReplayModal';
 import { PitchHeatmapViewer } from './PitchHeatmapViewer';
+import { MatchHighlightsReportModal } from './MatchHighlightsReportModal';
 import { 
   getSavedHighlights, 
   saveHighlightToVault, 
@@ -76,6 +78,9 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
   // Saved vault highlights
   const [vaultHighlights, setVaultHighlights] = useState<MatchHighlightEvent[]>(() => getSavedHighlights());
   const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  // Dynamic Match Highlights Report modal state
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
 
   // Resolved spatial movement telemetry & heatmap data
   const resolvedHeatmapData: MatchHeatmapData = heatmapData || engine?.getHeatmapData() || {
@@ -247,18 +252,30 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
             </button>
           </div>
 
-          {/* Quick Reel Action Button if highlights exist */}
-          {activeTab === 'highlights' && keyMatchEvents.length > 0 && (
+          {/* Header Action Buttons */}
+          <div className="flex items-center space-x-2 flex-shrink-0 ml-2 py-1.5">
             <button
-              id="replay-all-reel-btn"
-              onClick={() => setActiveReplayHighlight(keyMatchEvents[0])}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-extrabold shadow-[0_0_12px_rgba(6,182,212,0.35)] transition-all active:scale-95 flex-shrink-0 ml-2"
+              id="match-highlights-report-btn"
+              onClick={() => setShowReportModal(true)}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold shadow-[0_0_12px_rgba(16,185,129,0.35)] transition-all active:scale-95 flex-shrink-0"
+              title="Generate Dynamic Match Highlights Report"
             >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span className="hidden sm:inline">Play Highlight Reel</span>
-              <span className="sm:hidden">Reel</span>
+              <FileText className="w-3.5 h-3.5" />
+              <span>Match Highlights Report</span>
             </button>
-          )}
+
+            {activeTab === 'highlights' && keyMatchEvents.length > 0 && (
+              <button
+                id="replay-all-reel-btn"
+                onClick={() => setActiveReplayHighlight(keyMatchEvents[0])}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-extrabold shadow-[0_0_12px_rgba(6,182,212,0.35)] transition-all active:scale-95 flex-shrink-0"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span className="hidden sm:inline">Play Highlight Reel</span>
+                <span className="sm:hidden">Reel</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Tab Content Body */}
@@ -273,6 +290,32 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
           {/* TAB 1: MATCH HIGHLIGHTS & REPLAYS */}
           {activeTab === 'highlights' && (
             <div className="space-y-3">
+              {/* Dynamic Editorial Report Callout Banner */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-slate-900 via-emerald-950/30 to-slate-900 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 flex-shrink-0">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center space-x-2">
+                      <span>Match Editorial & Highlights Report</span>
+                      <span className="bg-emerald-950 text-emerald-300 border border-emerald-500/40 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold">LIVE METRICS</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Dynamic post-match story referencing {stats.homePossessionPercent}% vs {stats.awayPossessionPercent}% possession, {stats.homeShotsOnTarget + stats.awayShotsOnTarget} shots on goal, and pivotal tactical turning points.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  id="match-highlights-report-banner-btn"
+                  onClick={() => setShowReportModal(true)}
+                  className="flex items-center justify-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex-shrink-0 transition active:scale-95 shadow-md shadow-emerald-500/20"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Generate Report</span>
+                </button>
+              </div>
+
               {/* Filter Pills */}
               {keyMatchEvents.length > 0 && (
                 <div className="flex items-center justify-between gap-2 pb-1">
@@ -542,15 +585,26 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
         </div>
 
         {/* Actions Footer */}
-        <div className="p-4 sm:p-5 bg-slate-950/90 border-t border-white/10 flex items-center justify-between gap-3">
-          <button
-            id="match-end-exit-btn"
-            onClick={onExit}
-            className="px-4 sm:px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition"
-          >
-            <Home className="w-4 h-4" />
-            Main Menu
-          </button>
+        <div className="p-4 sm:p-5 bg-slate-950/90 border-t border-white/10 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              id="match-end-exit-btn"
+              onClick={onExit}
+              className="px-4 sm:px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition"
+            >
+              <Home className="w-4 h-4" />
+              Main Menu
+            </button>
+
+            <button
+              id="match-highlights-report-footer-btn"
+              onClick={() => setShowReportModal(true)}
+              className="px-4 sm:px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition active:scale-95"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Match Highlights Report</span>
+            </button>
+          </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
             <button
@@ -586,6 +640,23 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Dynamic Match Highlights Report Modal */}
+      {showReportModal && (
+        <MatchHighlightsReportModal
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+          stats={stats}
+          goalEvents={goalEvents}
+          keyMatchEvents={keyMatchEvents}
+          heatmapData={resolvedHeatmapData}
+          onClose={() => setShowReportModal(false)}
+          onReplayHighlight={(hl) => {
+            setShowReportModal(false);
+            setActiveReplayHighlight(hl);
+          }}
+        />
+      )}
 
       {/* Replay Theater Modal if a highlight is selected */}
       {activeReplayHighlight && (
