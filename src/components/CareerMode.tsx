@@ -26,7 +26,8 @@ import {
   UserPlus,
   Edit3,
   Zap,
-  MapPin
+  MapPin,
+  Compass
 } from 'lucide-react';
 import { FCHeaderBar } from './FCHeaderBar';
 import { ClubEmblem } from './ClubEmblem';
@@ -37,6 +38,7 @@ import { createPlayerSigningNews, CareerNewsItem } from '../services/careerNewsS
 import { PlayerFaceCard, PlayerFaceAvatar } from './PlayerFaceCard';
 import { PlayerEditorModal } from './PlayerEditorModal';
 import { PlayerDevelopmentModal } from './PlayerDevelopmentModal';
+import { ScoutingHub } from './ScoutingHub';
 import { getStadiumForTeam } from '../data/stadiums';
 
 interface CareerModeProps {
@@ -58,7 +60,7 @@ export const CareerMode: React.FC<CareerModeProps> = ({
   onOpenSocial,
   onOpenSettings,
 }) => {
-  const [activeTab, setActiveTab] = useState<'hub' | 'squad' | 'table' | 'fixtures' | 'transfers'>('hub');
+  const [activeTab, setActiveTab] = useState<'hub' | 'squad' | 'scouting' | 'transfers' | 'table' | 'fixtures'>('hub');
   const [selectedMatchday, setSelectedMatchday] = useState(career.currentMatchday);
   const [transferFeedback, setTransferFeedback] = useState<string | null>(null);
 
@@ -348,6 +350,21 @@ export const CareerMode: React.FC<CareerModeProps> = ({
             </span>
           </button>
           <button
+            onClick={() => setActiveTab('scouting')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-['Chakra_Petch'] font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'scouting'
+                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                : 'text-white/60 hover:text-white'
+            }`}
+          >
+            <span>SCOUTING</span>
+            {career.scoutingNetwork && career.scoutingNetwork.activeReports.length > 0 && (
+              <span className="text-[10px] bg-amber-400 text-slate-950 font-mono font-black px-1.5 py-0.2 rounded-full">
+                {career.scoutingNetwork.activeReports.length}
+              </span>
+            )}
+          </button>
+          <button
             onClick={() => setActiveTab('transfers')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-['Chakra_Petch'] font-black uppercase tracking-wider transition cursor-pointer ${
               activeTab === 'transfers'
@@ -565,31 +582,40 @@ export const CareerMode: React.FC<CareerModeProps> = ({
                 </div>
               </div>
 
-              {/* TILE: YOUTH ACADEMY (Bottom-Right Tile, 6 Cols) */}
+              {/* TILE: YOUTH ACADEMY & SCOUTING (Bottom-Right Tile, 6 Cols) */}
               <div 
-                onClick={() => setActiveOfficeModal('youth')}
-                className="md:col-span-6 bg-slate-950/80 border border-cyan-500/30 hover:border-cyan-400 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between cursor-pointer group transition"
+                onClick={() => setActiveTab('scouting')}
+                className="md:col-span-6 bg-slate-950/80 border border-teal-500/30 hover:border-teal-400 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between cursor-pointer group transition"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-['Chakra_Petch'] font-black text-teal-400 uppercase tracking-wider">
-                    YOUTH ACADEMY
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-['Chakra_Petch'] font-black text-teal-400 uppercase tracking-wider">
+                      GLOBAL SCOUTING NETWORK
+                    </span>
+                    {career.scoutingNetwork && career.scoutingNetwork.activeReports.length > 0 && (
+                      <span className="px-2 py-0.2 rounded-full text-[9px] font-mono font-bold bg-amber-400 text-slate-950">
+                        {career.scoutingNetwork.activeReports.length} REPORTS
+                      </span>
+                    )}
+                  </div>
                   <div className="w-10 h-10 rounded-2xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-300">
-                    <GraduationCap className="w-5 h-5" />
+                    <Compass className="w-5 h-5" />
                   </div>
                 </div>
 
                 <div className="my-3">
-                  <h3 className="text-xl font-black font-['Chakra_Petch'] text-white uppercase tracking-wider group-hover:text-teal-300 transition">
-                    TALENT SCOUT REPORT
+                  <h3 className="text-xl font-black font-['Chakra_Petch'] text-white uppercase tracking-wider group-hover:text-teal-300 transition flex items-center gap-2">
+                    <span>TALENT SCOUTING & YOUTH ACADEMY</span>
                   </h3>
                   <p className="text-xs text-white/60 mt-1">
-                    3 High-Potential Prospects Scouted in South America & Western Europe (88-94 Potential).
+                    {career.scoutingNetwork && career.scoutingNetwork.activeReports.length > 0
+                      ? `${career.scoutingNetwork.activeReports.length} Discovered Prodigies • ${career.scoutingNetwork.activeReports.filter(p => p.potentialTier === 'generational').length > 0 ? 'Generational Wonderkid Scouted (91-95 Potential) • ' : ''}${career.youthAcademy?.length || 0} Enrolled in Academy.`
+                      : 'Dispatch scouts across South America, Western Europe, and Africa to discover youth talent with unique potential ratings.'}
                   </p>
                 </div>
 
                 <div className="flex items-center justify-between pt-3 border-t border-cyan-900/30 text-xs text-teal-400 font-['Chakra_Petch'] font-bold uppercase tracking-wider">
-                  <span>Inspect Prospects</span>
+                  <span>Open Scouting Hub</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition" />
                 </div>
               </div>
@@ -875,6 +901,20 @@ export const CareerMode: React.FC<CareerModeProps> = ({
                 </span>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            TAB: GLOBAL SCOUTING NETWORK & YOUTH ACADEMY
+        ========================================================================= */}
+        {activeTab === 'scouting' && (
+          <div className="max-w-6xl mx-auto">
+            <ScoutingHub
+              career={career}
+              userTeam={userTeam}
+              onUpdateCareer={onUpdateCareer}
+              onOpenDevelopment={handleOpenDevelopment}
+            />
           </div>
         )}
 
@@ -1409,29 +1449,37 @@ export const CareerMode: React.FC<CareerModeProps> = ({
       ========================================================================= */}
       {activeOfficeModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 select-none">
-          <div className="w-full max-w-md bg-slate-950 border border-cyan-500/40 rounded-3xl p-6 shadow-2xl">
-            <h3 className="font-['Chakra_Petch'] font-black text-lg text-white mb-2 uppercase tracking-wider">
-              {activeOfficeModal === 'office' && "MANAGER'S EXECUTIVE DESK"}
-              {activeOfficeModal === 'training' && 'TRAINING CENTRE DRILLS'}
-              {activeOfficeModal === 'youth' && 'YOUTH ACADEMY SCOUTING'}
-            </h3>
+          {activeOfficeModal === 'youth' ? (
+            <ScoutingHub
+              career={career}
+              userTeam={userTeam}
+              onUpdateCareer={onUpdateCareer}
+              onOpenDevelopment={handleOpenDevelopment}
+              onClose={() => setActiveOfficeModal(null)}
+              isModal={true}
+            />
+          ) : (
+            <div className="w-full max-w-md bg-slate-950 border border-cyan-500/40 rounded-3xl p-6 shadow-2xl">
+              <h3 className="font-['Chakra_Petch'] font-black text-lg text-white mb-2 uppercase tracking-wider">
+                {activeOfficeModal === 'office' && "MANAGER'S EXECUTIVE DESK"}
+                {activeOfficeModal === 'training' && 'TRAINING CENTRE DRILLS'}
+              </h3>
 
-            <p className="text-xs text-white/60 leading-relaxed mb-6 font-['Outfit']">
-              {activeOfficeModal === 'office' &&
-                'Club board confidence is high at 92%. Maintain matchday win streaks to trigger end-of-season transfer fund bonuses.'}
-              {activeOfficeModal === 'training' &&
-                'Drill simulation complete: Striker finishing improved (+2 SHO), Midfield recovery rate boosted (+3 STAMINA).'}
-              {activeOfficeModal === 'youth' &&
-                'Scouts have recommended promoting 17-year old attacking midfielder Mateo Silva (Overall 74, Potential 91).'}
-            </p>
+              <p className="text-xs text-white/60 leading-relaxed mb-6 font-['Outfit']">
+                {activeOfficeModal === 'office' &&
+                  'Club board confidence is high at 92%. Maintain matchday win streaks to trigger end-of-season transfer fund bonuses.'}
+                {activeOfficeModal === 'training' &&
+                  'Drill simulation complete: Striker finishing improved (+2 SHO), Midfield recovery rate boosted (+3 STAMINA).'}
+              </p>
 
-            <button
-              onClick={() => setActiveOfficeModal(null)}
-              className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition shadow cursor-pointer"
-            >
-              Confirm Directive
-            </button>
-          </div>
+              <button
+                onClick={() => setActiveOfficeModal(null)}
+                className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider transition shadow cursor-pointer"
+              >
+                Confirm Directive
+              </button>
+            </div>
+          )}
         </div>
       )}
 

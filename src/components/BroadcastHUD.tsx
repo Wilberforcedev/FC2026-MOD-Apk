@@ -132,6 +132,20 @@ export const BroadcastHUD: React.FC<BroadcastHUDProps> = ({
                 </span>
               </div>
             )}
+
+            {/* Quick Sub Broadcast Alert */}
+            {engine.subsUsed < engine.maxSubs && engine.homePlayers.some(p => !p.player.isGoalkeeper && p.stamina < 45) && (
+              <button
+                onClick={onPause}
+                className="flex items-center gap-1.5 bg-gradient-to-r from-rose-500/20 via-amber-500/20 to-slate-900 border border-amber-400/50 hover:border-amber-300 px-3 py-1 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.25)] text-amber-300 transition cursor-pointer"
+                title="Players are fatigued - click to open Quick Substitution"
+              >
+                <Zap className="w-3 h-3 text-amber-400 fill-amber-400 animate-pulse" />
+                <span className="text-[10px] font-['Chakra_Petch'] font-black uppercase tracking-wider">
+                  QUICK SUB ({engine.maxSubs - engine.subsUsed} Left)
+                </span>
+              </button>
+            )}
           </div>
         </div>
 

@@ -44,6 +44,14 @@ const RAW_TEAMS: Team[] = [
       { id: 'rma-11', name: 'Rodrygo', shortName: 'Rodrygo', number: 11, position: 'RW', rating: 87, stats: { pace: 91, shooting: 83, passing: 82, dribbling: 89, defending: 45, physicality: 68 } },
       { id: 'rma-9', name: 'Kylian Mbappé', shortName: 'Mbappé', number: 9, position: 'ST', rating: 94, stats: { pace: 97, shooting: 92, passing: 82, dribbling: 93, defending: 38, physicality: 80 } },
       { id: 'rma-7', name: 'Vinícius Júnior', shortName: 'Vinícius Jr.', number: 7, position: 'LW', rating: 92, stats: { pace: 96, shooting: 85, passing: 82, dribbling: 93, defending: 35, physicality: 72 } },
+      // Bench Substitutes
+      { id: 'rma-10', name: 'Luka Modrić', shortName: 'Modrić', number: 10, position: 'CM', rating: 86, stats: { pace: 70, shooting: 76, passing: 91, dribbling: 88, defending: 72, physicality: 66 } },
+      { id: 'rma-21', name: 'Brahim Díaz', shortName: 'Brahim', number: 21, position: 'CAM', rating: 84, stats: { pace: 87, shooting: 78, passing: 81, dribbling: 88, defending: 40, physicality: 62 } },
+      { id: 'rma-16', name: 'Endrick', shortName: 'Endrick', number: 16, position: 'ST', rating: 82, stats: { pace: 91, shooting: 83, passing: 72, dribbling: 84, defending: 36, physicality: 82 } },
+      { id: 'rma-15', name: 'Arda Güler', shortName: 'Güler', number: 15, position: 'CAM', rating: 83, stats: { pace: 78, shooting: 79, passing: 86, dribbling: 87, defending: 44, physicality: 60 } },
+      { id: 'rma-6', name: 'Eduardo Camavinga', shortName: 'Camavinga', number: 6, position: 'CDM', rating: 86, stats: { pace: 83, shooting: 72, passing: 84, dribbling: 85, defending: 83, physicality: 83 } },
+      { id: 'rma-17', name: 'Lucas Vázquez', shortName: 'Vázquez', number: 17, position: 'RB', rating: 81, stats: { pace: 82, shooting: 74, passing: 80, dribbling: 81, defending: 76, physicality: 75 } },
+      { id: 'rma-13', name: 'Andriy Lunin', shortName: 'Lunin', number: 13, position: 'GK', rating: 82, stats: { pace: 50, shooting: 20, passing: 75, dribbling: 50, defending: 83, physicality: 78 }, isGoalkeeper: true },
     ],
   },
   {
@@ -88,6 +96,13 @@ const RAW_TEAMS: Team[] = [
       { id: 'mci-47', name: 'Phil Foden', shortName: 'Foden', number: 47, position: 'RW', rating: 90, stats: { pace: 86, shooting: 87, passing: 88, dribbling: 92, defending: 58, physicality: 70 } },
       { id: 'mci-9', name: 'Erling Haaland', shortName: 'Haaland', number: 9, position: 'ST', rating: 93, stats: { pace: 91, shooting: 95, passing: 70, dribbling: 82, defending: 45, physicality: 91 } },
       { id: 'mci-11', name: 'Jérémy Doku', shortName: 'Doku', number: 11, position: 'LW', rating: 84, stats: { pace: 95, shooting: 74, passing: 78, dribbling: 92, defending: 35, physicality: 70 } },
+      // Bench Substitutes
+      { id: 'mci-19', name: 'İlkay Gündoğan', shortName: 'Gündoğan', number: 19, position: 'CM', rating: 87, stats: { pace: 70, shooting: 80, passing: 89, dribbling: 85, defending: 72, physicality: 72 } },
+      { id: 'mci-8', name: 'Mateo Kovačić', shortName: 'Kovačić', number: 8, position: 'CM', rating: 83, stats: { pace: 76, shooting: 70, passing: 85, dribbling: 87, defending: 78, physicality: 76 } },
+      { id: 'mci-26', name: 'Savinho', shortName: 'Savinho', number: 26, position: 'RW', rating: 82, stats: { pace: 89, shooting: 76, passing: 78, dribbling: 86, defending: 40, physicality: 62 } },
+      { id: 'mci-5', name: 'John Stones', shortName: 'Stones', number: 5, position: 'CB', rating: 85, stats: { pace: 72, shooting: 52, passing: 81, dribbling: 77, defending: 86, physicality: 81 } },
+      { id: 'mci-82', name: 'Rico Lewis', shortName: 'Lewis', number: 82, position: 'RB', rating: 79, stats: { pace: 81, shooting: 60, passing: 80, dribbling: 82, defending: 78, physicality: 68 } },
+      { id: 'mci-18', name: 'Stefan Ortega', shortName: 'Ortega', number: 18, position: 'GK', rating: 80, stats: { pace: 50, shooting: 20, passing: 82, dribbling: 50, defending: 81, physicality: 75 }, isGoalkeeper: true },
     ],
   },
   {
@@ -132,6 +147,13 @@ const RAW_TEAMS: Team[] = [
       { id: 'bar-19', name: 'Lamine Yamal', shortName: 'Yamal', number: 19, position: 'RW', rating: 87, stats: { pace: 92, shooting: 82, passing: 86, dribbling: 91, defending: 42, physicality: 65 } },
       { id: 'bar-9', name: 'Robert Lewandowski', shortName: 'Lewandowski', number: 9, position: 'ST', rating: 89, stats: { pace: 76, shooting: 91, passing: 80, dribbling: 84, defending: 44, physicality: 82 } },
       { id: 'bar-11', name: 'Raphinha', shortName: 'Raphinha', number: 11, position: 'LW', rating: 87, stats: { pace: 91, shooting: 85, passing: 84, dribbling: 88, defending: 55, physicality: 74 } },
+      // Bench Substitutes
+      { id: 'bar-7', name: 'Ferran Torres', shortName: 'Ferran', number: 7, position: 'ST', rating: 82, stats: { pace: 84, shooting: 82, passing: 78, dribbling: 83, defending: 45, physicality: 73 } },
+      { id: 'bar-16', name: 'Fermín López', shortName: 'Fermín', number: 16, position: 'CAM', rating: 82, stats: { pace: 80, shooting: 81, passing: 81, dribbling: 84, defending: 66, physicality: 75 } },
+      { id: 'bar-17', name: 'Marc Casadó', shortName: 'Casadó', number: 17, position: 'CDM', rating: 80, stats: { pace: 74, shooting: 62, passing: 82, dribbling: 78, defending: 81, physicality: 78 } },
+      { id: 'bar-18', name: 'Pau Víctor', shortName: 'Pau Víctor', number: 18, position: 'ST', rating: 77, stats: { pace: 82, shooting: 78, passing: 72, dribbling: 77, defending: 35, physicality: 72 } },
+      { id: 'bar-24', name: 'Eric García', shortName: 'Eric', number: 24, position: 'CB', rating: 79, stats: { pace: 72, shooting: 45, passing: 80, dribbling: 74, defending: 80, physicality: 76 } },
+      { id: 'bar-13', name: 'Iñaki Peña', shortName: 'Peña', number: 13, position: 'GK', rating: 78, stats: { pace: 50, shooting: 20, passing: 76, dribbling: 50, defending: 78, physicality: 72 }, isGoalkeeper: true },
     ],
   },
   {
@@ -176,6 +198,13 @@ const RAW_TEAMS: Team[] = [
       { id: 'ars-7', name: 'Bukayo Saka', shortName: 'Saka', number: 7, position: 'RW', rating: 89, stats: { pace: 88, shooting: 85, passing: 86, dribbling: 89, defending: 65, physicality: 78 } },
       { id: 'ars-29', name: 'Kai Havertz', shortName: 'Havertz', number: 29, position: 'ST', rating: 85, stats: { pace: 82, shooting: 82, passing: 82, dribbling: 84, defending: 55, physicality: 82 } },
       { id: 'ars-11', name: 'Gabriel Martinelli', shortName: 'Martinelli', number: 11, position: 'LW', rating: 85, stats: { pace: 92, shooting: 80, passing: 79, dribbling: 87, defending: 48, physicality: 73 } },
+      // Bench Substitutes
+      { id: 'ars-19', name: 'Leandro Trossard', shortName: 'Trossard', number: 19, position: 'LW', rating: 84, stats: { pace: 81, shooting: 84, passing: 81, dribbling: 86, defending: 45, physicality: 68 } },
+      { id: 'ars-9', name: 'Gabriel Jesus', shortName: 'Jesus', number: 9, position: 'ST', rating: 82, stats: { pace: 83, shooting: 81, passing: 76, dribbling: 86, defending: 42, physicality: 75 } },
+      { id: 'ars-30', name: 'Raheem Sterling', shortName: 'Sterling', number: 30, position: 'RW', rating: 81, stats: { pace: 88, shooting: 78, passing: 76, dribbling: 85, defending: 40, physicality: 65 } },
+      { id: 'ars-5', name: 'Thomas Partey', shortName: 'Partey', number: 5, position: 'CDM', rating: 83, stats: { pace: 68, shooting: 72, passing: 82, dribbling: 81, defending: 83, physicality: 84 } },
+      { id: 'ars-20', name: 'Jorginho', shortName: 'Jorginho', number: 20, position: 'CM', rating: 81, stats: { pace: 55, shooting: 68, passing: 86, dribbling: 80, defending: 76, physicality: 66 } },
+      { id: 'ars-32', name: 'Neto', shortName: 'Neto', number: 32, position: 'GK', rating: 78, stats: { pace: 50, shooting: 20, passing: 76, dribbling: 50, defending: 78, physicality: 75 }, isGoalkeeper: true },
     ],
   },
   {
@@ -220,6 +249,13 @@ const RAW_TEAMS: Team[] = [
       { id: 'bay-42', name: 'Jamal Musiala', shortName: 'Musiala', number: 42, position: 'CAM', rating: 90, stats: { pace: 88, shooting: 84, passing: 86, dribbling: 94, defending: 55, physicality: 72 } },
       { id: 'bay-10', name: 'Leroy Sané', shortName: 'Sané', number: 10, position: 'LW', rating: 86, stats: { pace: 92, shooting: 83, passing: 81, dribbling: 88, defending: 38, physicality: 70 } },
       { id: 'bay-9', name: 'Harry Kane', shortName: 'Kane', number: 9, position: 'ST', rating: 91, stats: { pace: 75, shooting: 94, passing: 86, dribbling: 83, defending: 48, physicality: 84 } },
+      // Bench Substitutes
+      { id: 'bay-25', name: 'Thomas Müller', shortName: 'Müller', number: 25, position: 'CAM', rating: 84, stats: { pace: 68, shooting: 82, passing: 83, dribbling: 80, defending: 55, physicality: 72 } },
+      { id: 'bay-7', name: 'Serge Gnabry', shortName: 'Gnabry', number: 7, position: 'RW', rating: 83, stats: { pace: 83, shooting: 82, passing: 78, dribbling: 84, defending: 42, physicality: 72 } },
+      { id: 'bay-11', name: 'Kingsley Coman', shortName: 'Coman', number: 11, position: 'LW', rating: 84, stats: { pace: 89, shooting: 78, passing: 79, dribbling: 87, defending: 35, physicality: 68 } },
+      { id: 'bay-39', name: 'Mathys Tel', shortName: 'Tel', number: 39, position: 'ST', rating: 79, stats: { pace: 87, shooting: 80, passing: 72, dribbling: 82, defending: 32, physicality: 74 } },
+      { id: 'bay-15', name: 'Eric Dier', shortName: 'Dier', number: 15, position: 'CB', rating: 80, stats: { pace: 62, shooting: 64, passing: 76, dribbling: 68, defending: 81, physicality: 82 } },
+      { id: 'bay-26', name: 'Sven Ulreich', shortName: 'Ulreich', number: 26, position: 'GK', rating: 76, stats: { pace: 50, shooting: 20, passing: 72, dribbling: 50, defending: 76, physicality: 74 }, isGoalkeeper: true },
     ],
   },
   {
@@ -264,6 +300,13 @@ const RAW_TEAMS: Team[] = [
       { id: 'arg-10', name: 'Lionel Messi', shortName: 'Messi', number: 10, position: 'RW', rating: 91, stats: { pace: 80, shooting: 93, passing: 94, dribbling: 94, defending: 35, physicality: 65 } },
       { id: 'arg-9', name: 'Julián Álvarez', shortName: 'Álvarez', number: 9, position: 'ST', rating: 87, stats: { pace: 86, shooting: 87, passing: 81, dribbling: 86, defending: 58, physicality: 83 } },
       { id: 'arg-15', name: 'Lautaro Martínez', shortName: 'Lautaro', number: 15, position: 'LW', rating: 89, stats: { pace: 84, shooting: 90, passing: 76, dribbling: 86, defending: 48, physicality: 85 } },
+      // Bench Substitutes
+      { id: 'arg-17', name: 'Alejandro Garnacho', shortName: 'Garnacho', number: 17, position: 'LW', rating: 81, stats: { pace: 88, shooting: 78, passing: 76, dribbling: 84, defending: 36, physicality: 65 } },
+      { id: 'arg-5', name: 'Leandro Paredes', shortName: 'Paredes', number: 5, position: 'CDM', rating: 82, stats: { pace: 66, shooting: 75, passing: 85, dribbling: 80, defending: 79, physicality: 81 } },
+      { id: 'arg-16', name: 'Giovani Lo Celso', shortName: 'Lo Celso', number: 16, position: 'CM', rating: 81, stats: { pace: 76, shooting: 77, passing: 83, dribbling: 82, defending: 70, physicality: 73 } },
+      { id: 'arg-19', name: 'Nicolás Otamendi', shortName: 'Otamendi', number: 19, position: 'CB', rating: 81, stats: { pace: 62, shooting: 52, passing: 70, dribbling: 64, defending: 83, physicality: 86 } },
+      { id: 'arg-21', name: 'Paulo Dybala', shortName: 'Dybala', number: 21, position: 'CAM', rating: 86, stats: { pace: 78, shooting: 86, passing: 87, dribbling: 90, defending: 40, physicality: 62 } },
+      { id: 'arg-12', name: 'Gerónimo Rulli', shortName: 'Rulli', number: 12, position: 'GK', rating: 79, stats: { pace: 50, shooting: 20, passing: 76, dribbling: 50, defending: 79, physicality: 75 }, isGoalkeeper: true },
     ],
   },
   {
@@ -308,6 +351,13 @@ const RAW_TEAMS: Team[] = [
       { id: 'fra-11', name: 'Ousmane Dembélé', shortName: 'Dembélé', number: 11, position: 'RW', rating: 86, stats: { pace: 94, shooting: 78, passing: 82, dribbling: 91, defending: 35, physicality: 62 } },
       { id: 'fra-10', name: 'Kylian Mbappé', shortName: 'Mbappé', number: 10, position: 'ST', rating: 94, stats: { pace: 97, shooting: 92, passing: 82, dribbling: 93, defending: 38, physicality: 80 } },
       { id: 'fra-20', name: 'Bradley Barcola', shortName: 'Barcola', number: 20, position: 'LW', rating: 84, stats: { pace: 93, shooting: 78, passing: 79, dribbling: 87, defending: 40, physicality: 70 } },
+      // Bench Substitutes
+      { id: 'fra-12', name: 'Randal Kolo Muani', shortName: 'Kolo Muani', number: 12, position: 'ST', rating: 82, stats: { pace: 89, shooting: 80, passing: 75, dribbling: 82, defending: 38, physicality: 78 } },
+      { id: 'fra-15', name: 'Marcus Thuram', shortName: 'Thuram', number: 15, position: 'ST', rating: 83, stats: { pace: 86, shooting: 81, passing: 76, dribbling: 83, defending: 44, physicality: 82 } },
+      { id: 'fra-19', name: 'Youssouf Fofana', shortName: 'Fofana', number: 19, position: 'CM', rating: 81, stats: { pace: 78, shooting: 72, passing: 80, dribbling: 79, defending: 81, physicality: 84 } },
+      { id: 'fra-24', name: 'Ibrahima Konaté', shortName: 'Konaté', number: 24, position: 'CB', rating: 84, stats: { pace: 82, shooting: 40, passing: 68, dribbling: 68, defending: 85, physicality: 87 } },
+      { id: 'fra-14', name: 'Adrien Rabiot', shortName: 'Rabiot', number: 14, position: 'CM', rating: 83, stats: { pace: 78, shooting: 76, passing: 81, dribbling: 81, defending: 80, physicality: 82 } },
+      { id: 'fra-1', name: 'Brice Samba', shortName: 'Samba', number: 1, position: 'GK', rating: 80, stats: { pace: 50, shooting: 20, passing: 74, dribbling: 50, defending: 80, physicality: 76 }, isGoalkeeper: true },
     ],
   },
   {
@@ -352,6 +402,13 @@ const RAW_TEAMS: Team[] = [
       { id: 'liv-11', name: 'Mohamed Salah', shortName: 'Salah', number: 11, position: 'RW', rating: 90, stats: { pace: 90, shooting: 89, passing: 84, dribbling: 89, defending: 45, physicality: 77 } },
       { id: 'liv-9', name: 'Darwin Núñez', shortName: 'Núñez', number: 9, position: 'ST', rating: 83, stats: { pace: 91, shooting: 83, passing: 72, dribbling: 79, defending: 42, physicality: 86 } },
       { id: 'liv-7', name: 'Luis Díaz', shortName: 'Díaz', number: 7, position: 'LW', rating: 85, stats: { pace: 92, shooting: 81, passing: 78, dribbling: 88, defending: 42, physicality: 74 } },
+      // Bench Substitutes
+      { id: 'liv-18', name: 'Cody Gakpo', shortName: 'Gakpo', number: 18, position: 'LW', rating: 83, stats: { pace: 84, shooting: 82, passing: 80, dribbling: 84, defending: 44, physicality: 76 } },
+      { id: 'liv-20', name: 'Diogo Jota', shortName: 'Jota', number: 20, position: 'ST', rating: 85, stats: { pace: 83, shooting: 84, passing: 76, dribbling: 85, defending: 46, physicality: 76 } },
+      { id: 'liv-14', name: 'Federico Chiesa', shortName: 'Chiesa', number: 14, position: 'RW', rating: 82, stats: { pace: 88, shooting: 81, passing: 77, dribbling: 85, defending: 45, physicality: 72 } },
+      { id: 'liv-17', name: 'Curtis Jones', shortName: 'Jones', number: 17, position: 'CM', rating: 80, stats: { pace: 78, shooting: 74, passing: 81, dribbling: 83, defending: 74, physicality: 76 } },
+      { id: 'liv-3', name: 'Wataru Endo', shortName: 'Endo', number: 3, position: 'CDM', rating: 80, stats: { pace: 68, shooting: 65, passing: 78, dribbling: 74, defending: 82, physicality: 80 } },
+      { id: 'liv-62', name: 'Caoimhín Kelleher', shortName: 'Kelleher', number: 62, position: 'GK', rating: 80, stats: { pace: 50, shooting: 20, passing: 78, dribbling: 50, defending: 80, physicality: 74 }, isGoalkeeper: true },
     ],
   },
 ];

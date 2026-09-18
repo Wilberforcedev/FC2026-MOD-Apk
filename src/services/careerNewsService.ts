@@ -506,3 +506,36 @@ export function createPlayerSigningNews(
     isRead: false,
   };
 }
+
+/**
+  * Creates an instant Breaking News item when the user promotes an academy prodigy to the senior first team
+  */
+export function createYouthPromotionNews(
+  userTeam: Team,
+  player: Player,
+  potential: number,
+  matchday: number
+): CareerNewsItem {
+  return {
+    id: `news_youth_promo_${player.id}_${Date.now()}`,
+    type: 'development',
+    category: 'DEVELOPMENT',
+    importance: 'breaking',
+    title: `🚨 WONDERKID PROMOTED! ${userTeam.name} Register 17yo Prodigy ${player.name} to First Team!`,
+    summary: `Academy sensation ${player.name} officially earns a senior squad contract with an extraordinary potential ceiling of ${potential}!`,
+    fullBody: `🌟 GENERATIONAL TALENT! ${userTeam.name} have promoted youth academy phenom ${player.name} to the first-team roster. Discovered through the club's scouting network, the ${player.position} gem (Overall: ${player.rating}, Potential: ${potential}) has stunned coaches with his technique and maturity. Expect to see him feature in upcoming matchdays!`,
+    date: `Matchday ${matchday} • Just Now`,
+    matchday,
+    author: 'Youth Scout Weekly',
+    handle: '@ScoutAcademyFC',
+    verified: true,
+    avatarText: 'YS',
+    teamId: userTeam.id,
+    playerName: player.name,
+    playerPosition: player.position,
+    playerRating: player.rating,
+    likes: `${(Math.random() * 70 + 80).toFixed(1)}K`,
+    retweets: `${(Math.random() * 20 + 15).toFixed(1)}K`,
+    isRead: false,
+  };
+}

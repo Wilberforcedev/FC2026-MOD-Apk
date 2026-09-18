@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { MatchEngine } from '../game/engine';
 import { PITCH } from '../game/constants';
-import { MatchPlayerEntity, ReplayPlayerState } from '../types/soccer';
+import { MatchPlayerEntity, ReplayPlayerState, Team } from '../types/soccer';
 import { Camera, FastForward, Play, Pause, X, Sparkles } from 'lucide-react';
 import { getStadiumForTeam, StadiumLikeness } from '../data/stadiums';
 
@@ -275,11 +275,16 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({ engine, weather = 'Nig
 // STADIUM & PITCH GRAPHICS (Authentic Stadium Likeness)
 // -------------------------------------------------------------
 
-function drawStadiumSurroundings(
+export interface CanvasEngineContext {
+  homeTeam: Team;
+  awayTeam: Team;
+}
+
+export function drawStadiumSurroundings(
   ctx: CanvasRenderingContext2D,
   weather: string,
   stadium: StadiumLikeness,
-  engine: MatchEngine
+  engine: CanvasEngineContext
 ) {
   const stadiumMargin = 220;
   const left = PITCH.MARGIN_X - stadiumMargin;
@@ -527,7 +532,7 @@ function drawStadiumSurroundings(
   }
 }
 
-function drawPitch(ctx: CanvasRenderingContext2D, stadium: StadiumLikeness) {
+export function drawPitch(ctx: CanvasRenderingContext2D, stadium: StadiumLikeness) {
   const x = PITCH.MARGIN_X;
   const y = PITCH.MARGIN_Y;
   const w = PITCH.LENGTH;
@@ -642,7 +647,7 @@ function drawPitch(ctx: CanvasRenderingContext2D, stadium: StadiumLikeness) {
   ctx.fill();
 }
 
-function drawGoalNets(ctx: CanvasRenderingContext2D) {
+export function drawGoalNets(ctx: CanvasRenderingContext2D) {
   const goalTop = PITCH.MARGIN_Y + (PITCH.WIDTH - PITCH.GOAL_WIDTH) / 2;
   const goalH = PITCH.GOAL_WIDTH;
   const depth = 26;
@@ -679,7 +684,7 @@ function drawGoalNets(ctx: CanvasRenderingContext2D) {
   ctx.strokeRect(rightX, goalTop, depth, goalH);
 }
 
-function drawCornerFlags(ctx: CanvasRenderingContext2D) {
+export function drawCornerFlags(ctx: CanvasRenderingContext2D) {
   const flags = [
     { x: PITCH.MARGIN_X, y: PITCH.MARGIN_Y },
     { x: PITCH.MARGIN_X + PITCH.LENGTH, y: PITCH.MARGIN_Y },
@@ -709,7 +714,7 @@ function drawCornerFlags(ctx: CanvasRenderingContext2D) {
 // REALISTIC ATHLETIC PLAYER LIKENESS RENDERER
 // -------------------------------------------------------------
 
-function drawPlayerAvatar(
+export function drawPlayerAvatar(
   ctx: CanvasRenderingContext2D,
   p: MatchPlayerEntity,
   x: number,
@@ -719,7 +724,7 @@ function drawPlayerAvatar(
   animState: string,
   isUserControlled: boolean,
   shootCharge: number,
-  engine: MatchEngine
+  engine: CanvasEngineContext
 ) {
   const teamObj = p.team === 'home' ? engine.homeTeam : engine.awayTeam;
   const kit = teamObj.kit;
@@ -1096,7 +1101,7 @@ function drawPlayerAvatar(
   }
 }
 
-function drawBall(ctx: CanvasRenderingContext2D, ball: { pos: { x: number; y: number; z: number }; velocity: { x: number; y: number; z: number }; spin: { x: number; y: number }; isInGoal: boolean }) {
+export function drawBall(ctx: CanvasRenderingContext2D, ball: { pos: { x: number; y: number; z: number }; velocity: { x: number; y: number; z: number }; spin: { x: number; y: number }; isInGoal: boolean }) {
   const x = ball.pos.x;
   const y = ball.pos.y;
   const z = ball.pos.z;

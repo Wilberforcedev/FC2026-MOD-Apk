@@ -1,6 +1,7 @@
 import { TEAMS } from '../data/teams';
 import { CareerState, LeagueTableRow, SeasonFixture, Team, Player, CareerNewsItem, PlayerInjury } from '../types/soccer';
 import { getInitialNewsFeed, generateMatchdayNews } from './careerNewsService';
+import { initializeScoutingNetwork, advanceScoutingMatchday } from './scoutingService';
 
 const CAREER_STORAGE_KEY = 'fc26_career_save';
 
@@ -132,6 +133,7 @@ export function initializeCareer(userTeamId: string): CareerState {
     youthAcademy: [],
     newsFeed: news,
     activeInjuries: injuries,
+    scoutingNetwork: initializeScoutingNetwork(),
   };
 
   saveCareer(careerState);
@@ -152,10 +154,18 @@ export function loadCareer(): CareerState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CareerState;
     // Backwards-compatibility check for existing saves
+    let updated = false;
     if (!parsed.newsFeed || parsed.newsFeed.length === 0) {
       const { news, injuries } = getInitialNewsFeed(parsed.userTeamId);
       parsed.newsFeed = news;
       if (!parsed.activeInjuries) parsed.activeInjuries = injuries;
+      updated = true;
+    }
+    if (!parsed.scoutingNetwork) {
+      parsed.scoutingNetwork = initializeScoutingNetwork();
+      updated = true;
+    }
+    if (updated) {
       saveCareer(parsed);
     }
     return parsed;
@@ -271,8 +281,11 @@ export function processMatchdayResults(
   const existingNews = state.newsFeed || [];
   const mergedNews = [...newNews, ...existingNews];
 
+  // Advance any active scouting missions across global regions
+  const { updatedCareer: stateWithAdvancedScouts } = advanceScoutingMatchday(state);
+
   const nextState: CareerState = {
-    ...state,
+    ...stateWithAdvancedScouts,
     currentMatchday: Math.min(state.totalMatchdays, state.currentMatchday + 1),
     budget: Math.round((state.budget + prizeMoney) * 10) / 10,
     table: updatedTable,

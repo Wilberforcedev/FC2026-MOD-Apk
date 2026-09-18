@@ -682,6 +682,7 @@ export default function App() {
           {/* In-Game Pause Modal */}
           {showPauseModal && (
             <MatchPauseModal
+              engine={matchEngine}
               homeTeam={matchEngine.homeTeam}
               awayTeam={matchEngine.awayTeam}
               currentTactic={matchEngine.homeTeam.tactic}
@@ -703,6 +704,8 @@ export default function App() {
               awayTeam={matchEngine.awayTeam}
               stats={matchEngine.stats}
               goalEvents={matchEngine.goalEvents}
+              keyMatchEvents={matchEngine.keyMatchEvents}
+              engine={matchEngine}
               isTournament={!!activeTournamentMatch}
               isCareer={!!activeCareerFixture}
               onRematch={handleRestartMatch}

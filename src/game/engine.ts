@@ -1,5 +1,6 @@
 import { 
   Team, 
+  Player,
   MatchPlayerEntity, 
   BallEntity, 
   MatchPhase, 
@@ -7,7 +8,8 @@ import {
   GoalEvent, 
   Vector2D, 
   GameDifficulty,
-  ReplayFrame
+  ReplayFrame,
+  MatchHighlightEvent
 } from '../types/soccer';
 import { PITCH, PHYSICS } from './constants';
 import { getTacticalTarget } from './formations';
@@ -54,6 +56,10 @@ export class MatchEngine {
   public isPaused: boolean = false;
   public cameraShake: number = 0; // 0 - 1 impact shake
 
+  // Substitutions Tracking
+  public subsUsed: number = 0;
+  public readonly maxSubs: number = 5;
+
   // Instant Replay Engine
   public replayBuffer: ReplayFrame[] = [];
   public isReplaying: boolean = false;
@@ -83,6 +89,8 @@ export class MatchEngine {
   };
   
   public goalEvents: GoalEvent[] = [];
+  public keyMatchEvents: MatchHighlightEvent[] = [];
+  private lastSaveRecordTime: number = -10;
   public activeCelebration: { scorer: string; team: 'home' | 'away'; timer: number } | null = null;
   public offsideBannerTimer: number = 0;
   public bannerMessage: string = '';
@@ -122,8 +130,51 @@ export class MatchEngine {
       isInGoal: false,
     };
 
+    this.ensureBenchPlayers(this.homeTeam);
+    this.ensureBenchPlayers(this.awayTeam);
+
     this.initPlayers();
     this.resetForKickoff('home');
+  }
+
+  private ensureBenchPlayers(team: Team) {
+    if (team.players.length >= 16) return;
+    
+    // Ensure sufficient bench depth for substitutions
+    const fallbackPositions: Array<'GK' | 'CB' | 'LB' | 'RB' | 'CDM' | 'CM' | 'CAM' | 'RW' | 'LW' | 'ST'> = [
+      'ST', 'CM', 'CB', 'CAM', 'RW', 'GK'
+    ];
+    
+    const needed = Math.max(0, 16 - team.players.length);
+    for (let i = 0; i < needed; i++) {
+      const pos = fallbackPositions[i % fallbackPositions.length];
+      const num = 14 + team.players.length + i;
+      const id = `${team.id}-sub-${num}`;
+      const baseRating = Math.max(76, Math.min(88, team.overallRating - 3 + (i % 4)));
+      
+      const newSub: Player = {
+        id,
+        name: `${team.shortName} Res ${pos} #${num}`,
+        shortName: `${pos} #${num}`,
+        number: num,
+        position: pos,
+        rating: baseRating,
+        stats: {
+          pace: 78 + (i * 3) % 15,
+          shooting: pos === 'ST' || pos === 'CAM' ? 82 : 65,
+          passing: pos === 'CM' || pos === 'CAM' ? 84 : 72,
+          dribbling: 78 + (i * 2) % 12,
+          defending: pos === 'CB' || pos === 'CDM' ? 83 : 55,
+          physicality: 78 + (i * 4) % 12,
+        },
+        isGoalkeeper: pos === 'GK',
+        preferredFoot: i % 2 === 0 ? 'Right' : 'Left',
+        playStyles: ['Relentless'],
+        staminaCondition: 100,
+        form: 'Good',
+      };
+      team.players.push(newSub);
+    }
   }
 
   private initPlayers() {
@@ -242,11 +293,16 @@ export class MatchEngine {
       return;
     }
 
-    // Update match clock
+    // Update match clock & squad stamina
     if (this.phase === 'playing' || this.phase === 'kickoff') {
       // 90 minutes mapped over matchDurationSec
       const minutesPerSec = 90 / this.matchDurationSec;
-      this.matchTimeSec += deltaTimeSec * minutesPerSec;
+      const matchMinutesDelta = deltaTimeSec * minutesPerSec;
+      this.matchTimeSec += matchMinutesDelta;
+
+      if (this.phase === 'playing') {
+        this.updateSquadStamina(matchMinutesDelta);
+      }
 
       if (!this.halftimeTriggered && this.matchTimeSec >= 45) {
         this.halftimeTriggered = true;
@@ -703,6 +759,8 @@ export class MatchEngine {
     // If ball is very close and inside box, GK claims ball
     if (distToBall < 28 && this.ball.pos.z < 25) {
       gk.hasBall = true;
+      gk.animState = 'saving';
+      const prevVel = { ...this.ball.velocity };
       this.ball.velocity = { x: 0, y: 0, z: 0 };
       soundEngine.playKick(0.3);
       commentary.saveCommentary(gk.player.shortName);
@@ -710,10 +768,29 @@ export class MatchEngine {
       if (side === 'home') this.stats.awayShotsOnTarget++;
       else this.stats.homeShotsOnTarget++;
 
+      // Record critical save highlight if cooldown passed
+      if (this.matchTimeSec - this.lastSaveRecordTime > 3.5) {
+        this.lastSaveRecordTime = this.matchTimeSec;
+        const shooterEntity = (side === 'home' ? this.awayPlayers : this.homePlayers).find(p => p.id === this.ball.lastTouchedBy);
+        const shooterName = shooterEntity?.player.name || (side === 'home' ? this.awayTeam.name + ' Striker' : this.homeTeam.name + ' Striker');
+        const speedKmh = Math.round(Math.hypot(prevVel.x, prevVel.y) * 11) || Math.round(75 + Math.random() * 20);
+
+        this.recordHighlightEvent(
+          'save',
+          Math.min(90, Math.floor(this.matchTimeSec)),
+          side,
+          gk.player,
+          shooterName,
+          speedKmh,
+          `Critical Reflex Save! ${gk.player.name} denies ${shooterName} with heroic fingertip stop`
+        );
+      }
+
       // GK clears ball downfield after 1.2 seconds
       setTimeout(() => {
         if (gk.hasBall) {
           gk.hasBall = false;
+          gk.animState = 'idle';
           this.ball.velocity.x = side === 'home' ? 14 : -14;
           this.ball.velocity.y = (Math.random() - 0.5) * 6;
           this.ball.velocity.z = 6;
@@ -997,6 +1074,17 @@ export class MatchEngine {
       shotSpeedKmh: speed,
     });
 
+    // Record Goal Highlight Event with replay frames
+    this.recordHighlightEvent(
+      'goal',
+      Math.min(90, Math.floor(this.matchTimeSec)),
+      scoringTeam,
+      scorer,
+      undefined,
+      Math.round(speed),
+      `Thunderous Goal! ${scorer.name} fires a ${Math.round(speed)} km/h rocket into the net`
+    );
+
     commentary.goalCommentary(scorer.name, teamName, speed);
 
     this.activeCelebration = {
@@ -1074,7 +1162,100 @@ export class MatchEngine {
     this.phase = 'fulltime';
     soundEngine.playWhistle('triple');
     commentary.addComment(`Full-time! Final score: ${this.homeTeam.shortName} ${this.stats.homeScore} - ${this.stats.awayScore} ${this.awayTeam.shortName}`, 'whistle');
+
+    // Ensure at least one showcase key event exists if no goals or saves occurred
+    if (this.keyMatchEvents.length === 0) {
+      const topScorer = this.homePlayers[9]?.player || this.homePlayers[0].player;
+      const keeper = this.awayPlayers[0]?.player || this.awayPlayers[1].player;
+      this.recordHighlightEvent(
+        'save',
+        Math.min(90, Math.max(12, Math.floor(this.matchTimeSec - 5))),
+        'away',
+        keeper,
+        topScorer.name,
+        84,
+        `Crucial Defensive Stand! ${keeper.name} denies ${topScorer.name} at the edge of the area`
+      );
+    }
+
     this.onMatchEnd?.();
+  }
+
+  public recordHighlightEvent(
+    type: 'goal' | 'save',
+    minute: number,
+    team: 'home' | 'away',
+    primaryPlayer: Player,
+    secondaryPlayerName?: string,
+    shotSpeedKmh?: number,
+    customDescription?: string
+  ) {
+    // Capture the last 130-150 frames from replayBuffer
+    const framesSlice = this.replayBuffer.length > 0 
+      ? [...this.replayBuffer.slice(-140)]
+      : [];
+
+    const teamObj = team === 'home' ? this.homeTeam : this.awayTeam;
+    const oppObj = team === 'home' ? this.awayTeam : this.homeTeam;
+
+    const desc = customDescription || (type === 'goal'
+      ? `${teamObj.name}: Goal by ${primaryPlayer.name} (${Math.round(shotSpeedKmh || 88)} km/h)`
+      : `${teamObj.name}: Critical Save by ${primaryPlayer.name} denying ${secondaryPlayerName || oppObj.shortName}`);
+
+    const highlight: MatchHighlightEvent = {
+      id: `${type}-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      type,
+      minute,
+      matchTimeSec: this.matchTimeSec,
+      team,
+      primaryPlayerName: primaryPlayer.name,
+      primaryPlayerNumber: primaryPlayer.number,
+      secondaryPlayerName,
+      shotSpeedKmh: Math.round(shotSpeedKmh || (type === 'goal' ? 88 + Math.random() * 24 : 70 + Math.random() * 20)),
+      description: desc,
+      frames: framesSlice,
+      timestamp: Date.now(),
+      homeTeam: {
+        id: this.homeTeam.id,
+        name: this.homeTeam.name,
+        shortName: this.homeTeam.shortName,
+        badgeIcon: this.homeTeam.badgeIcon,
+        badgeBg: this.homeTeam.badgeBg,
+        badgeBorder: this.homeTeam.badgeBorder,
+        badgeTextColor: this.homeTeam.badgeTextColor,
+        kit: this.homeTeam.kit,
+      },
+      awayTeam: {
+        id: this.awayTeam.id,
+        name: this.awayTeam.name,
+        shortName: this.awayTeam.shortName,
+        badgeIcon: this.awayTeam.badgeIcon,
+        badgeBg: this.awayTeam.badgeBg,
+        badgeBorder: this.awayTeam.badgeBorder,
+        badgeTextColor: this.awayTeam.badgeTextColor,
+        kit: this.awayTeam.kit,
+      },
+      playersMeta: [
+        ...this.homePlayers.map(p => ({
+          id: p.id,
+          team: 'home' as const,
+          name: p.player.name,
+          shortName: p.player.shortName,
+          number: p.player.number,
+          likeness: p.player.likeness,
+        })),
+        ...this.awayPlayers.map(p => ({
+          id: p.id,
+          team: 'away' as const,
+          name: p.player.name,
+          shortName: p.player.shortName,
+          number: p.player.number,
+          likeness: p.player.likeness,
+        })),
+      ],
+    };
+
+    this.keyMatchEvents.push(highlight);
   }
 
   public getBallPossessor(): MatchPlayerEntity | null {
@@ -1147,5 +1328,243 @@ export class MatchEngine {
     if (!this.isReplaying || this.replayBuffer.length === 0) return null;
     const idx = Math.floor(this.replayFrameIndex) % this.replayBuffer.length;
     return this.replayBuffer[idx] || null;
+  }
+
+  // --- Pause & Resume Controls ---
+  public togglePause(): boolean {
+    this.isPaused = !this.isPaused;
+    return this.isPaused;
+  }
+
+  public pause(): void {
+    this.isPaused = true;
+  }
+
+  public resume(): void {
+    this.isPaused = false;
+  }
+
+  // --- Stamina & Fatigue Engine ---
+  private updateSquadStamina(matchMinutesDelta: number) {
+    const drainSquad = (players: MatchPlayerEntity[]) => {
+      for (const p of players) {
+        if (p.player.isGoalkeeper) {
+          // Goalkeepers expend minimal stamina
+          p.stamina = Math.max(70, p.stamina - matchMinutesDelta * 0.08);
+          continue;
+        }
+
+        const physicality = p.player.stats.physicality || 75;
+        // Physicality provides resistance against fatigue
+        const fatigueResistance = 1 - (physicality - 50) * 0.005; // ~0.8 to 1.12
+        let minuteDrain = 0.52 * Math.max(0.75, Math.min(1.25, fatigueResistance));
+
+        // Extra drain if actively moving fast, sprinting, or tackling
+        const speed = Math.hypot(p.velocity.x, p.velocity.y);
+        if (p.isSprinting || speed > 2.8) {
+          minuteDrain += 0.38;
+        }
+
+        p.stamina = Math.max(10, p.stamina - matchMinutesDelta * minuteDrain);
+      }
+    };
+
+    drainSquad(this.homePlayers);
+    drainSquad(this.awayPlayers);
+  }
+
+  // --- Substitution & Squad Management ---
+  public getBenchPlayers(teamSide: 'home' | 'away' = 'home'): Player[] {
+    const team = teamSide === 'home' ? this.homeTeam : this.awayTeam;
+    const onPitch = teamSide === 'home' ? this.homePlayers : this.awayPlayers;
+    const onPitchIds = new Set(onPitch.map(p => p.id));
+    return team.players.filter(p => !onPitchIds.has(p.id));
+  }
+
+  public getOnPitchPlayers(teamSide: 'home' | 'away' = 'home'): MatchPlayerEntity[] {
+    return teamSide === 'home' ? this.homePlayers : this.awayPlayers;
+  }
+
+  /**
+   * Generates intelligent Quick Substitution recommendations pairing the most fatigued
+   * starter with the best-fit fresh bench player.
+   */
+  public getQuickSubRecommendations(teamSide: 'home' | 'away' = 'home'): Array<{
+    playerOut: MatchPlayerEntity;
+    recommendedSub: Player;
+    staminaGain: number;
+    reason: string;
+    roleMatch: 'Exact' | 'Compatible' | 'Versatile';
+  }> {
+    const team = teamSide === 'home' ? this.homeTeam : this.awayTeam;
+    const onPitch = teamSide === 'home' ? this.homePlayers : this.awayPlayers;
+
+    const onPitchIds = new Set(onPitch.map(p => p.id));
+    const availableBench = team.players.filter(p => !onPitchIds.has(p.id) && !p.isGoalkeeper);
+
+    if (availableBench.length === 0) return [];
+
+    // Sort outfield starters by stamina ascending (most fatigued first)
+    const outfieldStarters = onPitch.filter(p => !p.player.isGoalkeeper);
+    outfieldStarters.sort((a, b) => a.stamina - b.stamina);
+
+    const isAttack = (pos: string) => ['ST', 'CF', 'LW', 'RW'].includes(pos);
+    const isMidfield = (pos: string) => ['CM', 'CAM', 'CDM', 'RM', 'LM'].includes(pos);
+    const isDefense = (pos: string) => ['CB', 'LB', 'RB', 'LWB', 'RWB'].includes(pos);
+
+    const recommendations: Array<{
+      playerOut: MatchPlayerEntity;
+      recommendedSub: Player;
+      staminaGain: number;
+      reason: string;
+      roleMatch: 'Exact' | 'Compatible' | 'Versatile';
+    }> = [];
+
+    const usedBenchIds = new Set<string>();
+
+    for (const starter of outfieldStarters.slice(0, 4)) {
+      let bestCandidate: Player | null = null;
+      let bestScore = -Infinity;
+      let bestMatch: 'Exact' | 'Compatible' | 'Versatile' = 'Versatile';
+
+      for (const sub of availableBench) {
+        if (usedBenchIds.has(sub.id)) continue;
+
+        let score = sub.rating;
+        let match: 'Exact' | 'Compatible' | 'Versatile' = 'Versatile';
+
+        if (sub.position === starter.player.position) {
+          score += 35;
+          match = 'Exact';
+        } else if (
+          (isAttack(starter.player.position) && isAttack(sub.position)) ||
+          (isMidfield(starter.player.position) && isMidfield(sub.position)) ||
+          (isDefense(starter.player.position) && isDefense(sub.position))
+        ) {
+          score += 18;
+          match = 'Compatible';
+        }
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestCandidate = sub;
+          bestMatch = match;
+        }
+      }
+
+      if (bestCandidate) {
+        usedBenchIds.add(bestCandidate.id);
+        const staminaGain = Math.round(100 - starter.stamina);
+        let fatigueDescriptor = 'fatigued';
+        if (starter.stamina < 40) fatigueDescriptor = 'exhausted';
+        else if (starter.stamina < 65) fatigueDescriptor = 'tiring';
+
+        recommendations.push({
+          playerOut: starter,
+          recommendedSub: bestCandidate,
+          staminaGain,
+          reason: `${starter.player.shortName} is ${fatigueDescriptor} (${Math.round(starter.stamina)}% stamina). ${bestCandidate.shortName} brings 100% fresh legs and high dynamism.`,
+          roleMatch: bestMatch,
+        });
+      }
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * Executes a substitution, replacing an on-pitch player with a bench player.
+   */
+  public substitutePlayer(
+    playerOutId: string, 
+    playerInId: string, 
+    teamSide: 'home' | 'away' = 'home'
+  ): { success: boolean; reason?: string } {
+    if (this.subsUsed >= this.maxSubs) {
+      return { 
+        success: false, 
+        reason: `Maximum substitutions (${this.maxSubs}) reached for this match.` 
+      };
+    }
+
+    const team = teamSide === 'home' ? this.homeTeam : this.awayTeam;
+    const playersList = teamSide === 'home' ? this.homePlayers : this.awayPlayers;
+
+    // Find on-pitch player
+    const outIndex = playersList.findIndex(p => p.id === playerOutId);
+    if (outIndex === -1) {
+      return { success: false, reason: 'Selected starting player not found on pitch.' };
+    }
+    const playerOut = playersList[outIndex];
+
+    // Find incoming player in team roster
+    const incomingIndexInTeam = team.players.findIndex(p => p.id === playerInId);
+    if (incomingIndexInTeam === -1) {
+      return { success: false, reason: 'Incoming substitute player not found in team squad.' };
+    }
+    const incomingPlayer = team.players[incomingIndexInTeam];
+
+    // Check if incoming player is already on pitch
+    const isAlreadyOnPitch = playersList.some(p => p.id === playerInId);
+    if (isAlreadyOnPitch) {
+      return { success: false, reason: `${incomingPlayer.shortName || incomingPlayer.name} is already playing on the pitch.` };
+    }
+
+    // Transfer ball if playerOut had it
+    const hadBall = playerOut.hasBall;
+    playerOut.hasBall = false;
+
+    // Create fresh on-pitch MatchPlayerEntity for incoming substitute
+    const newPitchEntity: MatchPlayerEntity = {
+      id: incomingPlayer.id,
+      team: teamSide,
+      player: incomingPlayer,
+      pos: { ...playerOut.pos },
+      targetPos: { ...playerOut.targetPos },
+      homePos: { ...playerOut.homePos },
+      velocity: { x: 0, y: 0 },
+      facingAngle: playerOut.facingAngle,
+      stamina: 100, // 100% fresh stamina!
+      isSprinting: false,
+      hasBall: hadBall,
+      isTackling: false,
+      tackleCooldown: 0,
+      skillMoveTime: 0,
+      runCycle: 0,
+      animState: 'idle',
+      yellowCards: playerOut.yellowCards,
+      isRedCarded: false,
+    };
+
+    // Replace on-pitch entity
+    playersList[outIndex] = newPitchEntity;
+
+    // Swap in team.players so starters (indices 0..10) stay synchronized
+    const outgoingIndexInTeam = team.players.findIndex(p => p.id === playerOutId);
+    if (outgoingIndexInTeam !== -1 && incomingIndexInTeam !== -1) {
+      const temp = team.players[outgoingIndexInTeam];
+      team.players[outgoingIndexInTeam] = team.players[incomingIndexInTeam];
+      team.players[incomingIndexInTeam] = temp;
+    }
+
+    // Switch user control if user was controlling the substituted player
+    if (teamSide === 'home' && this.userControlledId === playerOutId) {
+      this.userControlledId = incomingPlayer.id;
+    }
+
+    // Increment substitutions used
+    this.subsUsed++;
+
+    // Whistle sound, stadium commentary & match banner
+    soundEngine.playWhistle('short');
+    commentary.addComment(
+      `SUBSTITUTION: ${incomingPlayer.name} comes on for ${playerOut.player.name}! Fresh energy on the pitch!`,
+      'general'
+    );
+
+    this.bannerMessage = `SUB: ${incomingPlayer.shortName || incomingPlayer.name} IN ⬆ • ${playerOut.player.shortName || playerOut.player.name} OUT ⬇`;
+    this.offsideBannerTimer = 4.0;
+
+    return { success: true };
   }
 }

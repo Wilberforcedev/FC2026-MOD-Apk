@@ -221,6 +221,78 @@ export interface CareerNewsItem {
   isRead?: boolean;
 }
 
+export type ScoutingRegionId = 
+  | 'south_america' 
+  | 'western_europe' 
+  | 'central_europe' 
+  | 'southern_europe' 
+  | 'africa' 
+  | 'asia_oceania' 
+  | 'north_america';
+
+export type ScoutProfilePriority = 
+  | 'any' 
+  | 'technically_gifted' 
+  | 'pace_winger' 
+  | 'physically_strong' 
+  | 'playmaker' 
+  | 'defensive_minded' 
+  | 'goalkeeper';
+
+export type PotentialTier = 
+  | 'generational' // 91-95 "Has Potential to be Special"
+  | 'exciting'     // 86-90 "An Exciting Prospect"
+  | 'great'        // 81-85 "Showing Great Potential"
+  | 'rotation';    // 75-80 "Solid Squad Prospect"
+
+export interface ScoutedProspect extends Player {
+  age: number;
+  nationality: string;
+  flag: string;
+  region: ScoutingRegionId;
+  potentialMin: number;
+  potentialMax: number;
+  potentialTier: PotentialTier;
+  weakFoot: number; // 1-5
+  skillMoves: number; // 1-5
+  workRate: string; // e.g. 'High/Med'
+  scoutComment: string;
+  scoutedAtMatchday: number;
+  scoutId: string;
+  scoutName: string;
+  status: 'scouted' | 'signed_to_academy' | 'promoted' | 'rejected';
+}
+
+export interface ScoutMission {
+  region: ScoutingRegionId;
+  priority: ScoutProfilePriority;
+  matchdaysRemaining: number;
+  totalMatchdays: number;
+  cost: number;
+}
+
+export interface Scout {
+  id: string;
+  name: string;
+  nationality: string;
+  flag: string;
+  experience: number; // 1-5 stars
+  judgement: number;  // 1-5 stars
+  hired: boolean;
+  hiringCost: number; // Millions e.g. 0.8
+  wage: number;       // Thousands per week
+  status: 'available' | 'scouting';
+  specialty: string;
+  currentMission?: ScoutMission;
+}
+
+export interface ScoutingNetworkState {
+  scouts: Scout[];
+  activeReports: ScoutedProspect[];
+  totalDiscovered: number;
+  promotedCount: number;
+}
+
 export interface CareerState {
   userTeamId: string;
   seasonYear: number;
@@ -233,6 +305,7 @@ export interface CareerState {
   youthAcademy: Player[];
   newsFeed?: CareerNewsItem[];
   activeInjuries?: PlayerInjury[];
+  scoutingNetwork?: ScoutingNetworkState;
 }
 
 export interface BallEntity {
@@ -284,6 +357,52 @@ export interface GoalEvent {
   team: 'home' | 'away';
   assistedBy?: string;
   shotSpeedKmh: number;
+}
+
+export interface HighlightPlayerMeta {
+  id: string;
+  team: 'home' | 'away';
+  name: string;
+  shortName: string;
+  number: number;
+  likeness?: PlayerLikeness;
+}
+
+export interface MatchHighlightEvent {
+  id: string;
+  type: 'goal' | 'save';
+  minute: number;
+  matchTimeSec: number;
+  team: 'home' | 'away';
+  primaryPlayerName: string;
+  primaryPlayerNumber: number;
+  secondaryPlayerName?: string;
+  shotSpeedKmh?: number;
+  description: string;
+  frames: ReplayFrame[];
+  timestamp: number;
+  homeTeam: {
+    id?: string;
+    name: string;
+    shortName: string;
+    badgeIcon: string;
+    badgeBg: string;
+    badgeBorder: string;
+    badgeTextColor: string;
+    kit: TeamKit;
+  };
+  awayTeam: {
+    id?: string;
+    name: string;
+    shortName: string;
+    badgeIcon: string;
+    badgeBg: string;
+    badgeBorder: string;
+    badgeTextColor: string;
+    kit: TeamKit;
+  };
+  playersMeta?: HighlightPlayerMeta[];
+  weather?: string;
 }
 
 export interface TournamentMatch {

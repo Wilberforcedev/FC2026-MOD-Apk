@@ -532,21 +532,21 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
             <AnimatePresence mode="wait">
               {inspectorTab === 'stats' ? (
                 <motion.div
-                  key="inspector-stats"
+                  key={`inspector-stats-${selectedPlayer.id}`}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.18 }}
+                  transition={{ duration: 0.2 }}
                 >
                   {/* Core Stats Progress Bars (matches image.png) */}
                   <div className="space-y-1.5 py-1">
-                    <StatBar label="AVR" value={selectedPlayer.rating} color="cyan" />
-                    <StatBar label="Pace" value={selectedPlayer.stats.pace} color="teal" />
-                    <StatBar label="Shooting" value={selectedPlayer.stats.shooting} color="amber" />
-                    <StatBar label="Passing" value={selectedPlayer.stats.passing} color="cyan" />
-                    <StatBar label="Dribbling" value={selectedPlayer.stats.dribbling} color="teal" />
-                    <StatBar label="Defending" value={selectedPlayer.stats.defending} color="emerald" />
-                    <StatBar label="Physical" value={selectedPlayer.stats.physicality} color="amber" />
+                    <StatBar label="AVR" value={selectedPlayer.rating} color="cyan" delay={0.0} />
+                    <StatBar label="Pace" value={selectedPlayer.stats.pace} color="teal" delay={0.03} />
+                    <StatBar label="Shooting" value={selectedPlayer.stats.shooting} color="amber" delay={0.06} />
+                    <StatBar label="Passing" value={selectedPlayer.stats.passing} color="cyan" delay={0.09} />
+                    <StatBar label="Dribbling" value={selectedPlayer.stats.dribbling} color="teal" delay={0.12} />
+                    <StatBar label="Defending" value={selectedPlayer.stats.defending} color="emerald" delay={0.15} />
+                    <StatBar label="Physical" value={selectedPlayer.stats.physicality} color="amber" delay={0.18} />
                   </div>
 
                   {/* Shortcut button to Full Progression Studio */}
@@ -564,11 +564,11 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
               ) : (
                 /* Compact Recharts Progression View in Inspector */
                 <motion.div
-                  key="inspector-progression"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.2 }}
+                  key={`inspector-progression-${selectedPlayer.id}`}
+                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                  transition={{ duration: 0.28, ease: 'easeOut' }}
                   className="space-y-2 py-1"
                 >
                   <PlayerProgressionChart
@@ -873,26 +873,43 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
   );
 };
 
-function StatBar({ label, value, color }: { label: string; value: number; color: 'cyan' | 'teal' | 'amber' | 'emerald' }) {
+function StatBar({ 
+  label, 
+  value, 
+  color, 
+  delay = 0 
+}: { 
+  label: string; 
+  value: number; 
+  color: 'cyan' | 'teal' | 'amber' | 'emerald';
+  delay?: number;
+}) {
   const colorClasses = {
-    cyan: 'bg-cyan-400',
-    teal: 'bg-teal-400',
-    amber: 'bg-amber-400',
-    emerald: 'bg-emerald-400',
+    cyan: 'bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]',
+    teal: 'bg-teal-400 shadow-[0_0_8px_rgba(20,184,166,0.6)]',
+    amber: 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.6)]',
+    emerald: 'bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)]',
   };
 
   return (
-    <div className="flex items-center gap-3 text-xs">
+    <motion.div 
+      initial={{ opacity: 0, x: -6 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.25, delay, ease: 'easeOut' }}
+      className="flex items-center gap-3 text-xs"
+    >
       <span className="w-16 text-white/60 font-medium font-mono">{label}</span>
-      <div className="flex-1 bg-slate-900 h-2 rounded-full overflow-hidden border border-white/5">
-        <div 
-          className={`h-full ${colorClasses[color]} transition-all duration-300 shadow-[0_0_8px_currentColor]`}
-          style={{ width: `${Math.min(value, 100)}%` }}
+      <div className="flex-1 bg-slate-900 h-2 rounded-full overflow-hidden border border-white/5 relative">
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(value, 100)}%` }}
+          transition={{ duration: 0.5, delay: delay + 0.04, ease: [0.16, 1, 0.3, 1] }}
+          className={`h-full ${colorClasses[color]} rounded-full`}
         />
       </div>
       <span className="w-8 text-right font-['Chakra_Petch'] font-black text-white font-mono">
         {value}
       </span>
-    </div>
+    </motion.div>
   );
 }
