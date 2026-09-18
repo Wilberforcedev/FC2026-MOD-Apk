@@ -368,6 +368,32 @@ export interface HighlightPlayerMeta {
   likeness?: PlayerLikeness;
 }
 
+export interface HeatmapSample {
+  x: number;
+  y: number;
+}
+
+export interface PlayerHeatmapRecord {
+  id: string;
+  name: string;
+  shortName: string;
+  number: number;
+  position: string;
+  team: 'home' | 'away';
+  samples: HeatmapSample[];
+  distanceKm: number;
+  sprintDistanceKm: number;
+  topSpeedKmh: number;
+}
+
+export interface MatchHeatmapData {
+  homePlayers: Record<string, PlayerHeatmapRecord>;
+  awayPlayers: Record<string, PlayerHeatmapRecord>;
+  ballSamples: HeatmapSample[];
+  homeTeamSamples: HeatmapSample[];
+  awayTeamSamples: HeatmapSample[];
+}
+
 export interface MatchHighlightEvent {
   id: string;
   type: 'goal' | 'save';

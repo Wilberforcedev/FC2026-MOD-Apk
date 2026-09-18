@@ -705,6 +705,7 @@ export default function App() {
               stats={matchEngine.stats}
               goalEvents={matchEngine.goalEvents}
               keyMatchEvents={matchEngine.keyMatchEvents}
+              heatmapData={matchEngine.getHeatmapData()}
               engine={matchEngine}
               isTournament={!!activeTournamentMatch}
               isCareer={!!activeCareerFixture}

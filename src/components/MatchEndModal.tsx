@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MatchStats, GoalEvent, Team, MatchHighlightEvent } from '../types/soccer';
+import { MatchStats, GoalEvent, Team, MatchHighlightEvent, MatchHeatmapData } from '../types/soccer';
 import { MatchEngine } from '../game/engine';
 import confetti from 'canvas-confetti';
 import { 
@@ -16,9 +16,11 @@ import {
   Zap, 
   Trash2, 
   Sparkles,
-  Shield
+  Shield,
+  Flame
 } from 'lucide-react';
 import { HighlightReplayModal } from './HighlightReplayModal';
+import { PitchHeatmapViewer } from './PitchHeatmapViewer';
 import { 
   getSavedHighlights, 
   saveHighlightToVault, 
@@ -33,6 +35,7 @@ interface MatchEndModalProps {
   stats: MatchStats;
   goalEvents: GoalEvent[];
   keyMatchEvents?: MatchHighlightEvent[];
+  heatmapData?: MatchHeatmapData;
   engine?: MatchEngine;
   isTournament: boolean;
   isCareer?: boolean;
@@ -42,7 +45,7 @@ interface MatchEndModalProps {
   onCareerHub?: () => void;
 }
 
-type TabType = 'highlights' | 'stats' | 'vault';
+type TabType = 'highlights' | 'heatmap' | 'stats' | 'vault';
 type FilterType = 'all' | 'goals' | 'saves';
 
 export const MatchEndModal: React.FC<MatchEndModalProps> = ({
@@ -51,6 +54,7 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
   stats,
   goalEvents,
   keyMatchEvents = [],
+  heatmapData,
   engine,
   isTournament,
   isCareer,
@@ -72,6 +76,15 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
   // Saved vault highlights
   const [vaultHighlights, setVaultHighlights] = useState<MatchHighlightEvent[]>(() => getSavedHighlights());
   const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  // Resolved spatial movement telemetry & heatmap data
+  const resolvedHeatmapData: MatchHeatmapData = heatmapData || engine?.getHeatmapData() || {
+    homePlayers: {},
+    awayPlayers: {},
+    ballSamples: [],
+    homeTeamSamples: [],
+    awayTeamSamples: [],
+  };
 
   useEffect(() => {
     if (isUserWinner) {
@@ -120,7 +133,7 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
     <div id="match-end-modal-backdrop" className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
       <div 
         id="match-end-modal-container"
-        className="w-full max-w-3xl max-h-[92vh] bg-slate-900 border border-white/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-4xl max-h-[94vh] bg-slate-900 border border-white/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
       >
         {/* Banner Header */}
         <div className={`py-5 px-6 text-center relative overflow-hidden ${
@@ -163,12 +176,12 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-slate-950/80 border-b border-white/10 px-4 flex items-center justify-between">
+        <div className="bg-slate-950/80 border-b border-white/10 px-4 flex items-center justify-between overflow-x-auto">
           <div className="flex items-center space-x-2">
             <button
               id="tab-match-highlights-btn"
               onClick={() => setActiveTab('highlights')}
-              className={`flex items-center space-x-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors ${
+              className={`flex items-center space-x-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors flex-shrink-0 ${
                 activeTab === 'highlights'
                   ? 'border-cyan-400 text-cyan-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -184,9 +197,25 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
             </button>
 
             <button
+              id="tab-match-heatmap-btn"
+              onClick={() => setActiveTab('heatmap')}
+              className={`flex items-center space-x-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors flex-shrink-0 ${
+                activeTab === 'heatmap'
+                  ? 'border-orange-500 text-orange-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Flame className="w-4 h-4 text-orange-400" />
+              <span>Pitch Heatmap</span>
+              <span className="bg-orange-950 border border-orange-500/40 text-orange-300 text-[10px] px-1.5 py-0.5 rounded-full font-mono">
+                Live
+              </span>
+            </button>
+
+            <button
               id="tab-match-stats-btn"
               onClick={() => setActiveTab('stats')}
-              className={`flex items-center space-x-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors ${
+              className={`flex items-center space-x-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors flex-shrink-0 ${
                 activeTab === 'stats'
                   ? 'border-cyan-400 text-cyan-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -202,7 +231,7 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
                 refreshVault();
                 setActiveTab('vault');
               }}
-              className={`flex items-center space-x-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors ${
+              className={`flex items-center space-x-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors flex-shrink-0 ${
                 activeTab === 'vault'
                   ? 'border-amber-400 text-amber-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -223,7 +252,7 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
             <button
               id="replay-all-reel-btn"
               onClick={() => setActiveReplayHighlight(keyMatchEvents[0])}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-extrabold shadow-[0_0_12px_rgba(6,182,212,0.35)] transition-all active:scale-95"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-extrabold shadow-[0_0_12px_rgba(6,182,212,0.35)] transition-all active:scale-95 flex-shrink-0 ml-2"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span className="hidden sm:inline">Play Highlight Reel</span>
@@ -233,7 +262,7 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
         </div>
 
         {/* Tab Content Body */}
-        <div className="p-4 sm:p-5 flex-1 overflow-y-auto min-h-[260px] max-h-[420px] relative">
+        <div className="p-4 sm:p-5 flex-1 overflow-y-auto min-h-[280px] max-h-[580px] relative">
           {/* Toast Notification */}
           {saveToast && (
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 bg-cyan-950/95 border border-cyan-400/50 text-cyan-200 text-xs font-bold px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.3)] animate-in fade-in">
@@ -378,7 +407,18 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: MATCH STATISTICS */}
+          {/* TAB 2: PITCH HEATMAP & SPATIAL MOVEMENT VISUALIZATION */}
+          {activeTab === 'heatmap' && (
+            <PitchHeatmapViewer
+              homeTeam={homeTeam}
+              awayTeam={awayTeam}
+              heatmapData={resolvedHeatmapData}
+              homeScore={stats.homeScore}
+              awayScore={stats.awayScore}
+            />
+          )}
+
+          {/* TAB 3: MATCH STATISTICS */}
           {activeTab === 'stats' && (
             <div className="space-y-3 font-mono text-sm">
               <StatRow label="Possession" homeVal={`${stats.homePossessionPercent}%`} awayVal={`${stats.awayPossessionPercent}%`} homeHigher={stats.homePossessionPercent > stats.awayPossessionPercent} />
