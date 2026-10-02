@@ -8,6 +8,7 @@ import { TEAMS } from './data/teams';
 import { CareerState, SeasonFixture, Team, TournamentMatch } from './types/soccer';
 import { MatchEngine, UserInputState } from './game/engine';
 import { PitchCanvas } from './components/PitchCanvas';
+import { OnPitchLikenessLayer } from './components/OnPitchLikenessLayer';
 import { BroadcastHUD } from './components/BroadcastHUD';
 import { MatchControlsOverlay } from './components/MatchControlsOverlay';
 import { MatchEndModal } from './components/MatchEndModal';
@@ -100,10 +101,8 @@ export default function App() {
 
   const tournamentUserTeam =
     tournamentMatches.find(match => match.id === 'q1')?.homeTeam || userTeam;
-
   const careerUserTeam =
     TEAMS.find(team => team.id === careerState.userTeamId) || userTeam;
-
   const championTeam = tournamentMatches.find(
     match => match.round === 'final' && match.isCompleted,
   )?.winner;
@@ -181,18 +180,14 @@ export default function App() {
     const isTournament = Boolean(context.tournamentMatch);
     const isCareer = Boolean(context.careerFixture);
 
-    // Exhibition mode changes the active club. Managed modes preserve the
-    // player's actual club even when the fixture places them on the away side.
     if (!isTournament && !isCareer) {
       setUserTeam(config.homeTeam);
       setOpponentTeam(config.awayTeam);
     } else if (isTournament) {
-      const opponent =
-        config.homeTeam.id === tournamentUserTeam.id ? config.awayTeam : config.homeTeam;
+      const opponent = config.homeTeam.id === tournamentUserTeam.id ? config.awayTeam : config.homeTeam;
       setOpponentTeam(opponent);
     } else {
-      const opponent =
-        config.homeTeam.id === careerUserTeam.id ? config.awayTeam : config.homeTeam;
+      const opponent = config.homeTeam.id === careerUserTeam.id ? config.awayTeam : config.homeTeam;
       setOpponentTeam(opponent);
     }
 
@@ -272,7 +267,6 @@ export default function App() {
 
     let lastTime = performance.now();
     let frameId = 0;
-
     const loop = (time: number) => {
       if (document.visibilityState === 'hidden') {
         lastTime = time;
@@ -369,6 +363,7 @@ export default function App() {
       {currentScreen === 'match' && matchEngine && (
         <div className="w-full h-full relative overflow-hidden bg-slate-950">
           <PitchCanvas engine={matchEngine} weather={weather} />
+          <OnPitchLikenessLayer engine={matchEngine} />
           <BroadcastHUD
             engine={matchEngine}
             isMuted={isMuted}
