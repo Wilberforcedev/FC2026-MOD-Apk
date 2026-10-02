@@ -70,9 +70,7 @@ export function loadCareer(): CareerState | null {
     updated = true;
   }
 
-  // Re-save legacy raw saves into the versioned envelope after migration.
   if (updated) saveCareer(parsed);
-
   return parsed;
 }
 
@@ -82,8 +80,8 @@ export function clearCareer(): void {
 
 export function processMatchdayResults(
   state: CareerState,
-  userHomeScore: number,
-  userAwayScore: number,
+  actualHomeScore: number,
+  actualAwayScore: number,
 ): CareerState {
   const currentFixtures = state.fixtures.filter(fixture => fixture.matchday === state.currentMatchday);
   const updatedFixtures = state.fixtures.map(fixture => ({ ...fixture }));
@@ -99,17 +97,19 @@ export function processMatchdayResults(
       fixture.homeTeamId === state.userTeamId || fixture.awayTeamId === state.userTeamId;
 
     if (isUserFixture) {
-      if (fixture.homeTeamId === state.userTeamId) {
-        homeScore = userHomeScore;
-        awayScore = userAwayScore;
-        if (homeScore > awayScore) prizeMoney += 2.0;
-        else if (homeScore === awayScore) prizeMoney += 0.8;
-      } else {
-        homeScore = userAwayScore;
-        awayScore = userHomeScore;
-        if (awayScore > homeScore) prizeMoney += 2.0;
-        else if (awayScore === homeScore) prizeMoney += 0.8;
-      }
+      // MatchEngine scores are always home-team then away-team scores, regardless
+      // of whether the user's club is playing home or away. Keep that orientation
+      // intact when writing the fixture and league table.
+      homeScore = actualHomeScore;
+      awayScore = actualAwayScore;
+
+      const userWon =
+        (fixture.homeTeamId === state.userTeamId && homeScore > awayScore) ||
+        (fixture.awayTeamId === state.userTeamId && awayScore > homeScore);
+      const userDrew = homeScore === awayScore;
+
+      if (userWon) prizeMoney += 2.0;
+      else if (userDrew) prizeMoney += 0.8;
     } else {
       const homeTeam = TEAMS.find(team => team.id === fixture.homeTeamId);
       const awayTeam = TEAMS.find(team => team.id === fixture.awayTeamId);
