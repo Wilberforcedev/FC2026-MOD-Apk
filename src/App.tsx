@@ -98,6 +98,12 @@ export default function App() {
 
   const inputRef = useRef<UserInputState>({ ...emptyInput });
 
+  const tournamentUserTeam =
+    tournamentMatches.find(match => match.id === 'q1')?.homeTeam || userTeam;
+
+  const careerUserTeam =
+    TEAMS.find(team => team.id === careerState.userTeamId) || userTeam;
+
   const championTeam = tournamentMatches.find(
     match => match.round === 'final' && match.isCompleted,
   )?.winner;
@@ -157,12 +163,12 @@ export default function App() {
           match,
           homeScore,
           awayScore,
-          userTeam.id,
+          tournamentUserTeam.id,
         );
         return progress.matches;
       });
     },
-    [userTeam.id],
+    [tournamentUserTeam.id],
   );
 
   const handleStartMatch = useCallback((config: {
@@ -172,8 +178,24 @@ export default function App() {
     halfLengthMinutes: number;
     weather: 'Night' | 'Sunset' | 'Clear' | 'Rain';
   }, context: MatchContext = {}) => {
-    setUserTeam(config.homeTeam);
-    setOpponentTeam(config.awayTeam);
+    const isTournament = Boolean(context.tournamentMatch);
+    const isCareer = Boolean(context.careerFixture);
+
+    // Exhibition mode changes the active club. Managed modes preserve the
+    // player's actual club even when the fixture places them on the away side.
+    if (!isTournament && !isCareer) {
+      setUserTeam(config.homeTeam);
+      setOpponentTeam(config.awayTeam);
+    } else if (isTournament) {
+      const opponent =
+        config.homeTeam.id === tournamentUserTeam.id ? config.awayTeam : config.homeTeam;
+      setOpponentTeam(opponent);
+    } else {
+      const opponent =
+        config.homeTeam.id === careerUserTeam.id ? config.awayTeam : config.homeTeam;
+      setOpponentTeam(opponent);
+    }
+
     setWeather(config.weather);
 
     const engine = new MatchEngine(
@@ -206,7 +228,7 @@ export default function App() {
     setShowPauseModal(false);
     setShowMatchEndModal(false);
     setCurrentScreen('match');
-  }, [careerState, handleCareerUpdate, handleTournamentMatchEnd]);
+  }, [careerState, careerUserTeam.id, handleCareerUpdate, handleTournamentMatchEnd, tournamentUserTeam.id]);
 
   const handlePlayTournamentMatch = (match: TournamentMatch) => {
     setActiveTournamentMatch(match);
@@ -240,7 +262,7 @@ export default function App() {
 
   const handleResetTournament = () => {
     clearTournament();
-    const reset = initializeTournament(userTeam, TEAMS);
+    const reset = initializeTournament(tournamentUserTeam, TEAMS);
     setTournamentMatches(reset);
     saveTournament(reset);
   };
@@ -424,7 +446,7 @@ export default function App() {
           <div className="flex-1 overflow-hidden">
             <Suspense fallback={lazyFallback}>
               <TournamentBracket
-                userTeam={userTeam}
+                userTeam={tournamentUserTeam}
                 matches={tournamentMatches}
                 currentRound={tournamentMatches.find(match => match.isPlayerMatch && !match.isCompleted)?.round || 'champion'}
                 championTeam={championTeam}
