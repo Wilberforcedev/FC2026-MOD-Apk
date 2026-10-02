@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace FC2026.Gameplay
 {
@@ -17,6 +16,8 @@ namespace FC2026.Gameplay
         private BallController ball;
         private Vector2 touchOrigin;
         private bool leftTouchActive;
+        private float mobileSprintAmount;
+        private bool kickQueued;
         private Vector3 lastMoveDirection = Vector3.forward;
 
         public bool IsUserControlled { get; set; } = true;
@@ -31,6 +32,16 @@ namespace FC2026.Gameplay
         private void Start()
         {
             ball = FindFirstObjectByType<BallController>();
+        }
+
+        private void Update()
+        {
+            if (!IsUserControlled)
+                return;
+
+            ReadMobileTouches();
+            if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.JoystickButton0))
+                kickQueued = true;
         }
 
         private void FixedUpdate()
@@ -63,45 +74,30 @@ namespace FC2026.Gameplay
                 body.linearVelocity = new Vector3(changed.x, body.linearVelocity.y, changed.z);
             }
 
-            if (ReadKickPressed())
+            if (kickQueued)
+            {
+                kickQueued = false;
                 TryKick();
+            }
         }
 
         private Vector2 ReadMove()
         {
-            Vector2 move = Vector2.zero;
+            var move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
 
-            if (Keyboard.current != null)
+            if (leftTouchActive && Input.touchCount > 0)
             {
-                if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) move.x -= 1f;
-                if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) move.x += 1f;
-                if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) move.y -= 1f;
-                if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) move.y += 1f;
-            }
-
-            if (Gamepad.current != null && Gamepad.current.leftStick.ReadValue().sqrMagnitude > move.sqrMagnitude)
-                move = Gamepad.current.leftStick.ReadValue();
-
-            if (Touchscreen.current != null)
-            {
-                var touch = Touchscreen.current.primaryTouch;
-                var pressed = touch.press.isPressed;
-                var position = touch.position.ReadValue();
-
-                if (touch.press.wasPressedThisFrame && position.x < Screen.width * 0.52f)
+                for (var i = 0; i < Input.touchCount; i++)
                 {
-                    touchOrigin = position;
-                    leftTouchActive = true;
-                }
+                    var touch = Input.GetTouch(i);
+                    if (touch.position.x >= Screen.width * 0.52f)
+                        continue;
 
-                if (!pressed)
-                    leftTouchActive = false;
-
-                if (leftTouchActive)
-                {
-                    var delta = (position - touchOrigin) / Mathf.Max(70f, Screen.dpi * 0.34f);
+                    var delta = (touch.position - touchOrigin) / Mathf.Max(70f, Screen.dpi * 0.34f);
+                    mobileSprintAmount = Mathf.Clamp01(delta.magnitude);
                     if (delta.sqrMagnitude > 1f) delta.Normalize();
                     move = delta;
+                    break;
                 }
             }
 
@@ -110,27 +106,40 @@ namespace FC2026.Gameplay
 
         private bool ReadSprint()
         {
-            var keyboardSprint = Keyboard.current != null && (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed);
-            var gamepadSprint = Gamepad.current != null && Gamepad.current.rightTrigger.ReadValue() > 0.45f;
-            return keyboardSprint || gamepadSprint;
+            var keyboardSprint = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            return keyboardSprint || mobileSprintAmount > 0.84f;
         }
 
-        private bool ReadKickPressed()
+        private void ReadMobileTouches()
         {
-            if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
-                return true;
+            mobileSprintAmount = 0f;
 
-            if (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame)
-                return true;
-
-            if (Touchscreen.current != null)
+            if (Input.touchCount == 0)
             {
-                var touch = Touchscreen.current.primaryTouch;
-                if (touch.press.wasPressedThisFrame && touch.position.ReadValue().x >= Screen.width * 0.52f)
-                    return true;
+                leftTouchActive = false;
+                return;
             }
 
-            return false;
+            for (var i = 0; i < Input.touchCount; i++)
+            {
+                var touch = Input.GetTouch(i);
+
+                if (touch.phase == TouchPhase.Began)
+                {
+                    if (touch.position.x < Screen.width * 0.52f)
+                    {
+                        touchOrigin = touch.position;
+                        leftTouchActive = true;
+                    }
+                    else
+                    {
+                        kickQueued = true;
+                    }
+                }
+
+                if ((touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled) && touch.position.x < Screen.width * 0.52f)
+                    leftTouchActive = false;
+            }
         }
 
         private void TryKick()
