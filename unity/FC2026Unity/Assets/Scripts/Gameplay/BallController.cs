@@ -8,6 +8,7 @@ namespace FC2026.Gameplay
         private Rigidbody body;
 
         public Rigidbody Body => body;
+        public Transform LastKicker { get; private set; }
 
         private void Awake()
         {
@@ -19,11 +20,12 @@ namespace FC2026.Gameplay
             body.interpolation = RigidbodyInterpolation.Interpolate;
         }
 
-        public void Kick(Vector3 direction, float power, float lift = 0.08f)
+        public void Kick(Vector3 direction, float power, float lift = 0.08f, Transform kicker = null)
         {
             if (direction.sqrMagnitude < 0.001f)
                 return;
 
+            LastKicker = kicker;
             var impulse = direction.normalized;
             impulse.y = Mathf.Max(impulse.y, lift);
             body.AddForce(impulse.normalized * power, ForceMode.Impulse);
@@ -33,6 +35,7 @@ namespace FC2026.Gameplay
         {
             body.linearVelocity = Vector3.zero;
             body.angularVelocity = Vector3.zero;
+            LastKicker = null;
             transform.position = position;
         }
     }
