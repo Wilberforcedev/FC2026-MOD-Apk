@@ -9,15 +9,19 @@ namespace FC2026.Gameplay
         [SerializeField] private float sprintSpeed = 9.8f;
         [SerializeField] private float acceleration = 18f;
         [SerializeField] private float rotationSpeed = 12f;
-        [SerializeField] private float kickDistance = 2.2f;
-        [SerializeField] private float kickPower = 9.5f;
+        [SerializeField] private float kickDistance = 2.25f;
+        [SerializeField] private float passPower = 6.8f;
+        [SerializeField] private float shotPower = 10.2f;
 
         private Rigidbody body;
         private BallController ball;
+        private FootballMotionAnimator motion;
         private Vector2 touchOrigin;
         private bool leftTouchActive;
         private float mobileSprintAmount;
-        private bool kickQueued;
+        private bool passQueued;
+        private bool shootQueued;
+        private bool tackleQueued;
         private Vector3 lastMoveDirection = Vector3.forward;
 
         public bool IsUserControlled { get; set; } = true;
@@ -25,6 +29,7 @@ namespace FC2026.Gameplay
         private void Awake()
         {
             body = GetComponent<Rigidbody>();
+            motion = GetComponent<FootballMotionAnimator>();
             body.constraints = RigidbodyConstraints.FreezeRotation;
             body.interpolation = RigidbodyInterpolation.Interpolate;
         }
@@ -32,6 +37,8 @@ namespace FC2026.Gameplay
         private void Start()
         {
             ball = FindFirstObjectByType<BallController>();
+            if (motion == null)
+                motion = GetComponent<FootballMotionAnimator>();
         }
 
         private void Update()
@@ -40,8 +47,13 @@ namespace FC2026.Gameplay
                 return;
 
             ReadMobileTouches();
+
             if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.JoystickButton0))
-                kickQueued = true;
+                shootQueued = true;
+            if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.JoystickButton2))
+                passQueued = true;
+            if (Input.GetKeyDown(KeyCode.X) || Input.GetKeyDown(KeyCode.JoystickButton1))
+                tackleQueued = true;
         }
 
         private void FixedUpdate()
@@ -74,10 +86,22 @@ namespace FC2026.Gameplay
                 body.linearVelocity = new Vector3(changed.x, body.linearVelocity.y, changed.z);
             }
 
-            if (kickQueued)
+            if (tackleQueued)
             {
-                kickQueued = false;
-                TryKick();
+                tackleQueued = false;
+                PerformTackle();
+            }
+
+            if (passQueued)
+            {
+                passQueued = false;
+                TryKick(false);
+            }
+
+            if (shootQueued)
+            {
+                shootQueued = false;
+                TryKick(true);
             }
         }
 
@@ -120,6 +144,18 @@ namespace FC2026.Gameplay
                 return;
             }
 
+            if (Input.touchCount >= 2)
+            {
+                for (var i = 0; i < Input.touchCount; i++)
+                {
+                    if (Input.GetTouch(i).phase == TouchPhase.Began)
+                    {
+                        tackleQueued = true;
+                        break;
+                    }
+                }
+            }
+
             for (var i = 0; i < Input.touchCount; i++)
             {
                 var touch = Input.GetTouch(i);
@@ -131,9 +167,12 @@ namespace FC2026.Gameplay
                         touchOrigin = touch.position;
                         leftTouchActive = true;
                     }
-                    else
+                    else if (Input.touchCount == 1)
                     {
-                        kickQueued = true;
+                        if (touch.position.y >= Screen.height * 0.55f)
+                            shootQueued = true;
+                        else
+                            passQueued = true;
                     }
                 }
 
@@ -142,7 +181,14 @@ namespace FC2026.Gameplay
             }
         }
 
-        private void TryKick()
+        private void PerformTackle()
+        {
+            motion?.TriggerTackle();
+            var direction = lastMoveDirection.sqrMagnitude > 0.01f ? lastMoveDirection : transform.forward;
+            body.AddForce(direction.normalized * 1.8f, ForceMode.VelocityChange);
+        }
+
+        private void TryKick(bool shot)
         {
             if (ball == null)
                 ball = FindFirstObjectByType<BallController>();
@@ -156,7 +202,19 @@ namespace FC2026.Gameplay
                 return;
 
             var direction = lastMoveDirection.sqrMagnitude > 0.01f ? lastMoveDirection : transform.forward;
-            ball.Kick(direction, kickPower, 0.12f);
+            var localBall = transform.InverseTransformPoint(ball.transform.position);
+            var useLeftFoot = localBall.x < 0f;
+
+            if (shot)
+            {
+                motion?.TriggerShot(useLeftFoot);
+                ball.Kick(direction, shotPower, 0.13f, transform);
+            }
+            else
+            {
+                motion?.TriggerPass(useLeftFoot);
+                ball.Kick(direction, passPower, 0.045f, transform);
+            }
         }
     }
 }
