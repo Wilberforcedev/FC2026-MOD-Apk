@@ -33,15 +33,15 @@ namespace FC2026.Gameplay
         private void Awake()
         {
             body = GetComponent<Rigidbody>();
-            motion = GetComponent<FootballMotionAnimator>();
             body.constraints = RigidbodyConstraints.FreezeRotation;
             body.interpolation = RigidbodyInterpolation.Interpolate;
         }
 
         private void Start()
         {
+            var styleSeed = (uint)gameObject.name.GetHashCode() / (float)uint.MaxValue;
+            motion = FootballVisualFactory.EnsureAnimatedRig(gameObject, goalkeeper, styleSeed);
             ball = FindFirstObjectByType<BallController>();
-            motion ??= GetComponent<FootballMotionAnimator>();
             if (anchor == Vector3.zero)
                 anchor = transform.position;
         }
