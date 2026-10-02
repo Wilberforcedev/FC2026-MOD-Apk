@@ -1,65 +1,67 @@
-# FC 2026 Soccer — Native Android Build
+# FC 2026 Native Android Build
 
-FC 2026 is packaged for Android with Capacitor. The Vite production build is copied into the native Android application, so the core game UI, JavaScript, CSS, data and bundled assets run from the APK rather than from a hosted website.
+FC 2026 now supports a native Android APK through Capacitor. The Vite production bundle is packaged inside the Android application, so the core game can boot and remain playable without a hosted website or active internet connection.
 
-## Application identity
+## Native package
 
+- Application ID: `com.wilberforcedev.fc2026`
 - App name: `FC 2026 Soccer`
-- Android package: `com.wilberforcedev.fc2026`
-- Web asset directory: `dist`
+- Web bundle: `dist/`
+- Android runtime: Capacitor
+- Orientation: sensor landscape
+- Display: immersive fullscreen
+- Hardware acceleration: enabled
+- Keep screen awake during play: enabled
 
-## First local Android build
+## Offline behavior
 
-Requirements:
+The Android APK packages the built React/TypeScript game locally. Club and league badge graphics are generated locally as SVG data rather than fetched from remote servers, and the app no longer depends on Google Fonts at launch.
 
-- Node.js 22+
-- Java 21
-- Android Studio / Android SDK
+Remote/online features should be treated as optional enhancements. Core menus, gameplay, career saves, tournament saves and locally bundled visual assets should remain usable without connectivity.
 
-Run:
+## Create the native project
 
 ```bash
 npm install
-npm run build
-npx cap add android
-npx cap sync android
-npx cap open android
+npm run android:add
 ```
 
-From Android Studio you can run the application on a connected phone/emulator or produce an APK/AAB.
+This builds the web app, creates the Android project, applies the FC 2026 native Android configuration and synchronizes the offline assets.
 
-## Command-line debug APK
-
-After the Android platform has been generated:
-
-```bash
-npm run android:debug
-```
-
-The debug APK is produced at:
-
-```text
-android/app/build/outputs/apk/debug/app-debug.apk
-```
-
-## Updating game code in the Android application
-
-Whenever React/TypeScript code or bundled assets change, run:
+## Re-sync after source changes
 
 ```bash
 npm run android:sync
 ```
 
-This rebuilds `dist` and copies the current game into the native Android project.
+## Build a debug APK
 
-## Offline behavior
+```bash
+npm run android:debug
+```
 
-The application shell and built game assets are packaged in the APK and do not require a web server. Career and tournament saves continue to use local device WebView storage.
+Expected output:
 
-Remote-only media should be treated as optional. Important gameplay assets should live under `public/` or be imported from `src/` so they are included in the APK.
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
 
-## Automated APK build
+## Open in Android Studio
 
-The repository includes `.github/workflows/android-apk.yml`. It builds the web app, creates the Capacitor Android project, syncs the offline assets, compiles a debug APK and uploads `FC2026-Android-Debug` as a workflow artifact.
+```bash
+npm run android:open
+```
 
-A signed production release will require a release keystore and signing configuration. Do not commit keystore passwords or private signing keys to the repository.
+From Android Studio you can run the game on a connected phone/emulator and configure signing for release builds.
+
+## Release build
+
+```bash
+npm run android:release
+```
+
+A production release still requires an Android signing key before distribution.
+
+## GitHub Actions
+
+`.github/workflows/android-apk.yml` builds the native debug APK on the Android improvement branch, pull requests to `main`, and manual workflow dispatch. Successful runs upload an artifact named `FC2026-Android-Debug`.
