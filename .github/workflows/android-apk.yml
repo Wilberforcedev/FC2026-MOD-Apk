@@ -6,6 +6,9 @@ on:
     branches:
       - improve/core-v1
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build-android:
