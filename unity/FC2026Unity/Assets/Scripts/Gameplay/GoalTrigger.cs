@@ -10,8 +10,16 @@ namespace FC2026.Gameplay
 
         private void OnTriggerEnter(Collider other)
         {
-            if (other.GetComponent<BallController>() == null)
+            var ball = other.GetComponent<BallController>();
+            if (ball == null)
                 return;
+
+            var scorer = ball.LastKicker;
+            if (scorer != null)
+            {
+                scorer.GetComponent<FootballMotionAnimator>()?.TriggerCelebration();
+                FindFirstObjectByType<BroadcastCameraController>()?.FocusCelebration(scorer);
+            }
 
             Match?.RegisterGoal(HomeGoal);
         }
