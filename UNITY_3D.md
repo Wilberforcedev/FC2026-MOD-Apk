@@ -18,7 +18,7 @@ In Unity Hub, install these modules with the editor:
 - Android SDK & NDK Tools
 - OpenJDK
 
-The project uses URP 17.3 for the 3D rendering foundation.
+The first playable bootstrap uses Unity's built-in 3D renderer so it can open and run without an additional render-pipeline setup step. URP mobile quality profiles will be added as the next rendering stage once the first Android build has been verified.
 
 ## Open the project
 
@@ -120,7 +120,7 @@ The Unity version will progressively take over these systems from the existing p
 6. tournament mode
 7. career mode, transfers and saves
 8. menus/HUD
-9. Android optimization and device quality presets
+9. URP mobile rendering profiles and Android optimization
 10. signed release APK/AAB
 
 The React version should not be deleted until its career/tournament/player data has been migrated and validated in Unity.
