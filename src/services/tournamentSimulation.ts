@@ -33,10 +33,12 @@ function penaltyWinner(homeTeam: Team, awayTeam: Team): Team {
   return Math.random() < homeChance ? homeTeam : awayTeam;
 }
 
-export function simulateKnockoutMatch(homeTeam: Team, awayTeam: Team): SimulatedKnockoutResult {
-  let homeScore = poisson(expectedGoals(homeTeam, awayTeam, 0.12));
-  let awayScore = poisson(expectedGoals(awayTeam, homeTeam, 0));
-
+export function resolveKnockoutFromScore(
+  homeTeam: Team,
+  awayTeam: Team,
+  homeScore: number,
+  awayScore: number,
+): SimulatedKnockoutResult {
   if (homeScore !== awayScore) {
     return {
       homeScore,
@@ -46,23 +48,28 @@ export function simulateKnockoutMatch(homeTeam: Team, awayTeam: Team): Simulated
     };
   }
 
-  // Extra time is lower scoring than a full match but still influenced by team strength.
-  homeScore += poisson(expectedGoals(homeTeam, awayTeam, 0.05) * 0.33);
-  awayScore += poisson(expectedGoals(awayTeam, homeTeam, 0) * 0.33);
+  let resolvedHomeScore = homeScore + poisson(expectedGoals(homeTeam, awayTeam, 0.05) * 0.33);
+  let resolvedAwayScore = awayScore + poisson(expectedGoals(awayTeam, homeTeam, 0) * 0.33);
 
-  if (homeScore !== awayScore) {
+  if (resolvedHomeScore !== resolvedAwayScore) {
     return {
-      homeScore,
-      awayScore,
-      winner: homeScore > awayScore ? homeTeam : awayTeam,
+      homeScore: resolvedHomeScore,
+      awayScore: resolvedAwayScore,
+      winner: resolvedHomeScore > resolvedAwayScore ? homeTeam : awayTeam,
       decidedBy: 'extra-time',
     };
   }
 
   return {
-    homeScore,
-    awayScore,
+    homeScore: resolvedHomeScore,
+    awayScore: resolvedAwayScore,
     winner: penaltyWinner(homeTeam, awayTeam),
     decidedBy: 'penalties',
   };
+}
+
+export function simulateKnockoutMatch(homeTeam: Team, awayTeam: Team): SimulatedKnockoutResult {
+  const homeScore = poisson(expectedGoals(homeTeam, awayTeam, 0.12));
+  const awayScore = poisson(expectedGoals(awayTeam, homeTeam, 0));
+  return resolveKnockoutFromScore(homeTeam, awayTeam, homeScore, awayScore);
 }
