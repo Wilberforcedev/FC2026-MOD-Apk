@@ -120,6 +120,7 @@ namespace FC2026.Core
             // Penalty boxes give the prototype a true regulation-scale visual reference.
             CreatePenaltyBox(-1, line);
             CreatePenaltyBox(1, line);
+            CreatePitchDetails(line);
         }
 
         private void CreatePenaltyBox(int side, Material line)
@@ -131,6 +132,164 @@ namespace FC2026.Core
             CreateLine(new Vector3(0, 0.036f, insideZ), new Vector3(boxWidth, 0.04f, 0.1f), line);
             CreateLine(new Vector3(-boxWidth / 2f, 0.036f, goalZ - side * boxDepth / 2f), new Vector3(0.1f, 0.04f, boxDepth), line);
             CreateLine(new Vector3(boxWidth / 2f, 0.036f, goalZ - side * boxDepth / 2f), new Vector3(0.1f, 0.04f, boxDepth), line);
+        }
+
+        private void CreatePitchDetails(Material line)
+        {
+            var sixYardDepth = 5.5f;
+            var sixYardWidth = 18.32f;
+
+            for (var side = -1; side <= 1; side += 2)
+            {
+                var goalZ = side * PitchLength / 2f;
+                var insideZ = goalZ - side * sixYardDepth;
+
+                CreateLine(new Vector3(0f, 0.035f, insideZ), new Vector3(sixYardWidth, 0.04f, 0.1f), line);
+                CreateLine(new Vector3(-sixYardWidth / 2f, 0.035f, goalZ - side * sixYardDepth / 2f), new Vector3(0.1f, 0.04f, sixYardDepth), line);
+                CreateLine(new Vector3(sixYardWidth / 2f, 0.035f, goalZ - side * sixYardDepth / 2f), new Vector3(0.1f, 0.04f, sixYardDepth), line);
+
+                var penaltyZ = side * (PitchLength / 2f - 11f);
+                CreatePitchSpot("Penalty Spot", new Vector3(0f, 0.075f, penaltyZ), line);
+
+                if (side < 0)
+                    CreatePitchCurve("South Penalty Arc", new Vector3(0f, 0.078f, penaltyZ), 9.15f, 36.9f, 143.1f, 36, line);
+                else
+                    CreatePitchCurve("North Penalty Arc", new Vector3(0f, 0.078f, penaltyZ), 9.15f, 216.9f, 323.1f, 36, line);
+            }
+
+            CreatePitchCurve("Centre Circle", new Vector3(0f, 0.078f, 0f), 9.15f, 0f, 360f, 64, line);
+            CreatePitchSpot("Centre Spot", new Vector3(0f, 0.075f, 0f), line);
+
+            var cornerRadius = 1f;
+            CreatePitchCurve("South West Corner Arc", new Vector3(-PitchWidth / 2f, 0.078f, -PitchLength / 2f), cornerRadius, 0f, 90f, 12, line);
+            CreatePitchCurve("South East Corner Arc", new Vector3(PitchWidth / 2f, 0.078f, -PitchLength / 2f), cornerRadius, 90f, 180f, 12, line);
+            CreatePitchCurve("North East Corner Arc", new Vector3(PitchWidth / 2f, 0.078f, PitchLength / 2f), cornerRadius, 180f, 270f, 12, line);
+            CreatePitchCurve("North West Corner Arc", new Vector3(-PitchWidth / 2f, 0.078f, PitchLength / 2f), cornerRadius, 270f, 360f, 12, line);
+        }
+
+        private void CreatePitchSpot(string name, Vector3 position, Material material)
+        {
+            var spot = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            spot.name = name;
+            spot.transform.SetParent(transform);
+            spot.transform.position = position;
+            spot.transform.localScale = new Vector3(0.34f, 0.025f, 0.34f);
+            spot.GetComponent<Renderer>().material = material;
+            Destroy(spot.GetComponent<Collider>());
+        }
+
+        private void CreatePitchCurve(string name, Vector3 center, float radius, float startDegrees, float endDegrees, int segments, Material material)
+        {
+            var curve = new GameObject(name);
+            curve.transform.SetParent(transform);
+
+            var renderer = curve.AddComponent<LineRenderer>();
+            renderer.useWorldSpace = true;
+            renderer.loop = false;
+            renderer.positionCount = segments + 1;
+            renderer.startWidth = 0.11f;
+            renderer.endWidth = 0.11f;
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.numCapVertices = 2;
+            renderer.numCornerVertices = 2;
+
+            for (var i = 0; i <= segments; i++)
+            {
+                var angle = Mathf.Lerp(startDegrees, endDegrees, i / (float)segments) * Mathf.Deg2Rad;
+                renderer.SetPosition(i, new Vector3(
+                    center.x + Mathf.Cos(angle) * radius,
+                    center.y,
+                    center.z + Mathf.Sin(angle) * radius));
+            }
+        }
+
+        private void CreateGoalNet(int side, float goalZ, Material material)
+        {
+            const float depth = 2.5f;
+            const int acrossCount = 8;
+            const int depthCount = 4;
+            const int heightCount = 4;
+
+            var backZ = goalZ + side * depth;
+            var vertices = new List<Vector3>();
+            var triangles = new List<int>();
+
+            for (var i = 0; i <= acrossCount; i++)
+            {
+                var x = Mathf.Lerp(-GoalWidth / 2f, GoalWidth / 2f, i / (float)acrossCount);
+                AddNetSegment(vertices, triangles, new Vector3(x, 0.05f, backZ), new Vector3(x, GoalHeight, backZ));
+            }
+
+            for (var i = 0; i <= heightCount; i++)
+            {
+                var y = Mathf.Lerp(0.05f, GoalHeight, i / (float)heightCount);
+                AddNetSegment(vertices, triangles, new Vector3(-GoalWidth / 2f, y, backZ), new Vector3(GoalWidth / 2f, y, backZ));
+            }
+
+            for (var edge = -1; edge <= 1; edge += 2)
+            {
+                var x = edge * GoalWidth / 2f;
+                for (var i = 0; i <= depthCount; i++)
+                {
+                    var z = Mathf.Lerp(goalZ, backZ, i / (float)depthCount);
+                    AddNetSegment(vertices, triangles, new Vector3(x, 0.05f, z), new Vector3(x, GoalHeight, z));
+                }
+
+                for (var i = 0; i <= heightCount; i++)
+                {
+                    var y = Mathf.Lerp(0.05f, GoalHeight, i / (float)heightCount);
+                    AddNetSegment(vertices, triangles, new Vector3(x, y, goalZ), new Vector3(x, y, backZ));
+                }
+            }
+
+            for (var i = 0; i <= acrossCount; i++)
+            {
+                var x = Mathf.Lerp(-GoalWidth / 2f, GoalWidth / 2f, i / (float)acrossCount);
+                AddNetSegment(vertices, triangles, new Vector3(x, GoalHeight, goalZ), new Vector3(x, GoalHeight, backZ));
+            }
+
+            for (var i = 0; i <= depthCount; i++)
+            {
+                var z = Mathf.Lerp(goalZ, backZ, i / (float)depthCount);
+                AddNetSegment(vertices, triangles, new Vector3(-GoalWidth / 2f, GoalHeight, z), new Vector3(GoalWidth / 2f, GoalHeight, z));
+            }
+
+            var mesh = new Mesh { name = "Goal Net Mesh" };
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateNormals();
+
+            var net = new GameObject("Goal Net");
+            net.transform.SetParent(transform);
+            var filter = net.AddComponent<MeshFilter>();
+            var renderer = net.AddComponent<MeshRenderer>();
+            filter.sharedMesh = mesh;
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+
+        private static void AddNetSegment(List<Vector3> vertices, List<int> triangles, Vector3 start, Vector3 end)
+        {
+            var direction = (end - start).normalized;
+            var side = Vector3.Cross(direction, Vector3.up);
+            if (side.sqrMagnitude < 0.001f)
+                side = Vector3.Cross(direction, Vector3.forward);
+            side = side.normalized * 0.018f;
+
+            var first = vertices.Count;
+            vertices.Add(start - side);
+            vertices.Add(start + side);
+            vertices.Add(end + side);
+            vertices.Add(end - side);
+            triangles.Add(first);
+            triangles.Add(first + 1);
+            triangles.Add(first + 2);
+            triangles.Add(first);
+            triangles.Add(first + 2);
+            triangles.Add(first + 3);
         }
 
         private void CreateLine(Vector3 position, Vector3 scale, Material material)
@@ -154,6 +313,29 @@ namespace FC2026.Core
             CreateStand("East Stand", new Vector3(47f, 6f, 0), new Vector3(20f, 12f, 118f), concrete, crowdGold);
             CreateStand("North Stand", new Vector3(0, 6f, 66f), new Vector3(76f, 12f, 20f), concrete, crowdBlue);
             CreateStand("South Stand", new Vector3(0, 6f, -66f), new Vector3(76f, 12f, 20f), concrete, crowdGold);
+
+            var canopy = CreateMaterial(new Color(0.025f, 0.04f, 0.065f), 0.62f);
+            CreateStadiumBlock("West Canopy", new Vector3(-47f, 17.6f, 0f), new Vector3(21f, 0.8f, 120f), canopy);
+            CreateStadiumBlock("East Canopy", new Vector3(47f, 17.6f, 0f), new Vector3(21f, 0.8f, 120f), canopy);
+            CreateStadiumBlock("North Canopy", new Vector3(0f, 17.6f, 66f), new Vector3(78f, 0.8f, 21f), canopy);
+            CreateStadiumBlock("South Canopy", new Vector3(0f, 17.6f, -66f), new Vector3(78f, 0.8f, 21f), canopy);
+
+            var fascia = CreateMaterial(new Color(0.025f, 0.12f, 0.16f), 0.48f);
+            CreateStadiumBlock("West LED Fascia", new Vector3(-36.7f, 1.15f, 0f), new Vector3(0.35f, 0.7f, 104f), fascia);
+            CreateStadiumBlock("East LED Fascia", new Vector3(36.7f, 1.15f, 0f), new Vector3(0.35f, 0.7f, 104f), fascia);
+            CreateStadiumBlock("North LED Fascia", new Vector3(0f, 1.15f, 52.2f), new Vector3(66f, 0.7f, 0.35f), fascia);
+            CreateStadiumBlock("South LED Fascia", new Vector3(0f, 1.15f, -52.2f), new Vector3(66f, 0.7f, 0.35f), fascia);
+        }
+
+        private void CreateStadiumBlock(string name, Vector3 position, Vector3 scale, Material material)
+        {
+            var block = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            block.name = name;
+            block.transform.SetParent(transform);
+            block.transform.position = position;
+            block.transform.localScale = scale;
+            block.GetComponent<Renderer>().material = material;
+            Destroy(block.GetComponent<Collider>());
         }
 
         private void CreateStand(string name, Vector3 position, Vector3 scale, Material baseMaterial, Material crowdMaterial)
@@ -200,6 +382,7 @@ namespace FC2026.Core
             var goalTrigger = trigger.AddComponent<GoalTrigger>();
             goalTrigger.HomeGoal = homeGoal;
             goalTrigger.Match = this;
+            CreateGoalNet(side, z, material);
         }
 
         private void CreatePost(Vector3 position, Vector3 scale, Material material)
