@@ -7,7 +7,6 @@ namespace FC2026.Gameplay
     public sealed class SimpleFootballAI : MonoBehaviour
     {
         [SerializeField] private float moveSpeed = 5.6f;
-        [SerializeField] private float engagementRadius = 15f;
         [SerializeField] private float kickDistance = 2.1f;
         [SerializeField] private float kickPower = 7.5f;
 
