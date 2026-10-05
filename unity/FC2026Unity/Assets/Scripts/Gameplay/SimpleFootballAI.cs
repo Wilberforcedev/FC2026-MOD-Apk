@@ -1,4 +1,4 @@
-using UnityEngine;
+using System.Collections.Generic;\nusing UnityEngine;
 
 namespace FC2026.Gameplay
 {
@@ -10,7 +10,7 @@ namespace FC2026.Gameplay
         [SerializeField] private float kickDistance = 2.1f;
         [SerializeField] private float kickPower = 7.5f;
 
-        private Rigidbody body;
+        private readonly List<SimpleFootballAI> teammates = new();\n\n        private Rigidbody body;
         private BallController ball;
         private FootballMotionAnimator motion;
         private Vector3 anchor;
@@ -19,7 +19,7 @@ namespace FC2026.Gameplay
         private float kickCooldown;
         private float tackleCooldown;
         private float diveCooldown;
-        private bool goalkeeper;
+        private bool goalkeeper;\n\n        public int TeamDirection => attackDirection;
 
         public void Configure(Vector3 homePosition, int direction, float speedMultiplier = 1f, bool isGoalkeeper = false)
         {
@@ -69,22 +69,31 @@ namespace FC2026.Gameplay
             var ballFlat = new Vector3(ball.transform.position.x, 0f, ball.transform.position.z);
             var selfFlat = new Vector3(transform.position.x, 0f, transform.position.z);
             var distToBall = Vector3.Distance(selfFlat, ballFlat);
+            var teamHasBall = HasTeamPossession();
+            var isClosestPressingPlayer = IsClosestTeammateToBall();
 
             Vector3 target;
-            if (distToBall <= engagementRadius)
+            if (teamHasBall && ball.LastKicker == transform)
             {
-                var laneBias = new Vector3(Mathf.Sin(Time.time * 0.7f + decisionOffset) * 1.4f, 0f, 0f);
+                // The player who last played the ball carries play forward while staying close enough to recover it.
+                target = ballFlat + Vector3.forward * (attackDirection * 1.8f);
+            }
+            else if (!teamHasBall && isClosestPressingPlayer)
+            {
+                // Only the nearest outfield teammate presses. Others keep their shape instead of forming a swarm.
+                var laneBias = new Vector3(Mathf.Sin(Time.time * 0.7f + decisionOffset) * 0.65f, 0f, 0f);
                 target = ballFlat + laneBias;
             }
             else
             {
-                var ballInfluence = new Vector3(ballFlat.x * 0.16f, 0f, ballFlat.z * 0.12f);
-                target = anchor + ballInfluence;
+                var ballInfluence = new Vector3(ballFlat.x * 0.12f, 0f, ballFlat.z * 0.09f);
+                var attackingRun = teamHasBall ? attackDirection * 5f : 0f;
+                target = anchor + ballInfluence + Vector3.forward * attackingRun;
             }
 
             MoveTowards(target, moveSpeed, 14f);
 
-            if (distToBall <= 3.1f && tackleCooldown <= 0f && ball.LastKicker != transform && Random.value < 0.018f)
+            if (!teamHasBall && distToBall <= 3.1f && tackleCooldown <= 0f && ball.LastKicker != transform && Random.value < 0.018f)
             {
                 tackleCooldown = 1.2f;
                 motion?.TriggerTackle();
@@ -93,23 +102,92 @@ namespace FC2026.Gameplay
             if (distToBall > kickDistance || kickCooldown > 0f)
                 return;
 
-            kickCooldown = Random.Range(0.55f, 0.9f);
+            kickCooldown = Random.Range(0.65f, 1.0f);
             var goalZ = attackDirection * 52.5f;
             var distanceToGoal = Mathf.Abs(goalZ - transform.position.z);
-            var shooting = distanceToGoal < 26f || Random.value < 0.28f;
-            var lateralAim = shooting ? Random.Range(-0.09f, 0.09f) : Random.Range(-0.2f, 0.2f);
-            var goalDirection = new Vector3(lateralAim, shooting ? 0.045f : 0.02f, attackDirection).normalized;
+            var shooting = distanceToGoal < 25f || (distanceToGoal < 38f && Random.value < 0.12f);
 
             if (shooting)
             {
+                var goalDirection = new Vector3(Random.Range(-0.08f, 0.08f), 0.07f, attackDirection).normalized;
                 motion?.TriggerShot(Random.value < 0.18f);
                 ball.Kick(goalDirection, kickPower + Random.Range(0.6f, 2.2f), 0.10f, transform);
+                return;
             }
-            else
+
+            var passTarget = FindForwardPassTarget();
+            var passDirection = passTarget != null
+                ? (passTarget.position - transform.position + Vector3.up * 1.1f).normalized
+                : new Vector3(Random.Range(-0.12f, 0.12f), 0.045f, attackDirection).normalized;
+            motion?.TriggerPass(Random.value < 0.18f);
+            ball.Kick(passDirection, kickPower - 1.2f + Random.Range(-0.4f, 0.7f), 0.035f, transform);
+        }
+
+        private bool HasTeamPossession()
+        {
+            var lastKicker = ball != null ? ball.LastKicker : null;
+            if (lastKicker == null)
+                return false;
+
+            var ai = lastKicker.GetComponent<SimpleFootballAI>();
+            if (ai != null)
+                return ai.TeamDirection == attackDirection;
+
+            var user = lastKicker.GetComponent<FootballPlayerController>();
+            return user != null && user.TeamDirection == attackDirection;
+        }
+
+        private bool IsClosestTeammateToBall()
+        {
+            var closest = this;
+            var closestDistance = float.MaxValue;
+
+            foreach (var teammate in teammates)
             {
-                motion?.TriggerPass(Random.value < 0.18f);
-                ball.Kick(goalDirection, kickPower - 1.2f + Random.Range(-0.4f, 0.7f), 0.035f, transform);
+                if (teammate == null || teammate.goalkeeper)
+                    continue;
+
+                var distance = (teammate.transform.position - ball.transform.position).sqrMagnitude;
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closest = teammate;
+                }
             }
+
+            return closest == this;
+        }
+
+        private Transform FindForwardPassTarget()
+        {
+            Transform bestTarget = null;
+            var bestScore = float.MinValue;
+            var ownProgress = transform.position.z * attackDirection;
+
+            foreach (var teammate in teammates)
+            {
+                if (teammate == null || teammate == this || teammate.goalkeeper)
+                    continue;
+
+                var offset = teammate.transform.position - transform.position;
+                var distance = offset.magnitude;
+                var forwardProgress = offset.z * attackDirection;
+
+                if (distance < 4f || distance > 24f || forwardProgress < -2f)
+                    continue;
+
+                var score = forwardProgress * 1.6f - Mathf.Abs(offset.x) * 0.22f - distance * 0.12f;
+                if (teammate.transform.position.z * attackDirection <= ownProgress - 2f)
+                    score -= 4f;
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestTarget = teammate.transform;
+                }
+            }
+
+            return bestTarget;
         }
 
         private void UpdateGoalkeeper()
