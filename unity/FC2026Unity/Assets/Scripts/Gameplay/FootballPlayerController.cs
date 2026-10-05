@@ -25,6 +25,7 @@ namespace FC2026.Gameplay
         private Vector3 lastMoveDirection = Vector3.forward;
 
         public bool IsUserControlled { get; set; } = true;
+        public int TeamDirection { get; set; } = 1;
 
         private void Awake()
         {
