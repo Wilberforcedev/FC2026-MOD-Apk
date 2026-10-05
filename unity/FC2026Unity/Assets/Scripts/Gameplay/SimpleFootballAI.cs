@@ -1,4 +1,5 @@
-using System.Collections.Generic;\nusing UnityEngine;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace FC2026.Gameplay
 {
@@ -10,7 +11,9 @@ namespace FC2026.Gameplay
         [SerializeField] private float kickDistance = 2.1f;
         [SerializeField] private float kickPower = 7.5f;
 
-        private readonly List<SimpleFootballAI> teammates = new();\n\n        private Rigidbody body;
+        private readonly List<SimpleFootballAI> teammates = new();
+
+        private Rigidbody body;
         private BallController ball;
         private FootballMotionAnimator motion;
         private Vector3 anchor;
@@ -19,7 +22,9 @@ namespace FC2026.Gameplay
         private float kickCooldown;
         private float tackleCooldown;
         private float diveCooldown;
-        private bool goalkeeper;\n\n        public int TeamDirection => attackDirection;
+        private bool goalkeeper;
+
+        public int TeamDirection => attackDirection;
 
         public void Configure(Vector3 homePosition, int direction, float speedMultiplier = 1f, bool isGoalkeeper = false)
         {
@@ -44,6 +49,13 @@ namespace FC2026.Gameplay
             ball = FindFirstObjectByType<BallController>();
             if (anchor == Vector3.zero)
                 anchor = transform.position;
+
+            var allPlayers = FindObjectsByType<SimpleFootballAI>(FindObjectsSortMode.None);
+            foreach (var candidate in allPlayers)
+            {
+                if (candidate != null && candidate.attackDirection == attackDirection && !candidate.goalkeeper)
+                    teammates.Add(candidate);
+            }
         }
 
         private void FixedUpdate()
