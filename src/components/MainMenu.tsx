@@ -29,7 +29,7 @@ interface MainMenuProps {
 }
 
 const modeCard =
-  'group relative flex min-h-[156px] w-full flex-col justify-between overflow-hidden rounded-2xl border p-5 text-left shadow-lg transition duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 active:scale-[0.99] touch-manipulation';
+  'group relative flex min-h-[156px] w-full flex-col md:col-span-3 justify-between overflow-hidden rounded-2xl border p-5 text-left shadow-lg transition duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 active:scale-[0.99] touch-manipulation';
 
 export const MainMenu: React.FC<MainMenuProps> = ({
   coins,
