@@ -234,7 +234,8 @@ export const MatchControlsOverlay: React.FC<MatchControlsOverlayProps> = ({ onIn
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className="w-32 h-32 rounded-full bg-slate-950/60 border-2 border-white/20 backdrop-blur-md relative flex items-center justify-center shadow-2xl"
+          onTouchCancel={handleTouchEnd}
+          className="touch-none w-32 h-32 rounded-full bg-slate-950/60 border-2 border-white/20 backdrop-blur-md relative flex items-center justify-center shadow-2xl"
         >
           {/* Outer compass marks */}
           <div className="absolute top-1 text-[10px] text-white/30 font-bold">▲</div>
@@ -288,6 +289,11 @@ export const MatchControlsOverlay: React.FC<MatchControlsOverlayProps> = ({ onIn
               shootTouchStartY.current = null;
               onInputChange({ ...inputRef.current });
             }}
+            onTouchCancel={() => {
+              inputRef.current.shootCharging = false;
+              shootTouchStartY.current = null;
+              onInputChange({ ...inputRef.current });
+            }}
             onMouseDown={() => {
               inputRef.current.shootCharging = true;
               onInputChange({ ...inputRef.current });
@@ -296,7 +302,7 @@ export const MatchControlsOverlay: React.FC<MatchControlsOverlayProps> = ({ onIn
               inputRef.current.shootCharging = false;
               onInputChange({ ...inputRef.current });
             }}
-            className="absolute right-0 w-14 h-14 rounded-full bg-rose-600/90 hover:bg-rose-500 active:scale-90 border-2 border-rose-300 text-white font-['Chakra_Petch'] font-black text-xs shadow-xl flex flex-col items-center justify-center transition group"
+            className="touch-none absolute right-0 w-14 h-14 rounded-full bg-rose-600/90 hover:bg-rose-500 active:scale-90 border-2 border-rose-300 text-white font-['Chakra_Petch'] font-black text-xs shadow-xl flex flex-col items-center justify-center transition group"
           >
             <span>SHOOT</span>
             <span className="text-[9px] text-rose-200 font-mono">Hold / ↑Chip</span>
@@ -344,6 +350,11 @@ export const MatchControlsOverlay: React.FC<MatchControlsOverlayProps> = ({ onIn
               inputRef.current.skillPressed = false;
               onInputChange({ ...inputRef.current });
             }}
+            onTouchCancel={() => {
+              inputRef.current.sprint = false;
+              inputRef.current.skillPressed = false;
+              onInputChange({ ...inputRef.current });
+            }}
             onMouseDown={() => {
               inputRef.current.sprint = true;
               inputRef.current.skillPressed = true;
@@ -354,7 +365,7 @@ export const MatchControlsOverlay: React.FC<MatchControlsOverlayProps> = ({ onIn
               inputRef.current.skillPressed = false;
               onInputChange({ ...inputRef.current });
             }}
-            className="absolute -top-7 right-4 px-3 py-1 bg-violet-600/90 hover:bg-violet-500 active:scale-95 border border-violet-300 text-white font-['Chakra_Petch'] font-bold text-[10px] uppercase rounded-full shadow-lg flex items-center gap-1 transition"
+            className="touch-none absolute -top-7 right-4 px-3 py-1 bg-violet-600/90 hover:bg-violet-500 active:scale-95 border border-violet-300 text-white font-['Chakra_Petch'] font-bold text-[10px] uppercase rounded-full shadow-lg flex items-center gap-1 transition"
           >
             <span>⚡ SPRINT / SKILL</span>
           </button>
