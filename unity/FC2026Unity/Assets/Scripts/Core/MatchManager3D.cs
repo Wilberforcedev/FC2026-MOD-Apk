@@ -492,6 +492,7 @@ namespace FC2026.Core
             {
                 var controller = player.AddComponent<FootballPlayerController>();
                 controller.IsUserControlled = true;
+                controller.TeamDirection = attackDirection;
             }
             else
             {
