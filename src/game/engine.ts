@@ -842,6 +842,42 @@ export class MatchEngine {
     const formation = teamSide === 'home' ? this.homeTeam.formation : this.awayTeam.formation;
     const tactic = teamSide === 'home' ? this.homeTeam.tactic : this.awayTeam.tactic;
     const baseTarget = getTacticalTarget(slotIdx, formation, teamSide, ballPos, hasBallTeam, tactic);
+    const slotRole = formation === '4-3-3'
+      ? ['GK', 'RB', 'CB', 'CB', 'LB', 'CDM', 'CM', 'CAM', 'RW', 'ST', 'LW'][slotIdx]
+      : undefined;
+    const attackingRoles = new Set(['ST', 'LW', 'RW', 'RAM', 'LAM', 'CAM']);
+    const wideRoles = new Set(['LW', 'RW', 'LM', 'RM', 'LWB', 'RWB']);
+    const supportTarget = { ...baseTarget };
+
+    // Off-ball attacking movement: create depth and width while keeping midfielders
+    // available as passing options instead of having everyone chase the ball.
+    if (hasBallTeam === teamSide && !player.hasBall) {
+      const role = slotRole || '';
+      if (attackingRoles.has(role)) {
+        const forward = teamSide === 'home' ? 1 : -1;
+        supportTarget.x += forward * (role === 'ST' ? 34 : 22);
+      }
+      if (wideRoles.has(role)) {
+        const sideOffset = (baseTarget.y - (PITCH.MARGIN_Y + PITCH.WIDTH / 2)) >= 0 ? 1 : -1;
+        supportTarget.y += sideOffset * 18;
+      }
+      if (role === 'CM' || role === 'CDM') {
+        const forward = teamSide === 'home' ? 1 : -1;
+        supportTarget.x += forward * 12;
+      }
+    }
+
+    const ballCarrier = this.getBallPossessor();
+    if (hasBallTeam === teamSide && ballCarrier && ballCarrier.id !== player.id) {
+      const carrierDist = Math.hypot(ballCarrier.pos.x - supportTarget.x, ballCarrier.pos.y - supportTarget.y);
+      if (carrierDist < 42) {
+        const dx = supportTarget.x - ballCarrier.pos.x;
+        const dy = supportTarget.y - ballCarrier.pos.y;
+        const len = Math.max(1, Math.hypot(dx, dy));
+        supportTarget.x += (dx / len) * (42 - carrierDist);
+        supportTarget.y += (dy / len) * (42 - carrierDist);
+      }
+    }
 
     const distToBall = Math.hypot(ballPos.x - player.pos.x, ballPos.y - player.pos.y);
     const isClosestToBall = this.isClosestInTeam(player, teamSide, ballPos);
@@ -921,8 +957,8 @@ export class MatchEngine {
       if (player.tackleCooldown > 0) player.tackleCooldown--;
     } else {
       // Move towards tactical formation position
-      const dx = baseTarget.x - player.pos.x;
-      const dy = baseTarget.y - player.pos.y;
+      const dx = supportTarget.x - player.pos.x;
+      const dy = supportTarget.y - player.pos.y;
       const dist = Math.hypot(dx, dy);
       if (dist > 12) {
         player.velocity.x = (dx / dist) * 2.8 * speedFactor;
