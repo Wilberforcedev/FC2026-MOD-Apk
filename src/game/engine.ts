@@ -507,15 +507,21 @@ export class MatchEngine {
     userPlayer.pos.y += userPlayer.velocity.y;
     this.constrainPlayerToPitch(userPlayer);
 
-    // If player has ball, glue ball to feet with gentle dribble physics
+    // Controlled dribble: better ball control keeps the ball close without making it
+    // unrealistically welded to the player's feet.
     if (userPlayer.hasBall) {
       if (this.phase === 'kickoff') this.phase = 'playing';
-      const dribbleDist = 14;
-      this.ball.pos.x = userPlayer.pos.x + Math.cos(userPlayer.facingAngle) * dribbleDist;
-      this.ball.pos.y = userPlayer.pos.y + Math.sin(userPlayer.facingAngle) * dribbleDist;
+
+      const dribbling = userPlayer.player.stats.dribbling / 100;
+      const speedRatio = Math.min(1, Math.hypot(userPlayer.velocity.x, userPlayer.velocity.y) / 7);
+      const touchDistance = 11 + (1 - dribbling) * 7 + speedRatio * 8;
+      const touchSpeed = 0.72 + dribbling * 0.22;
+
+      this.ball.pos.x = userPlayer.pos.x + Math.cos(userPlayer.facingAngle) * touchDistance;
+      this.ball.pos.y = userPlayer.pos.y + Math.sin(userPlayer.facingAngle) * touchDistance;
       this.ball.pos.z = 0;
-      this.ball.velocity.x = userPlayer.velocity.x * 1.05;
-      this.ball.velocity.y = userPlayer.velocity.y * 1.05;
+      this.ball.velocity.x = userPlayer.velocity.x * touchSpeed;
+      this.ball.velocity.y = userPlayer.velocity.y * touchSpeed;
       this.ball.lastTouchedBy = userPlayer.id;
       this.ball.lastTouchedTeam = 'home';
     }
@@ -938,10 +944,27 @@ export class MatchEngine {
     player.pos.y += player.velocity.y;
     this.constrainPlayerToPitch(player);
 
-    // Collision with ball if free
-    if (!hasBallTeam && distToBall < PHYSICS.PLAYER_RADIUS + PHYSICS.BALL_RADIUS && this.ball.pos.z < 18) {
+    // First-touch control for a loose ball. Receiving quality depends on the
+    // player's dribbling attribute and the speed of the incoming ball.
+    if (!hasBallTeam && distToBall < PHYSICS.PLAYER_RADIUS + PHYSICS.BALL_RADIUS + 7 && this.ball.pos.z < 18) {
+      const incomingSpeed = Math.hypot(this.ball.velocity.x, this.ball.velocity.y);
+      const control = player.player.stats.dribbling / 100;
+      const touchQuality = Math.max(0.15, control - Math.min(0.55, incomingSpeed / 22));
+      const ballDir = incomingSpeed > 0.1
+        ? Math.atan2(this.ball.velocity.y, this.ball.velocity.x)
+        : player.facingAngle;
+      const controlAngle = ballDir + Math.PI + (Math.random() - 0.5) * (1 - control) * 0.9;
+      const touchDistance = 10 + (1 - control) * 6 + Math.min(6, incomingSpeed * 0.35);
+      const retainedSpeed = incomingSpeed * (0.12 + (1 - touchQuality) * 0.22);
+
       player.hasBall = true;
-      this.ball.velocity = { x: 0, y: 0, z: 0 };
+      player.facingAngle = controlAngle;
+      this.ball.pos.x = player.pos.x + Math.cos(controlAngle) * touchDistance;
+      this.ball.pos.y = player.pos.y + Math.sin(controlAngle) * touchDistance;
+      this.ball.pos.z = Math.min(4, this.ball.pos.z);
+      this.ball.velocity.x = Math.cos(controlAngle) * retainedSpeed;
+      this.ball.velocity.y = Math.sin(controlAngle) * retainedSpeed;
+      this.ball.velocity.z *= 0.25;
       this.ball.lastTouchedBy = player.id;
       this.ball.lastTouchedTeam = teamSide;
     }
@@ -987,9 +1010,11 @@ export class MatchEngine {
     this.ball.velocity.x *= friction;
     this.ball.velocity.y *= friction;
 
-    // Spin curve effect
-    this.ball.velocity.x += this.ball.spin.x;
-    this.ball.velocity.y += this.ball.spin.y;
+    // Spin curve effect. Curve influence fades as the ball loses momentum.
+    const speedBeforeSpin = Math.hypot(this.ball.velocity.x, this.ball.velocity.y);
+    const spinInfluence = Math.min(1, speedBeforeSpin / 8);
+    this.ball.velocity.x += this.ball.spin.x * spinInfluence;
+    this.ball.velocity.y += this.ball.spin.y * spinInfluence;
     this.ball.spin.x *= 0.95;
     this.ball.spin.y *= 0.95;
 
