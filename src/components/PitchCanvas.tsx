@@ -1,4 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
+
+const STATIC_SCENE_PADDING = 240;
 import { MatchEngine } from '../game/engine';
 import { PITCH } from '../game/constants';
 import { MatchPlayerEntity, ReplayPlayerState, Team } from '../types/soccer';
@@ -35,6 +37,22 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({ engine, weather = 'Nig
     if (!ctx) return;
 
     let animFrameId: number;
+
+    // Static stadium/pitch art is identical across frames. Render it once to an
+    // offscreen canvas and composite it each frame instead of rebuilding hundreds
+    // of paths, gradients, seats and lines at 60 FPS.
+    const stadium = getStadiumForTeam(engine.homeTeam?.id);
+    const staticCanvas = document.createElement('canvas');
+    staticCanvas.width = Math.ceil(PITCH.LENGTH + STATIC_SCENE_PADDING * 2);
+    staticCanvas.height = Math.ceil(PITCH.WIDTH + STATIC_SCENE_PADDING * 2);
+    const staticCtx = staticCanvas.getContext('2d');
+    if (staticCtx) {
+      staticCtx.translate(STATIC_SCENE_PADDING - PITCH.MARGIN_X, STATIC_SCENE_PADDING - PITCH.MARGIN_Y);
+      drawStadiumSurroundings(staticCtx, weather, stadium, engine);
+      drawPitch(staticCtx, stadium);
+      drawGoalNets(staticCtx);
+      drawCornerFlags(staticCtx);
+    }
 
     const render = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -101,8 +119,6 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({ engine, weather = 'Nig
         shakeOffsetY = (Math.random() - 0.5) * engine.cameraShake * 16;
       }
 
-      const stadium = getStadiumForTeam(engine.homeTeam?.id);
-
       // Background Fill (Stadium Atmosphere)
       ctx.fillStyle = weather === 'Night' ? stadium.ambientSky : weather === 'Sunset' ? '#1c1024' : '#0d1829';
       ctx.fillRect(0, 0, width, height);
@@ -113,18 +129,12 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({ engine, weather = 'Nig
       ctx.scale(cameraRef.current.zoom, cameraRef.current.zoom);
       ctx.translate(-cameraRef.current.x, -cameraRef.current.y);
 
-      // Draw Stadium Surroundings & Stands with stadium likeness
-      drawStadiumSurroundings(ctx, weather, stadium, engine);
-
-      // Draw Pitch Grass & Lines with authentic lawn pattern
-      drawPitch(ctx, stadium);
-
-      // Draw Goal Nets
-      drawGoalNets(ctx);
+      // Composite the pre-rendered static stadium scene.
+      ctx.drawImage(staticCanvas, PITCH.MARGIN_X - STATIC_SCENE_PADDING, PITCH.MARGIN_Y - STATIC_SCENE_PADDING);
 
       // Draw Players (Sorted by Y for correct 2.5D perspective)
       if (isReplay && replayFrame) {
-        const replayPlayersSorted = [...replayFrame.players].sort((a, b) => a.y - b.y);
+        const replayPlayersSorted = replayFrame.players.slice().sort((a, b) => a.y - b.y);
         for (const rp of replayPlayersSorted) {
           const original = (rp.team === 'home' ? engine.homePlayers : engine.awayPlayers).find(p => p.id === rp.id);
           if (original) {
@@ -134,7 +144,8 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({ engine, weather = 'Nig
         // Replay Ball
         drawBall(ctx, { pos: replayFrame.ball, velocity: { x: 0, y: 0, z: 0 }, spin: { x: 0, y: 0 }, isInGoal: false });
       } else {
-        const allPlayers = [...engine.homePlayers, ...engine.awayPlayers].sort((a, b) => a.pos.y - b.pos.y);
+        const allPlayers = engine.homePlayers.concat(engine.awayPlayers);
+        allPlayers.sort((a, b) => a.pos.y - b.pos.y);
         for (const p of allPlayers) {
           drawPlayerAvatar(
             ctx, 
