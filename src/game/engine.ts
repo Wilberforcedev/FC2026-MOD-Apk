@@ -774,10 +774,33 @@ export class MatchEngine {
     const goalMinY = goalCenterY - PITCH.GOAL_WIDTH / 2;
     const goalMaxY = goalCenterY + PITCH.GOAL_WIDTH / 2;
 
+    const ballSpeed = Math.hypot(this.ball.velocity.x, this.ball.velocity.y);
+    const ballMovingTowardGoal = side === 'home'
+      ? this.ball.velocity.x < -0.5
+      : this.ball.velocity.x > 0.5;
+    const reactionFactor = Math.min(1.35, 0.85 + ballSpeed / 35);
+    const predictedY = this.ball.pos.y + this.ball.velocity.y * reactionFactor;
+    const targetY = Math.max(goalMinY + 10, Math.min(goalMaxY - 10, predictedY));
+    const dangerDistance = Math.abs(this.ball.pos.x - goalX);
     const distToBall = Math.hypot(this.ball.pos.x - gk.pos.x, this.ball.pos.y - gk.pos.y);
 
-    // If ball is very close and inside box, GK claims ball
-    if (distToBall < 28 && this.ball.pos.z < 25) {
+    // Anticipate dangerous shots/crosses instead of only reacting to the current ball position.
+    if (ballMovingTowardGoal && dangerDistance < 210 && this.ball.pos.z < 42) {
+      const step = Math.min(7, 2.8 + ballSpeed * 0.18);
+      const dy = targetY - gk.pos.y;
+      gk.velocity.y = Math.max(-step, Math.min(step, dy * 0.28));
+      const idealX = side === 'home'
+        ? Math.max(PITCH.MARGIN_X + 12, Math.min(goalX + 34, this.ball.pos.x + 22))
+        : Math.min(PITCH.MARGIN_X + PITCH.LENGTH - 12, Math.max(goalX - 34, this.ball.pos.x - 22));
+      gk.velocity.x = (idealX - gk.pos.x) * 0.16;
+      gk.pos.x += gk.velocity.x;
+      gk.pos.y += gk.velocity.y;
+      gk.facingAngle = Math.atan2(this.ball.pos.y - gk.pos.y, this.ball.pos.x - gk.pos.x);
+    }
+
+    // Faster incoming balls can be claimed from slightly farther away.
+    const claimReach = Math.min(42, 28 + ballSpeed * 0.45);
+    if (distToBall < claimReach && this.ball.pos.z < 25) {
       gk.hasBall = true;
       gk.animState = 'saving';
       const prevVel = { ...this.ball.velocity };
@@ -820,11 +843,10 @@ export class MatchEngine {
       return;
     }
 
-    // Goalkeeper tracks ball along goal mouth
-    const targetY = Math.max(goalMinY + 14, Math.min(goalMaxY - 14, this.ball.pos.y));
+    // Goalkeeper tracks the predicted ball path along the goal mouth.
     const dy = targetY - gk.pos.y;
     gk.velocity.x = (goalX - gk.pos.x) * 0.15;
-    gk.velocity.y = Math.min(4.5, Math.max(-4.5, dy * 0.25));
+    gk.velocity.y = Math.min(4.8, Math.max(-4.8, dy * 0.25));
 
     gk.pos.x += gk.velocity.x;
     gk.pos.y += gk.velocity.y;
