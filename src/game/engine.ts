@@ -544,7 +544,30 @@ export class MatchEngine {
 
       const dot = (dx / dist) * facingVec.x + (dy / dist) * facingVec.y;
       if (dot > 0.4) {
-        const score = dot * 100 - dist * 0.15;
+        // Prefer forward, open passing options rather than simply choosing
+        // the closest teammate in the player's facing cone.
+        const forwardProgress = player.team === 'home'
+          ? (mate.pos.x - player.pos.x) / 450
+          : (player.pos.x - mate.pos.x) / 450;
+
+        const opponents = player.team === 'home' ? this.awayPlayers : this.homePlayers;
+        let nearestOpponentDist = Infinity;
+        for (const opponent of opponents) {
+          if (opponent.player.isGoalkeeper) continue;
+          nearestOpponentDist = Math.min(
+            nearestOpponentDist,
+            Math.hypot(opponent.pos.x - mate.pos.x, opponent.pos.y - mate.pos.y)
+          );
+        }
+
+        const openness = Math.min(1, nearestOpponentDist / 140);
+        const distancePenalty = dist / 450;
+        const score =
+          dot * 55 +
+          Math.max(-0.25, Math.min(0.25, forwardProgress)) * 30 +
+          openness * 35 -
+          distancePenalty * 18;
+
         if (score > highestScore) {
           highestScore = score;
           bestTeammate = mate;
