@@ -107,18 +107,48 @@ export function getTacticalTarget(
     else shiftX -= 0.05;
   }
 
-  // Dynamic push forward when attacking, drop back when defending
+  // Dynamic push forward when attacking, drop back when defending.
+  // The amount of movement now depends on the player's role so the team keeps
+  // its shape instead of every player collapsing onto the same tactical line.
   if (hasBallTeam === teamSide) {
     shiftX += 0.08;
   } else if (hasBallTeam && hasBallTeam !== teamSide) {
     shiftX -= 0.06;
   }
 
-  // Follow ball forward-backward slightly
-  shiftX += (ballRelX - 0.5) * 0.15;
+  const defensiveRoles = ['CB', 'LB', 'RB', 'LWB', 'RWB'];
+  const midfieldRoles = ['CDM', 'CM', 'CAM', 'RM', 'LM', 'RAM', 'LAM'];
+  const attackingRoles = ['ST', 'LW', 'RW'];
 
+  let roleShiftMultiplier = 1;
+  if (defensiveRoles.includes(slot.role)) {
+    roleShiftMultiplier = 0.55;
+  } else if (midfieldRoles.includes(slot.role)) {
+    roleShiftMultiplier = 0.9;
+  } else if (attackingRoles.includes(slot.role)) {
+    roleShiftMultiplier = 1.15;
+  }
+
+  shiftX *= roleShiftMultiplier;
+
+  // Follow the ball horizontally, but preserve the depth of each line.
+  shiftX += (ballRelX - 0.5) * (0.15 * roleShiftMultiplier);
+
+  // Keep wide players wider while central players track the ball more closely.
+  const isWideRole = ['LB', 'RB', 'LWB', 'RWB', 'LW', 'RW', 'LM', 'RM', 'LAM', 'RAM'].includes(slot.role);
+  const lateralTracking = isWideRole ? 0.08 : 0.16;
   let finalRelX = Math.max(0.08, Math.min(0.92, relX + shiftX));
-  let finalRelY = relY + (ballRelY - 0.5) * 0.12;
+  let finalRelY = relY + (ballRelY - 0.5) * lateralTracking;
+
+  // When defending, compress the midfield/defensive block around the ball.
+  // When attacking, give forwards extra depth without dragging defenders out.
+  if (hasBallTeam === teamSide && attackingRoles.includes(slot.role)) {
+    finalRelX += teamSide === 'home' ? 0.025 : -0.025;
+  } else if (hasBallTeam && hasBallTeam !== teamSide && defensiveRoles.includes(slot.role)) {
+    finalRelX += teamSide === 'home' ? -0.02 : 0.02;
+  }
+
+  finalRelX = Math.max(0.08, Math.min(0.92, finalRelX));
   finalRelY = Math.max(0.08, Math.min(0.92, finalRelY));
 
   if (teamSide === 'away') {
