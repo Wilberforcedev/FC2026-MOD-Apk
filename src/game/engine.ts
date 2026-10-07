@@ -728,15 +728,15 @@ export class MatchEngine {
     const hasBallTeam = ballPossessor ? ballPossessor.team : null;
 
     // Difficulty tuning factors
-    const diffSpeedMap: Record<GameDifficulty, number> = {
-      'Beginner': 0.65,
-      'Amateur': 0.75,
-      'Semi-Pro': 0.88,
-      'Professional': 0.95,
-      'World Class': 1.0,
-      'Legendary': 1.12,
+    const difficultyMap: Record<GameDifficulty, { speed: number; decision: number; tackle: number }> = {
+      'Beginner': { speed: 0.65, decision: 0.55, tackle: 0.55 },
+      'Amateur': { speed: 0.75, decision: 0.72, tackle: 0.72 },
+      'Semi-Pro': { speed: 0.88, decision: 0.9, tackle: 0.88 },
+      'Professional': { speed: 0.95, decision: 1.05, tackle: 1.0 },
+      'World Class': { speed: 1.0, decision: 1.2, tackle: 1.1 },
+      'Legendary': { speed: 1.08, decision: 1.38, tackle: 1.2 },
     };
-    const speedMult = diffSpeedMap[this.difficulty];
+    const difficulty = difficultyMap[this.difficulty];
 
     // Update Home Teammates (autonomous when not controlled by user)
     this.homePlayers.forEach((p, idx) => {
@@ -745,7 +745,7 @@ export class MatchEngine {
       if (p.player.isGoalkeeper) {
         this.updateGoalkeeperAI(p, 'home');
       } else {
-        this.updateOutfieldAI(p, idx, 'home', ballPos, hasBallTeam, 1.0);
+        this.updateOutfieldAI(p, idx, 'home', ballPos, hasBallTeam, 1.0, 1.0, 1.0);
       }
     });
 
@@ -754,7 +754,7 @@ export class MatchEngine {
       if (p.player.isGoalkeeper) {
         this.updateGoalkeeperAI(p, 'away');
       } else {
-        this.updateOutfieldAI(p, idx, 'away', ballPos, hasBallTeam, speedMult);
+        this.updateOutfieldAI(p, idx, 'away', ballPos, hasBallTeam, difficulty.speed, difficulty.decision, difficulty.tackle);
       }
     });
 
@@ -856,14 +856,14 @@ export class MatchEngine {
 
       // In shooting range?
       if (distToOppGoal < 260) {
-        if (Math.random() < 0.035) {
+        if (Math.random() < 0.035 * decisionFactor) {
           this.executeShot(player, 0.75 + Math.random() * 0.25);
           return;
         }
       }
 
       // Pass to open teammate or drive forward
-      if (Math.random() < 0.02) {
+      if (Math.random() < 0.02 * decisionFactor) {
         if (Math.random() < 0.5) this.executeGroundPass(player);
         else this.executeThroughBall(player);
         return;
@@ -903,7 +903,7 @@ export class MatchEngine {
       player.velocity.y = (dy / dist) * chaseSpeed;
 
       // Tackle opportunity
-      if (dist < PHYSICS.TACKLE_REACH && player.tackleCooldown <= 0 && Math.random() < 0.04) {
+      if (dist < PHYSICS.TACKLE_REACH && player.tackleCooldown <= 0 && Math.random() < 0.04 * tackleFactor) {
         player.isTackling = true;
         player.tackleCooldown = PHYSICS.TACKLE_COOLDOWN;
         soundEngine.playTackle();
