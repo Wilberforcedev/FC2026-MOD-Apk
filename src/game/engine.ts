@@ -920,9 +920,45 @@ export class MatchEngine {
 
       if (player.tackleCooldown > 0) player.tackleCooldown--;
     } else {
-      // Move towards tactical formation position
-      const dx = baseTarget.x - player.pos.x;
-      const dy = baseTarget.y - player.pos.y;
+      // Defending players hold their shape while marking the most dangerous nearby opponent.
+      // This gives the defensive line a cover/marking layer instead of sending everyone back
+      // to formation anchors and leaving attackers untracked.
+      let defensiveTarget = baseTarget;
+
+      if (hasBallTeam && hasBallTeam !== teamSide) {
+        const opponents = teamSide === 'home' ? this.awayPlayers : this.homePlayers;
+        let nearestThreat: MatchPlayerEntity | null = null;
+        let nearestThreatScore = Infinity;
+
+        for (const opponent of opponents) {
+          if (opponent.player.isGoalkeeper || opponent.hasBall) continue;
+
+          const goalX = teamSide === 'home'
+            ? PITCH.MARGIN_X
+            : PITCH.MARGIN_X + PITCH.LENGTH;
+          const goalDistance = Math.hypot(goalX - opponent.pos.x, opponent.pos.y - (PITCH.MARGIN_Y + PITCH.WIDTH / 2));
+          const playerDistance = Math.hypot(opponent.pos.x - player.pos.x, opponent.pos.y - player.pos.y);
+
+          // Prioritise attackers who are both close enough to influence the play
+          // and positioned dangerously near the defending goal.
+          const threatScore = goalDistance * 0.65 + playerDistance * 0.35;
+          if (threatScore < nearestThreatScore) {
+            nearestThreatScore = threatScore;
+            nearestThreat = opponent;
+          }
+        }
+
+        if (nearestThreat) {
+          const markStrength = player.player.position === 'CB' || player.player.position === 'CDM' ? 0.42 : 0.28;
+          defensiveTarget = {
+            x: baseTarget.x + (nearestThreat.pos.x - baseTarget.x) * markStrength,
+            y: baseTarget.y + (nearestThreat.pos.y - baseTarget.y) * markStrength,
+          };
+        }
+      }
+
+      const dx = defensiveTarget.x - player.pos.x;
+      const dy = defensiveTarget.y - player.pos.y;
       const dist = Math.hypot(dx, dy);
       if (dist > 12) {
         player.velocity.x = (dx / dist) * 2.8 * speedFactor;
