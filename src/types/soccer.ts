@@ -2,6 +2,9 @@ export type Position = 'GK' | 'CB' | 'LB' | 'RB' | 'CDM' | 'CM' | 'CAM' | 'LW' |
 
 export type PlayStyle = 
   | 'Finesse Shot' 
+  | 'Finesse Shot+' 
+  | 'Rapid' 
+  | 'Trivela' 
   | 'Power Header' 
   | 'Speed Dribbler' 
   | 'Whipped Cross' 
