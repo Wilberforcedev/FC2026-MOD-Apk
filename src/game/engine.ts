@@ -18,6 +18,9 @@ import { PITCH, PHYSICS } from './constants';
 import { getTacticalTarget } from './formations';
 import { soundEngine } from '../services/soundEngine';
 import { commentary } from '../services/commentaryEngine';
+import { stepBallPhysics } from './advancedPhysics';
+import { getAdaptiveTactics } from './tacticalAI';
+import { haptics } from '../services/haptics';
 
 export interface UserInputState {
   moveX: number;
@@ -365,13 +368,16 @@ export class MatchEngine {
     // 2. Process AI for Teammates & Opponents
     this.updateAI();
 
-    // 3. Update Ball Physics
-    this.updateBall();
+    // 3. Resolve body-to-body contact before the ball update.
+    this.resolvePlayerCollisions();
 
-    // 4. Check pitch boundaries, goals, fouls
+    // 4. Update Ball Physics
+    this.updateBall(deltaTimeSec);
+
+    // 5. Check pitch boundaries, goals, fouls
     this.checkBoundsAndGoals();
 
-    // 5. Update animation state & run cycles for all players
+    // 6. Update animation state & run cycles for all players
     const allPlayers = this.homePlayers.concat(this.awayPlayers);
     for (const p of allPlayers) {
       const speed = Math.hypot(p.velocity.x, p.velocity.y);
@@ -389,10 +395,10 @@ export class MatchEngine {
       }
     }
 
-    // 6. Record frame for Instant Replay buffer
+    // 7. Record frame for Instant Replay buffer
     this.recordReplayFrame();
 
-    // 7. Track player movement intensity & spatial heatmap telemetry
+    // 8. Track player movement intensity & spatial heatmap telemetry
     this.updateHeatmapTracking(deltaTimeSec);
 
     // Dynamic Crowd Audio Excitement
@@ -667,13 +673,22 @@ export class MatchEngine {
     this.ball.velocity.z = (1.5 + charge * 4.5);
 
     // Finesse Shot PlayStyle curl
-    const hasFinesse = player.player.playStyles?.includes('Finesse Shot');
+    const hasFinesse = player.player.playStyles?.includes('Finesse Shot') || player.player.playStyles?.includes('Finesse Shot+');
+    const hasTrivela = player.player.playStyles?.includes('Trivela');
+    const hasRapid = player.player.playStyles?.includes('Rapid');
     if (hasFinesse) {
       const curlDir = player.player.preferredFoot === 'Left' ? -0.45 : 0.45;
+      this.ball.spin.x *= player.player.playStyles?.includes('Finesse Shot+') ? 1.45 : 1;
       this.ball.spin = { x: curlDir, y: (targetY > player.pos.y ? 0.3 : -0.3) };
     } else {
       this.ball.spin = { x: (Math.random() - 0.5) * 0.3, y: (Math.random() - 0.5) * 0.3 };
     }
+    if (hasTrivela) this.ball.spin.x += player.player.preferredFoot === 'Left' ? -0.32 : 0.32;
+    if (hasRapid) {
+      player.velocity.x *= 1.08;
+      player.velocity.y *= 1.08;
+    }
+    haptics.kick(Math.min(1, charge));
 
     if (player.team === 'home') {
       this.stats.homeShots++;
@@ -737,6 +752,8 @@ export class MatchEngine {
       'Legendary': 1.12,
     };
     const speedMult = diffSpeedMap[this.difficulty];
+    const homeTactics = getAdaptiveTactics(this.homeTeam, this.stats.homeScore, this.stats.awayScore, this.matchTimeSec, this.difficulty);
+    const awayTactics = getAdaptiveTactics(this.awayTeam, this.stats.awayScore, this.stats.homeScore, this.matchTimeSec, this.difficulty);
 
     // Update Home Teammates (autonomous when not controlled by user)
     this.homePlayers.forEach((p, idx) => {
@@ -745,7 +762,7 @@ export class MatchEngine {
       if (p.player.isGoalkeeper) {
         this.updateGoalkeeperAI(p, 'home');
       } else {
-        this.updateOutfieldAI(p, idx, 'home', ballPos, hasBallTeam, 1.0);
+        this.updateOutfieldAI(p, idx, 'home', ballPos, hasBallTeam, 0.92 + homeTactics.transitionSpeed * 0.18, homeTactics);
       }
     });
 
@@ -754,7 +771,7 @@ export class MatchEngine {
       if (p.player.isGoalkeeper) {
         this.updateGoalkeeperAI(p, 'away');
       } else {
-        this.updateOutfieldAI(p, idx, 'away', ballPos, hasBallTeam, speedMult);
+        this.updateOutfieldAI(p, idx, 'away', ballPos, hasBallTeam, speedMult * (0.92 + awayTactics.transitionSpeed * 0.18), awayTactics);
       }
     });
 
@@ -837,7 +854,8 @@ export class MatchEngine {
     teamSide: 'home' | 'away', 
     ballPos: Vector2D, 
     hasBallTeam: 'home' | 'away' | null,
-    speedFactor: number
+    speedFactor: number,
+    tacticalState?: { pressingIntensity: number; defensiveLine: number; transitionSpeed: number; risk: number }
   ) {
     const formation = teamSide === 'home' ? this.homeTeam.formation : this.awayTeam.formation;
     const tactic = teamSide === 'home' ? this.homeTeam.tactic : this.awayTeam.tactic;
@@ -898,7 +916,7 @@ export class MatchEngine {
       const dist = Math.hypot(dx, dy);
       player.facingAngle = Math.atan2(dy, dx);
 
-      const chaseSpeed = 3.6 * speedFactor;
+      const chaseSpeed = 3.6 * speedFactor * (0.82 + (tacticalState?.pressingIntensity ?? 0.5) * 0.28);
       player.velocity.x = (dx / dist) * chaseSpeed;
       player.velocity.y = (dy / dist) * chaseSpeed;
 
@@ -976,39 +994,51 @@ export class MatchEngine {
     this.userControlledId = bestId;
   }
 
-  private updateBall() {
-    // If possessed, ball is driven by possessor
+  private updateBall(deltaTimeSec = 1 / 60) {
     if (this.getBallPossessor()) return;
+    const beforeZ = this.ball.pos.z;
+    stepBallPhysics(this.ball, deltaTimeSec);
+    if (beforeZ > 0 && this.ball.pos.z === 0 && Math.abs(this.ball.velocity.z) > 0.8) {
+      soundEngine.playKick(0.2);
+    }
+  }
 
-    // Apply friction & air drag
-    const isGround = this.ball.pos.z <= 0;
-    const friction = isGround ? PHYSICS.BALL_FRICTION_GROUND : PHYSICS.BALL_FRICTION_AIR;
-
-    this.ball.velocity.x *= friction;
-    this.ball.velocity.y *= friction;
-
-    // Spin curve effect
-    this.ball.velocity.x += this.ball.spin.x;
-    this.ball.velocity.y += this.ball.spin.y;
-    this.ball.spin.x *= 0.95;
-    this.ball.spin.y *= 0.95;
-
-    // Gravity & vertical bounce
-    this.ball.velocity.z -= PHYSICS.BALL_GRAVITY;
-    this.ball.pos.z += this.ball.velocity.z;
-
-    if (this.ball.pos.z <= 0) {
-      this.ball.pos.z = 0;
-      if (Math.abs(this.ball.velocity.z) > 1.2) {
-        this.ball.velocity.z = -this.ball.velocity.z * PHYSICS.BALL_BOUNCE_DAMPING;
-        soundEngine.playKick(0.2);
-      } else {
-        this.ball.velocity.z = 0;
+  private resolvePlayerCollisions() {
+    const players = this.homePlayers.concat(this.awayPlayers);
+    for (let i = 0; i < players.length; i++) {
+      for (let j = i + 1; j < players.length; j++) {
+        const a = players[i];
+        const b = players[j];
+        if (a.team === b.team || a.player.isGoalkeeper || b.player.isGoalkeeper) continue;
+        const dx = b.pos.x - a.pos.x;
+        const dy = b.pos.y - a.pos.y;
+        const dist = Math.hypot(dx, dy);
+        const minDist = PHYSICS.PLAYER_RADIUS * 1.55;
+        if (dist <= 0 || dist >= minDist) continue;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const push = (minDist - dist) * 0.5;
+        a.pos.x -= nx * push; a.pos.y -= ny * push;
+        b.pos.x += nx * push; b.pos.y += ny * push;
+        const relative = (b.velocity.x - a.velocity.x) * nx + (b.velocity.y - a.velocity.y) * ny;
+        if (relative < -0.6) {
+          a.velocity.x += nx * relative * 0.28; a.velocity.y += ny * relative * 0.28;
+          b.velocity.x -= nx * relative * 0.28; b.velocity.y -= ny * relative * 0.28;
+        }
+        if ((a.isTackling || b.isTackling) && this.ball.pos.z < 18) {
+          const tackler = a.isTackling ? a : b;
+          const ballDistA = Math.hypot(this.ball.pos.x - a.pos.x, this.ball.pos.y - a.pos.y);
+          const ballDistB = Math.hypot(this.ball.pos.x - b.pos.x, this.ball.pos.y - b.pos.y);
+          if (Math.min(ballDistA, ballDistB) < PHYSICS.PLAYER_RADIUS + PHYSICS.BALL_RADIUS + 6) {
+            this.ball.velocity.x = tackler.velocity.x * 0.65 + nx * (a.isTackling ? -2.2 : 2.2);
+            this.ball.velocity.y = tackler.velocity.y * 0.65 + ny * (a.isTackling ? -2.2 : 2.2);
+            this.ball.velocity.z = 1.8;
+            this.ball.lastTouchedBy = tackler.id;
+            this.ball.lastTouchedTeam = tackler.team;
+          }
+        }
       }
     }
-
-    this.ball.pos.x += this.ball.velocity.x;
-    this.ball.pos.y += this.ball.velocity.y;
   }
 
   private checkBoundsAndGoals() {
@@ -1105,7 +1135,13 @@ export class MatchEngine {
       `Thunderous Goal! ${scorer.name} fires a ${Math.round(speed)} km/h rocket into the net`
     );
 
-    commentary.goalCommentary(scorer.name, teamName, speed);
+    commentary.goalCommentary(scorer.name, teamName, speed, {
+      minute: this.matchTimeSec,
+      homeScore: this.stats.homeScore,
+      awayScore: this.stats.awayScore,
+      isLateDrama: this.matchTimeSec >= 75,
+    });
+    haptics.goal();
 
     this.activeCelebration = {
       scorer: scorer.name,
