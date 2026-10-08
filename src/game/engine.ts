@@ -531,6 +531,23 @@ export class MatchEngine {
     return this.shootChargeTimer;
   }
 
+
+  private getPassingLaneScore(passer: MatchPlayerEntity, receiver: MatchPlayerEntity, opponents: MatchPlayerEntity[]) {
+    const dx = receiver.pos.x - passer.pos.x, dy = receiver.pos.y - passer.pos.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    const ux = dx / dist, uy = dy / dist;
+    let pressure = 0;
+    for (const defender of opponents) {
+      const px = defender.pos.x - passer.pos.x, py = defender.pos.y - passer.pos.y;
+      const projection = px * ux + py * uy;
+      if (projection < 0 || projection > dist) continue;
+      const lateral = Math.abs(px * uy - py * ux);
+      if (lateral < 48) pressure += (48 - lateral) / 48 * (1 - projection / dist);
+    }
+    const progression = passer.team === 'home' ? dx : -dx;
+    return Math.max(-1, Math.min(1, progression / 700 + receiver.player.stats.passing / 250 - pressure * 0.8));
+  }
+
   private executeGroundPass(player: MatchPlayerEntity) {
     const teammates = player.team === 'home' 
       ? this.homePlayers.filter(p => p.id !== player.id && !p.player.isGoalkeeper)
@@ -550,7 +567,9 @@ export class MatchEngine {
 
       const dot = (dx / dist) * facingVec.x + (dy / dist) * facingVec.y;
       if (dot > 0.4) {
-        const score = dot * 100 - dist * 0.15;
+        const opponents = player.team === 'home' ? this.awayPlayers : this.homePlayers;
+        const laneScore = this.getPassingLaneScore(player, mate, opponents);
+        const score = dot * 100 - dist * 0.15 + laneScore * 65 + mate.player.stats.passing * 0.08;
         if (score > highestScore) {
           highestScore = score;
           bestTeammate = mate;
@@ -576,6 +595,8 @@ export class MatchEngine {
       this.ball.velocity.y = (dy / dist) * speed;
       this.ball.velocity.z = 0;
       if (player.team === 'home') this.userControlledId = bestTeammate.id;
+      const accuracy = Math.max(0.55, Math.min(0.99, 0.45 + player.player.stats.passing / 220 + bestTeammate.player.stats.passing / 500));
+      if (Math.random() < accuracy) { if (player.team === 'home') this.stats.homePassSuccess++; else this.stats.awayPassSuccess++; }
     } else {
       this.ball.velocity.x = facingVec.x * PHYSICS.PASS_POWER;
       this.ball.velocity.y = facingVec.y * PHYSICS.PASS_POWER;
@@ -848,6 +869,18 @@ export class MatchEngine {
     gk.facingAngle = side === 'home' ? 0 : Math.PI;
   }
 
+
+  private chooseDefensiveTarget(player: MatchPlayerEntity, ballPos: Vector2D, ballCarrier: MatchPlayerEntity | null, tacticalState: { pressingIntensity: number; defensiveLine: number }) {
+    const goalX = player.team === 'home' ? PITCH.MARGIN_X : PITCH.MARGIN_X + PITCH.LENGTH;
+    if (ballCarrier && ballCarrier.team !== player.team) {
+      const dx = ballCarrier.pos.x - player.pos.x, dy = ballCarrier.pos.y - player.pos.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const pressRadius = 180 + tacticalState.pressingIntensity * 140;
+      if (dist < pressRadius) return { x: ballCarrier.pos.x - dx / dist * 22, y: ballCarrier.pos.y - dy / dist * 22 };
+    }
+    return { x: player.homePos.x + (goalX - player.homePos.x) * (1 - tacticalState.defensiveLine) * 0.22, y: player.homePos.y + (ballPos.y - player.homePos.y) * 0.18 };
+  }
+
   private updateOutfieldAI(
     player: MatchPlayerEntity, 
     slotIdx: number, 
@@ -860,6 +893,11 @@ export class MatchEngine {
     const formation = teamSide === 'home' ? this.homeTeam.formation : this.awayTeam.formation;
     const tactic = teamSide === 'home' ? this.homeTeam.tactic : this.awayTeam.tactic;
     const baseTarget = getTacticalTarget(slotIdx, formation, teamSide, ballPos, hasBallTeam, tactic);
+    if (tacticalState && !player.player.isGoalkeeper && hasBallTeam !== teamSide) {
+      const defensive = this.chooseDefensiveTarget(player, ballPos, this.getBallPossessor(), tacticalState);
+      baseTarget.x = baseTarget.x * 0.62 + defensive.x * 0.38;
+      baseTarget.y = baseTarget.y * 0.62 + defensive.y * 0.38;
+    }
 
     const distToBall = Math.hypot(ballPos.x - player.pos.x, ballPos.y - player.pos.y);
     const isClosestToBall = this.isClosestInTeam(player, teamSide, ballPos);
