@@ -389,9 +389,19 @@ export class MatchEngine {
         // preserve celebration
       } else if (speed > 0.3) {
         p.animState = 'running';
-        p.runCycle = (p.runCycle + speed * 0.18) % (Math.PI * 2);
+        const targetAngle = Math.atan2(p.velocity.y, p.velocity.x);
+        let angleDelta = targetAngle - p.facingAngle;
+        while (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
+        while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
+        p.turnSharpness = Math.min(1, Math.abs(angleDelta) / Math.PI);
+        p.facingAngle += angleDelta * Math.min(1, deltaTimeSec * 10);
+        p.animationBlend = Math.min(1, p.animationBlend + deltaTimeSec * 8);
+        p.leftFootPlant = (Math.sin(p.runCycle) + 1) * 0.5;
+        p.rightFootPlant = (Math.sin(p.runCycle + Math.PI) + 1) * 0.5;
+        p.runCycle = (p.runCycle + speed * (0.13 + p.player.stats.pace / 900)) % (Math.PI * 2);
       } else {
         p.animState = 'idle';
+        p.animationBlend = Math.max(0, p.animationBlend - deltaTimeSec * 6);
       }
     }
 
