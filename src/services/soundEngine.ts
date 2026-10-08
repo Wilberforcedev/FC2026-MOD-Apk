@@ -1,3 +1,4 @@
+import { haptics } from './haptics';
 /**
  * Web Audio API Sound Synthesizer for FC 2026 Soccer
  * Works 100% offline without any external assets or network requests.
@@ -124,6 +125,7 @@ class SoundEngine {
    * Referee Whistle sound
    */
   public playWhistle(type: 'short' | 'double' | 'triple' | 'long' = 'short') {
+    haptics.whistle();
     this.initContext();
     if (!this.ctx || !this.masterGain || this.isMuted) return;
 
@@ -237,6 +239,7 @@ class SoundEngine {
    * Tackling Slide sound
    */
   public playTackle() {
+    haptics.tackle();
     this.initContext();
     if (!this.ctx || !this.masterGain || this.isMuted) return;
 
