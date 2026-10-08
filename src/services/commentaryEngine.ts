@@ -64,7 +64,7 @@ export class CommentaryEngine {
     return this.messages.slice(0, 5);
   }
 
-  public goalCommentary(scorer: string, team: string, speedKmh?: number): string {
+  public goalCommentary(scorer: string, team: string, speedKmh?: number, context?: { minute: number; homeScore: number; awayScore: number; isLateDrama?: boolean }): string {
     const speedStr = speedKmh ? ` Clocked at ${Math.round(speedKmh)} km/h!` : '';
     const lines = [
       `GOAL! ${scorer} with an absolute rocket for ${team}!${speedStr}`,
@@ -73,6 +73,8 @@ export class CommentaryEngine {
       `GOOOAAAL! Masterclass from ${scorer}, picking out the top corner!`,
       `IT'S IN! ${scorer} fires ${team} ahead with devastating precision!`,
     ];
+    if (context?.isLateDrama) lines.unshift(`LATE DRAMA! ${scorer} has changed the story for ${team}!`);
+    if (context && Math.abs(context.homeScore - context.awayScore) >= 2) lines.unshift(`${scorer} extends the advantage as the pressure mounts for ${team}!`);
     const picked = lines[Math.floor(Math.random() * lines.length)];
     this.addComment(picked, 'goal');
     return picked;
