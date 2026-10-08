@@ -1,136 +1,149 @@
 # FC 2026 Soccer
 
-A responsive, high-performance web and Android soccer game built with React, TypeScript, Tailwind CSS, and HTML5 Canvas. Experience complete offline play, realistic 2D match simulation, physics-based ball mechanics, tactical formations, dynamic career mode with transfer market, dynamic news feed reporting on league-wide transfers and injuries, and an integrated player editor with custom SVG face cards.
+A mobile-first soccer game built with **React, TypeScript, Vite, Tailwind CSS, HTML5 Canvas, and Capacitor**. FC 2026 is designed for responsive web play, offline/PWA installation, and Android packaging.
 
----
+> **Project status:** Active development. The game engine and major game modes are implemented; Android packaging and gameplay polish continue to evolve.
 
-## Key Features
+## Highlights
 
-### ⚽ Gameplay & Match Engine
-- **Physics-Driven 2D Pitch Engine**: Real-time ball trajectory, swerve, rebound physics, sprint stamina, sliding tackles, shooting power bars, and chip shots.
-- **Dynamic AI & Tactics**: AI opponents adjust pressing intensity, defensive blocks, and attacking counter-runs based on difficulty and scoreline.
-- **Multiple Game Modes**:
-  - **Kickoff**: Quick exhibition matches with full club & league crest selector.
-  - **Career Mode**: Full season management across European leagues, table progression, prize money, fixture schedule, and squad rotation.
-  - **Champions Tournament**: Knockout cup bracket with quarter-finals, semi-finals, and finals.
-  - **Penalty Shootout**: High-pressure goalkeeper duels with direction and power indicators.
-  - **Tactical Squad Management**: Custom formation creator (4-3-3, 4-2-3-1, 3-5-2, etc.), starter/bench drag-and-drop, and role assignments.
+- ⚽ Physics-based 2D match engine with passing, shooting, sprinting, tackling, stamina and ball movement
+- 🤖 AI opponents with difficulty levels and tactical behavior
+- 🏆 Kick Off, Career, Tournament, Penalty and Practice modes
+- 📋 Squad management, formations, player editing and player development
+- 📰 Career news, transfers, injuries and matchday updates
+- 📱 Touch controls for mobile devices
+- 📦 PWA/offline support with installable Android-friendly web app
+- 🤖 Capacitor Android shell for native APK builds
+- 🎨 SVG club/league artwork and procedural player face cards
+- 💾 Local persistence for career and tournament progress
 
-### 🎨 Visual Identity & Authentic Crests
-- **High-Fidelity Club & League Emblems**: Authentic SVG vector crests for top clubs across Premier League, La Liga, Bundesliga, and International teams.
-- **Procedural Player Face Cards**: Dynamic ultimate-team style player cards featuring procedural facial likenesses (skin tone, hair style, facial hair, boot colors, jersey kits, and dynamic card themes).
-- **Player Creator & Attribute Editor**: In-depth creator modal allowing managers to edit player stats (Pace, Shooting, Passing, Dribbling, Defending, Physicality) and customize facial likenesses in real time.
+## Tech Stack
 
-### 📰 Dynamic League News & Medical Room
-- **Dynamic News Feed**: Real-time reporting on league-wide blockbusters, breaking transfer rumors, injury reports, and fitness recovery updates.
-- **Physio Room**: Active tracker monitoring injured players across the league with weeks remaining, severity levels, and clinical diagnoses.
-
-### 📱 Android APK & PWA Compatibility
-- **WebAPK 1-Tap Installation**: Installs directly onto any Android device home screen as a standalone application.
-- **Bubblewrap / TWA Ready**: Manifest and asset bundle structured for native Android `.apk` generation using `@bubblewrap/cli` or PWABuilder.
-- **Touch-Optimized Virtual Controls**: Dual virtual thumbstick and touch action buttons (Pass, Shoot, Sprint, Tackle) engineered for mobile ergonomics.
-
----
+| Layer | Technology |
+| --- | --- |
+| UI | React 19 + TypeScript |
+| Build | Vite 6 |
+| Styling | Tailwind CSS 4 |
+| Game rendering | HTML5 Canvas |
+| Animation | Motion |
+| Charts | Recharts |
+| Icons | Lucide React |
+| PWA | vite-plugin-pwa |
+| Android | Capacitor 8 |
+| Runtime tooling | Node.js 18+ / npm 9+ |
 
 ## Project Structure
 
-```
-fc-2026-soccer/
-├── public/
-│   ├── icon.svg                     # Primary app icon
-│   ├── manifest.webmanifest         # PWA & WebAPK manifest
-│   └── pwa-192x192.png              # Android launcher icon
+```text
+FC2026-MOD-Apk/
+├── .github/workflows/       # CI and Android build automation
+├── public/                  # PWA icons and static assets
+├── scripts/                 # Android/build configuration scripts
 ├── src/
-│   ├── components/
-│   │   ├── AndroidAPKModal.tsx      # APK build & 1-tap install modal
-│   │   ├── CareerMode.tsx           # Full Career Mode dashboard & squad hub
-│   │   ├── ClubEmblem.tsx           # Vector SVG club badges
-│   │   ├── FCInboxModal.tsx         # Dynamic news feed & Physio Room
-│   │   ├── LeagueEmblem.tsx         # League crests (PL, La Liga, Bundesliga)
-│   │   ├── MatchEngine.tsx          # Canvas 2D soccer match simulation
-│   │   ├── PenaltyShootout.tsx      # Penalty shootout minigame
-│   │   ├── PlayerEditorModal.tsx    # Player creator & attribute editor
-│   │   ├── PlayerFaceCard.tsx       # Procedural SVG player face cards & avatars
-│   │   ├── SquadManagement.tsx      # Pitch tactical formation builder
-│   │   └── TournamentBracket.tsx    # Knockout tournament system
-│   ├── data/
-│   │   ├── emblems.ts               # Club & league emblem vector data
-│   │   └── teams.ts                 # Full player rosters, ratings, and kits
-│   ├── services/
-│   │   ├── careerNewsService.ts     # Matchday transfer & injury news engine
-│   │   └── careerService.ts         # Career league tables & fixture manager
-│   ├── types/
-│   │   └── soccer.ts                # TypeScript interfaces & domain types
-│   ├── App.tsx                      # Root application entry
-│   └── main.tsx                     # React DOM entry
+│   ├── components/          # Game UI and screens
+│   ├── data/                # Teams, players and emblem data
+│   ├── game/                # Core match engine and formations
+│   ├── services/            # Career, tournament, audio and commentary logic
+│   ├── types/               # Shared TypeScript domain types
+│   └── utils/               # Shared helpers
+├── unity/                   # Unity/3D integration resources
+├── capacitor.config.ts
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
 ```
 
----
+## Run Locally
 
-## Getting Started
+### Requirements
 
-### Prerequisites
-- Node.js 18+ or 20+
+- Node.js 18+ (Node.js 20 or 22 recommended)
 - npm 9+
+- Android Studio + Android SDK for native Android development
 
-### Installation
+### Install
 
 ```bash
-# Clone repository
-git clone https://github.com/your-username/fc-2026-soccer.git
-cd fc-2026-soccer
-
-# Install dependencies
+git clone https://github.com/Wilberforcedev/FC2026-MOD-Apk.git
+cd FC2026-MOD-Apk
 npm install
+```
 
-# Start development server
+### Development
+
+```bash
 npm run dev
 ```
 
-The application will be accessible at `http://localhost:3000`.
+Open **http://localhost:3000**.
 
-### Production Build
+### Validate and build
 
 ```bash
+npm run typecheck
 npm run build
 ```
 
-The static bundle will be output to the `dist/` directory.
+The production web bundle is generated in `dist/`.
 
-### Code Validation
+## Android
+
+The project uses Capacitor to package the web game as an Android application.
+
+### Add Android project
 
 ```bash
-npm run lint
+npm run android:add
 ```
 
----
+### Sync an existing Android project
 
-## Android APK Generation
-
-To package the game as a native Android APK:
-
-### Option 1: Using Google Bubblewrap CLI (Recommended)
 ```bash
-# 1. Install CLI
-npm install -g @bubblewrap/cli
-
-# 2. Initialize project from your deployment manifest
-bubblewrap init --manifest="https://your-domain.com/manifest.webmanifest"
-
-# 3. Build native Android APK & AAB
-bubblewrap build
+npm run android:sync
 ```
 
-### Option 2: PWABuilder (No local Android SDK needed)
-1. Deploy your build to any public URL or Netlify/Vercel/Cloud Run.
-2. Go to [PWABuilder.com](https://www.pwabuilder.com).
-3. Enter your site URL and click **Package for Android**.
-4. Download the signed or unsigned `.apk` file directly to test on your phone.
+### Open in Android Studio
 
----
+```bash
+npm run android:open
+```
+
+### Build a debug APK
+
+```bash
+npm run android:debug
+```
+
+The debug APK is produced under:
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+For a release build, configure signing credentials securely outside the repository and use:
+
+```bash
+npm run android:release
+```
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local` for local configuration.
+
+**Never commit real API keys or production secrets.** The repository ignores `.env*` files except for the safe `.env.example` template.
+
+## Continuous Integration
+
+GitHub Actions validates TypeScript and the production build on pushes and pull requests. The Android workflow also produces a downloadable debug APK artifact.
+
+## Contributing
+
+1. Create a focused branch from `main`.
+2. Make a small, testable change.
+3. Run `npm run typecheck` and `npm run build`.
+4. Keep gameplay behavior changes separate from unrelated refactors.
+5. Open a pull request with a clear summary and testing notes.
 
 ## License
+
 Apache-2.0
