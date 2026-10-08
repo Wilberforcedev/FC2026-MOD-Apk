@@ -138,6 +138,10 @@ export interface MatchPlayerEntity {
   diveTarget?: Vector2D;
   skillMoveTime: number; // For step-overs/roulette animations
   runCycle: number; // Animation phase (0 - 2PI)
+  animationBlend?: number;
+  leftFootPlant?: number;
+  rightFootPlant?: number;
+  turnSharpness?: number;
   animState: 'idle' | 'running' | 'kicking' | 'tackling' | 'celebrating' | 'saving';
   yellowCards: number;
   isRedCarded: boolean;
