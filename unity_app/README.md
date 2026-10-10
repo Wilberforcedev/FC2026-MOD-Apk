@@ -66,3 +66,7 @@ EditMode tests live under `Assets/Tests/Editor/FootballWorldCatalogTests.cs`. Th
 ## Career Mode season calendar
 
 `SeasonCalendarManager` generates a deterministic double round-robin season from the Football World Database. It creates home and away fixtures, assigns matchweeks, exposes the next fixture and week queries, records results, updates wins/draws/losses/goals/points, and provides standings ordered by points, goal difference, and goals scored. EditMode coverage is in `Assets/Tests/Editor/SeasonCalendarTests.cs`.
+
+## Career live match
+
+`CareerMatchSimulationEngine` runs a deterministic 90-minute offline simulation from the next season fixture. It calculates team strength from database players, emits kickoff, shot, goal, card, halftime, and full-time events, supports pause/speed/skip controls, and records the final result back into `SeasonCalendarManager`. `CareerMatchLiveScreen` presents the themed scoreboard, clock, commentary feed, match details, and controls using `FC2026UITheme`.
