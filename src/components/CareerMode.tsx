@@ -211,6 +211,26 @@ export const CareerMode: React.FC<CareerModeProps> = ({
   const squadDefRating = calcAvgRating([...defSquad, ...gkSquad]);
   const squadOverallRating = calcAvgRating(userTeam.players);
 
+  // Season Pulse: turn the Career Hub into a quick manager dashboard without changing save data.
+  const seasonPlayed = userTableRow?.played || 0;
+  const seasonWins = userTableRow?.won || 0;
+  const seasonDraws = userTableRow?.drawn || 0;
+  const seasonLosses = userTableRow?.lost || 0;
+  const seasonGoalDiff = userTableRow?.gd || 0;
+  const seasonProgress = career.totalMatchdays > 0
+    ? Math.min(100, Math.round((seasonPlayed / career.totalMatchdays) * 100))
+    : 0;
+  const topFourProgress = Math.max(0, Math.min(100, Math.round((5 - userPosition) * 25)));
+  const recentForm = career.fixtures
+    .filter(f => f.isPlayed && (f.homeTeamId === userTeam.id || f.awayTeamId === userTeam.id))
+    .slice(-5)
+    .map(f => {
+      const isHome = f.homeTeamId === userTeam.id;
+      const goalsFor = isHome ? (f.homeScore ?? 0) : (f.awayScore ?? 0);
+      const goalsAgainst = isHome ? (f.awayScore ?? 0) : (f.homeScore ?? 0);
+      return goalsFor > goalsAgainst ? 'W' : goalsFor === goalsAgainst ? 'D' : 'L';
+    });
+
   const filteredSquadList = userTeam.players.filter((p) => {
     if (squadFilterPos === 'ALL') return true;
     if (squadFilterPos === 'FWD') return ['ST', 'LW', 'RW'].includes(p.position);
@@ -412,6 +432,70 @@ export const CareerMode: React.FC<CareerModeProps> = ({
         ========================================================================= */}
         {activeTab === 'hub' && (
           <div className="max-w-6xl mx-auto space-y-5">
+            {/* Season Pulse — compact manager dashboard */}
+            <section className="relative overflow-hidden rounded-3xl border border-cyan-400/20 bg-slate-950/80 p-4 md:p-5 shadow-2xl backdrop-blur-md">
+              <div className="absolute -top-24 right-10 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl pointer-events-none" />
+              <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-400/10 text-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.12)]">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-400 font-['Chakra_Petch']">Season Pulse</p>
+                    <h3 className="mt-0.5 text-lg font-black uppercase tracking-wider text-white font-['Chakra_Petch']">
+                      {seasonPlayed}/{career.totalMatchdays} MATCHDAYS COMPLETE
+                    </h3>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Form</span>
+                  {recentForm.length > 0 ? recentForm.map((result, index) => (
+                    <span key={index} className={'flex h-7 w-7 items-center justify-center rounded-lg border text-[10px] font-black font-mono ' + (
+                      result === 'W'
+                        ? 'border-emerald-400/30 bg-emerald-400/15 text-emerald-300'
+                        : result === 'D'
+                          ? 'border-amber-400/30 bg-amber-400/15 text-amber-300'
+                          : 'border-rose-400/30 bg-rose-400/15 text-rose-300'
+                    )}>{result}</span>
+                  )) : (
+                    <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-mono text-white/40">NO RESULTS YET</span>
+                  )}
+                </div>
+              </div>
+              <div className="relative mt-4 grid grid-cols-2 gap-2 md:grid-cols-5">
+                {[
+                  { label: 'Position', value: '#' + userPosition, tone: 'text-cyan-300' },
+                  { label: 'Points', value: String(userTableRow?.points ?? 0), tone: 'text-amber-300' },
+                  { label: 'Record', value: seasonWins + '-' + seasonDraws + '-' + seasonLosses, tone: 'text-emerald-300' },
+                  { label: 'Goal Diff', value: seasonGoalDiff >= 0 ? '+' + seasonGoalDiff : String(seasonGoalDiff), tone: seasonGoalDiff >= 0 ? 'text-emerald-300' : 'text-rose-300' },
+                  { label: 'Budget', value: '€' + career.budget.toFixed(1) + 'M', tone: 'text-violet-300' },
+                ].map(stat => (
+                  <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-2.5">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-white/35">{stat.label}</p>
+                    <p className={'mt-1 text-base font-black font-[\'Chakra_Petch\'] ' + stat.tone}>{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="relative mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-white/40">
+                    <span>Season progress</span><span className="text-cyan-300">{seasonProgress}%</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 transition-all duration-700" style={{ width: seasonProgress + '%' }} />
+                  </div>
+                </div>
+                <div className="min-w-36">
+                  <div className="mb-1.5 flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-white/40">
+                    <span>Top 4 target</span><span className="text-teal-300">{userPosition <= 4 ? 'ON TRACK' : 'CHASE'}</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-gradient-to-r from-teal-400 to-cyan-300 transition-all duration-700" style={{ width: topFourProgress + '%' }} />
+                  </div>
+                </div>
+              </div>
+            </section>
+
             {/* Bento Grid layout */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
               {/* HERO TILE: NEXT MATCH (Large Top-Left Tile, 7 Cols) */}
