@@ -4,43 +4,32 @@ This folder is the Unity 6 implementation of the original mobile soccer game.
 
 ## Current implementation
 
-The first playable foundation includes a runtime-generated 3D pitch, match ball, sample footballers, mobile input, ball physics, tactical positioning, broadcast/follow cameras, squad chemistry, and a career foundation with fixtures, league points, matchweeks, and transfer budget.
+The project includes a runtime-generated 3D pitch, match ball, sample footballers, mobile input, ball physics, tactical positioning, broadcast/follow cameras, squad chemistry, and a career foundation with fixtures, league points, matchweeks, and transfer budget.
 
-The project now also includes a **Unity Netcode for GameObjects multiplayer baseline**. It supports host/client sessions over Unity Transport, synchronized match clock and score, networked player identity, ready state, server-authoritative goal events, and a simple mobile-friendly online session panel.
+The project now includes internet multiplayer through **Unity Gaming Services Authentication, Lobby, and Relay**, layered on top of Netcode for GameObjects. Players can anonymously authenticate, create a public lobby, receive a short Relay invite code, join that lobby from another device, and connect through Relay without exposing a host IP address.
 
-## Open in Unity
+## Unity Gaming Services setup
 
-1. Install **Unity 6.0 LTS** with Android Build Support and iOS Build Support as needed.
-2. Open this `unity_app` folder in Unity Hub.
-3. Create a scene with an empty `GameBootstrap` object and attach `Assets/Scripts/GameBootstrap.cs`.
-4. Add `MatchArenaBootstrap` to another empty object for the prototype arena.
-5. Add a `NetworkManager` object with `UnityTransport`, `NetworkSessionManager`, `NetworkMatchState`, and `NetworkSessionPanel`.
-6. Create a networked player prefab with `NetworkObject` and `NetworkPlayerIdentity`, then register it in the NetworkManager's Player Prefab field.
-7. Press Play twice for a local host/client test. Enter the host machine's LAN address on the client device.
+1. Open the project in Unity 6 and sign in with the Unity account that owns the project.
+2. Create or select a project in the Unity Dashboard at https://cloud.unity.com/.
+3. Copy the project's GUID into **Edit → Project Settings → Services**.
+4. Enable **Authentication**, **Lobby**, and **Relay** in the Unity Dashboard.
+5. Configure the Relay regions and usage limits for the project.
+6. Open the scene with a `NetworkManager` object, a `UnityTransport` component, and the networked player prefab registered in the Player Prefab field.
+7. Add `UnityServicesOnlineSession` and `NetworkSessionPanel` to the scene.
+8. Build the same Android or iOS app on two devices. One player selects **CREATE ONLINE LOBBY** and shares the displayed code; the second selects **JOIN ONLINE LOBBY** and enters that code.
+
+The code uses anonymous sign-in for the prototype. Production accounts should link authentication to Apple, Google, or another durable identity provider before adding purchases, rankings, or cloud saves.
 
 ## Multiplayer architecture
 
-`NetworkSessionManager` owns host/client lifecycle and Unity Transport configuration. `NetworkMatchState` keeps the score, match clock, running state, and goal events server-authoritative. `NetworkPlayerIdentity` synchronizes display name, team side, and ready state. `NetworkSessionPanel` provides a temporary touch-friendly test panel for hosting, joining, readying up, starting, and leaving a match.
+`UnityServicesOnlineSession` initializes Unity Services, signs in anonymously, creates and joins Lobby records, creates and joins Relay allocations, writes the Relay join code into lobby data, sends lobby heartbeats, refreshes lobby state, updates ready state, and leaves cleanly. `NetworkSessionManager` remains available for local/LAN testing. `NetworkMatchState` keeps the score, match clock, and goal events server-authoritative. `NetworkPlayerIdentity` synchronizes display name, team side, and ready state. `NetworkSessionPanel` exposes a temporary mobile-friendly create/join interface.
 
-For production internet matchmaking, connect the project to **Unity Gaming Services** and replace direct IP joining with Lobby plus Relay. Relay is required for most mobile users because direct inbound connections are blocked by carrier NAT and home routers. Add authentication, lobby discovery, reconnect handling, server validation, lag compensation, anti-cheat rules, and rate limits before ranked play.
+Unity documents the classic Lobby + Relay workflow at https://docs.unity.com/en-us/mps-sdk/tutorials/relay-and-ngo. Unity also marks the standalone `com.unity.services.relay` package as deprecated for Unity 6; after this prototype is proven, migrate the session orchestration to the current Multiplayer Services SDK sessions API while preserving the lobby-code UX.
 
-## Runtime architecture
+## Match and career systems
 
-- `GameBootstrap` — application entry point and sample team data.
-- `GameModeController` — Kick-off, Career, Champions Cup, Penalty Duel, Practice, and Squad Management routing.
-- `MatchArenaBootstrap` — prototype 3D arena generation and player spawning.
-- `BallController` — ball motion, passing, shooting, spin, lift, and friction.
-- `FootballerController` — player movement and ball actions.
-- `TacticalAI` — formation anchors, pressing, and marking response.
-- `MatchCameraController` — broadcast and follow-player camera presentation.
-- `MobileInputController` — UI-friendly touch input.
-- `SquadData` / `SquadManager` — data-driven players, teams, formations, and lineups.
-- `MatchManager` — offline match clock, scores, state changes, halftime, and full time.
-- `CareerManager` — fixtures, league table, transfer budget, and season progression foundation.
-- `NetworkSessionManager` — host/client session lifecycle.
-- `NetworkMatchState` — synchronized server-authoritative score and match clock.
-- `NetworkPlayerIdentity` — synchronized player identity and ready state.
-- `NetworkSessionPanel` — prototype online session controls.
+The runtime prototype also includes a generated pitch, ball passing and shooting, footballer movement, formation anchors, pressing and marking response, broadcast/follow cameras, squad swaps and chemistry, and a career manager with fixtures, table points, matchweeks, and transfer budget.
 
 ## Next production milestones
 
@@ -48,7 +37,7 @@ For production internet matchmaking, connect the project to **Unity Gaming Servi
 2. Add Animator Controllers, locomotion blend trees, passing/shooting animations, tackles, goalkeeper saves, and celebrations.
 3. Add real pitch markings, goals, net physics, match HUD, pause menu, replay camera, and goal presentation.
 4. Expand tactical AI into defensive lines, offside, set pieces, fouls, cards, substitutions, and difficulty presets.
-5. Connect Unity Authentication, Lobby, and Relay for internet matches.
+5. Migrate the prototype Lobby + Relay flow to the current Multiplayer Services SDK session API.
 6. Add interpolation, client prediction, server reconciliation, reconnect flow, host migration, anti-cheat, and match results validation.
-7. Add persistent career saves, transfers, player development, stadium upgrades, and Android builds.
-8. Add online friend matches only after the offline match is stable at 30 FPS on target devices.
+7. Add durable player authentication, cloud saves, transfers, player development, stadium upgrades, and Android builds.
+8. Add ranked play only after online friend matches are stable at 30 FPS on target devices.
