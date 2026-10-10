@@ -62,3 +62,7 @@ The original fictional V1 world is now stored under `Assets/Data/FootballWorld`:
 ## Automated catalog tests
 
 EditMode tests live under `Assets/Tests/Editor/FootballWorldCatalogTests.cs`. They cover wrapped JSON parsing, malformed and missing catalogs, duplicate IDs, broken cross-catalog references, successful loader replacement, and protection of an existing database after an invalid load. Run them from **Window → General → Test Runner → EditMode** or with Unity batch mode in CI.
+
+## Career Mode season calendar
+
+`SeasonCalendarManager` generates a deterministic double round-robin season from the Football World Database. It creates home and away fixtures, assigns matchweeks, exposes the next fixture and week queries, records results, updates wins/draws/losses/goals/points, and provides standings ordered by points, goal difference, and goals scored. EditMode coverage is in `Assets/Tests/Editor/SeasonCalendarTests.cs`.

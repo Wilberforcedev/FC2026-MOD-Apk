@@ -24,3 +24,7 @@ The V1 data is intentionally original and fictional. Real players, likenesses, c
 `FootballWorldCatalogParser` is the shared parser used by both runtime loading and the Unity Editor importer. It parses each wrapped JSON catalog with `JsonUtility`, reports missing files, empty files, invalid JSON, and null parse results, and returns a `FootballWorldValidationReport`.
 
 `FootballWorldDatabase.Validate()` checks duplicate and empty IDs, player-to-club references, club-to-league references, competition eligibility references, rating ranges, unusual ages, missing likeness profile IDs, negative club budgets, and league club-count mismatches. Editor imports abort without replacing the existing asset when errors are found. Runtime loads retain the existing database when the incoming catalog is invalid and log the errors for diagnostics.
+
+## Career season integration
+
+`SeasonCalendarManager` consumes the clubs assigned to a league and generates a full home-and-away round robin. A four-club league produces twelve fixtures across six matchweeks. Result recording updates a standings table while keeping fixture IDs deterministic for saves, match results, and future online validation.
