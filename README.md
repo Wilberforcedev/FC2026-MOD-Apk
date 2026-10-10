@@ -1,6 +1,6 @@
 # FC 2026 Soccer
 
-A responsive, high-performance web and Android soccer game built with React, TypeScript, Tailwind CSS, and HTML5 Canvas. Experience complete offline play, realistic 2D match simulation, physics-based ball mechanics, tactical formations, dynamic career mode with transfer market, dynamic news feed reporting on league-wide transfers and injuries, and an integrated player editor with custom SVG face cards.
+FC 2026 is evolving into a Unity 6 mobile football game with a reusable 3D match foundation, themed squad and transfer UI, online multiplayer, and a data-driven Football World Database. The repository also retains the earlier React/TypeScript web prototype for UI reference and lightweight browser play. Experience complete offline play, realistic 2D match simulation, physics-based ball mechanics, tactical formations, dynamic career mode with transfer market, dynamic news feed reporting on league-wide transfers and injuries, and an integrated player editor with custom SVG face cards.
 
 ---
 
@@ -134,3 +134,10 @@ bubblewrap build
 
 ## License
 Apache-2.0
+
+
+## Unity 6 Football World
+
+The active game foundation is under `unity_app/`. It includes the Unity 6 3D match prototype, Netcode multiplayer with Lobby and Relay, the shared `FC2026UITheme`, the Football World Database V1 JSON catalogs, ScriptableObject importer, transfer market, and the themed Football World browser for clubs and players.
+
+The current original fictional catalog contains 8 clubs, 2 leagues, 3 competitions, and 96 players. Real names, likenesses, badges, kits, stadiums, and league branding require appropriate licensing.

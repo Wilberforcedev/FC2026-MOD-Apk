@@ -53,3 +53,8 @@ All screens follow one FC 2026 presentation system inspired by the supplied kit-
 ## Football World Database V1
 
 The original fictional V1 world is now stored under `Assets/Data/FootballWorld`: 8 clubs, 2 leagues, 3 competitions, and 96 players. `FootballWorldDatabase` is the ScriptableObject runtime index; `FootballWorldCatalogLoader` loads JSON at runtime; and the editor menu **FC 2026 → Import Football World V1** creates or refreshes `FootballWorldDatabase.asset`. The transfer market can consume this database directly instead of its demo listings. See `FOOTBALL_WORLD_DATABASE.md` for the schema and licensing boundary.
+
+
+## Football World browser
+
+`FootballWorldBrowserScreen` displays the ScriptableObject database through the shared `FC2026UITheme`. It provides player and club modes, catalog counts, themed cards, rating and value details, club stadium/budget details, focus states, and lightweight search filters. Add it to a scene with `FootballWorldDatabase`, `FC2026UITheme`, and a Canvas reference; it can also discover the database from `FootballWorldCatalogLoader`.
