@@ -49,3 +49,7 @@ All screens follow one FC 2026 presentation system inspired by the supplied kit-
 ## Transfer market
 
 `TransferMarketScreen` is the first full screen built on `FC2026UITheme`. It presents searchable collectible player cards, bronze/silver/gold/elite tier colors, position and club context, player attributes, transfer fees, focused-player details, budget checks, squad insertion after purchase, and themed success/failure states. Add it to a scene with `FC2026UITheme`, `CareerManager`, and `SquadManager` references to use the runtime screen.
+
+## Football World Database V1
+
+The original fictional V1 world is now stored under `Assets/Data/FootballWorld`: 8 clubs, 2 leagues, 3 competitions, and 96 players. `FootballWorldDatabase` is the ScriptableObject runtime index; `FootballWorldCatalogLoader` loads JSON at runtime; and the editor menu **FC 2026 → Import Football World V1** creates or refreshes `FootballWorldDatabase.asset`. The transfer market can consume this database directly instead of its demo listings. See `FOOTBALL_WORLD_DATABASE.md` for the schema and licensing boundary.

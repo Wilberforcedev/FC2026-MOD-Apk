@@ -1,0 +1,100 @@
+{
+  "clubs": [
+    {
+      "id": "harbor-kings",
+      "displayName": "Harbor Kings",
+      "shortName": "HK",
+      "leagueId": "continental-premier",
+      "country": "Aurelia",
+      "stadiumName": "Kings Dock",
+      "primaryColorHex": "#18D9E6",
+      "secondaryColorHex": "#F5F7FA",
+      "startingBudget": 25000000,
+      "isFictional": true
+    },
+    {
+      "id": "northbridge-fc",
+      "displayName": "Northbridge FC",
+      "shortName": "NBF",
+      "leagueId": "continental-premier",
+      "country": "Aurelia",
+      "stadiumName": "Bridge Park",
+      "primaryColorHex": "#FF5A5F",
+      "secondaryColorHex": "#F5F7FA",
+      "startingBudget": 23200000,
+      "isFictional": true
+    },
+    {
+      "id": "redwood-athletic",
+      "displayName": "Redwood Athletic",
+      "shortName": "RWA",
+      "leagueId": "continental-premier",
+      "country": "Aurelia",
+      "stadiumName": "Redwood Bowl",
+      "primaryColorHex": "#B9ED4E",
+      "secondaryColorHex": "#F5F7FA",
+      "startingBudget": 21400000,
+      "isFictional": true
+    },
+    {
+      "id": "metro-vale",
+      "displayName": "Metro Vale",
+      "shortName": "MV",
+      "leagueId": "continental-premier",
+      "country": "Aurelia",
+      "stadiumName": "Vale Arena",
+      "primaryColorHex": "#8B6CFF",
+      "secondaryColorHex": "#F5F7FA",
+      "startingBudget": 19600000,
+      "isFictional": true
+    },
+    {
+      "id": "eastport-union",
+      "displayName": "Eastport Union",
+      "shortName": "EPU",
+      "leagueId": "national-championship",
+      "country": "Aurelia",
+      "stadiumName": "Union Ground",
+      "primaryColorHex": "#FF9F43",
+      "secondaryColorHex": "#F5F7FA",
+      "startingBudget": 8400000,
+      "isFictional": true
+    },
+    {
+      "id": "silverlake-rovers",
+      "displayName": "Silverlake Rovers",
+      "shortName": "SLR",
+      "leagueId": "national-championship",
+      "country": "Aurelia",
+      "stadiumName": "Lakehouse Stadium",
+      "primaryColorHex": "#32B67A",
+      "secondaryColorHex": "#F5F7FA",
+      "startingBudget": 7750000,
+      "isFictional": true
+    },
+    {
+      "id": "canyon-city",
+      "displayName": "Canyon City",
+      "shortName": "CC",
+      "leagueId": "national-championship",
+      "country": "Aurelia",
+      "stadiumName": "Canyon Field",
+      "primaryColorHex": "#E056FD",
+      "secondaryColorHex": "#F5F7FA",
+      "startingBudget": 7100000,
+      "isFictional": true
+    },
+    {
+      "id": "rivergate-sc",
+      "displayName": "Rivergate SC",
+      "shortName": "RSC",
+      "leagueId": "national-championship",
+      "country": "Aurelia",
+      "stadiumName": "Gatehouse Park",
+      "primaryColorHex": "#54A0FF",
+      "secondaryColorHex": "#F5F7FA",
+      "startingBudget": 6450000,
+      "isFictional": true
+    }
+  ]
+}

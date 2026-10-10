@@ -1,0 +1,22 @@
+{
+  "leagues": [
+    {
+      "id": "continental-premier",
+      "displayName": "Continental Premier",
+      "country": "Aurelia",
+      "tier": 1,
+      "clubCount": 4,
+      "promotionEnabled": false,
+      "isFictional": true
+    },
+    {
+      "id": "national-championship",
+      "displayName": "National Championship",
+      "country": "Aurelia",
+      "tier": 2,
+      "clubCount": 4,
+      "promotionEnabled": true,
+      "isFictional": true
+    }
+  ]
+}

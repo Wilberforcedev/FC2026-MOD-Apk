@@ -22,6 +22,7 @@ namespace FC2026
         [SerializeField] private FC2026UITheme theme;
         [SerializeField] private CareerManager career;
         [SerializeField] private SquadManager squad;
+        [SerializeField] private FootballWorldDatabase worldDatabase;
         [SerializeField] private Canvas canvas;
         [SerializeField] private List<TransferListing> listings = new();
 
@@ -40,7 +41,7 @@ namespace FC2026
             theme ??= Resources.Load<FC2026UITheme>("FC2026UITheme");
             career ??= FindFirstObjectByType<CareerManager>();
             squad ??= FindFirstObjectByType<SquadManager>();
-            if (listings.Count == 0) listings = CreateDemoListings();
+            if (listings.Count == 0) listings = worldDatabase != null ? CreateListingsFromDatabase(worldDatabase) : CreateDemoListings();
             BuildScreen();
         }
 
@@ -144,6 +145,33 @@ namespace FC2026
 
         private Color ColorOf(Func<FC2026UITheme, Color> selector) => theme != null ? selector(theme) : Color.black;
         private static string FormatMoney(int amount) => amount >= 1000000 ? $"€{amount / 1000000f:0.0}M" : $"€{amount / 1000f:0}K";
+
+        private static List<TransferListing> CreateListingsFromDatabase(FootballWorldDatabase database)
+        {
+            return database.players.Select(player =>
+            {
+                Enum.TryParse(player.position, true, out PlayerPosition position);
+                return new TransferListing
+                {
+                    player = new PlayerData
+                    {
+                        id = player.id,
+                        displayName = player.displayName,
+                        position = position,
+                        overall = player.overall,
+                        pace = player.pace,
+                        shooting = player.shooting,
+                        passing = player.passing,
+                        dribbling = player.dribbling,
+                        defending = player.defending,
+                        physicality = player.physicality
+                    },
+                    currentClub = database.FindClub(player.clubId)?.displayName ?? "Unknown Club",
+                    fee = player.marketValue,
+                    isRecommended = player.overall >= 80
+                };
+            }).ToList();
+        }
 
         private static List<TransferListing> CreateDemoListings() => new()
         {

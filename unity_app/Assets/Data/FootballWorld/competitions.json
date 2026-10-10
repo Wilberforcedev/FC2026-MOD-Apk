@@ -1,0 +1,32 @@
+{
+  "competitions": [
+    {
+      "id": "continental-premier-league",
+      "displayName": "Continental Premier",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "continental-premier"
+      ],
+      "isFictional": true
+    },
+    {
+      "id": "aurelia-cup",
+      "displayName": "Aurelia Cup",
+      "competitionType": "Cup",
+      "eligibleLeagueIds": [
+        "continental-premier",
+        "national-championship"
+      ],
+      "isFictional": true
+    },
+    {
+      "id": "champions-cup",
+      "displayName": "Champions Cup",
+      "competitionType": "Tournament",
+      "eligibleLeagueIds": [
+        "continental-premier"
+      ],
+      "isFictional": true
+    }
+  ]
+}
