@@ -17,20 +17,34 @@ namespace FC2026
         [SerializeField] private TextAsset leaguesJson;
         [SerializeField] private TextAsset competitionsJson;
         [SerializeField] private FootballWorldDatabase database;
+        [SerializeField] private bool logValidationWarnings = true;
 
         public FootballWorldDatabase Database => database;
+        public FootballWorldValidationReport LastReport { get; private set; }
+        public bool LastLoadSucceeded { get; private set; }
 
         private void Awake() => LoadIntoDatabase();
 
         public FootballWorldDatabase LoadIntoDatabase()
         {
             database ??= ScriptableObject.CreateInstance<FootballWorldDatabase>();
-            var players = playersJson == null ? new PlayerCatalogJson() : JsonUtility.FromJson<PlayerCatalogJson>(playersJson.text);
-            var clubs = clubsJson == null ? new ClubCatalogJson() : JsonUtility.FromJson<ClubCatalogJson>(clubsJson.text);
-            var leagues = leaguesJson == null ? new LeagueCatalogJson() : JsonUtility.FromJson<LeagueCatalogJson>(leaguesJson.text);
-            var competitions = competitionsJson == null ? new CompetitionCatalogJson() : JsonUtility.FromJson<CompetitionCatalogJson>(competitionsJson.text);
-            database.ReplaceCatalogs(players.players, clubs.clubs, leagues.leagues, competitions.competitions);
+            var bundle = FootballWorldCatalogParser.Parse(playersJson, clubsJson, leaguesJson, competitionsJson);
+            LastReport = bundle.Report;
+            if (LastReport.IsValid)
+            {
+                database.ReplaceCatalogs(bundle.Players.players, bundle.Clubs.clubs, bundle.Leagues.leagues, bundle.Competitions.competitions);
+                LastReport = database.Validate();
+            }
+            LastLoadSucceeded = LastReport.IsValid;
+            LogReport(LastReport);
             return database;
+        }
+
+        private void LogReport(FootballWorldValidationReport report)
+        {
+            foreach (var error in report.Errors) Debug.LogError($"[Football World] {error}", this);
+            if (!logValidationWarnings) return;
+            foreach (var warning in report.Warnings) Debug.LogWarning($"[Football World] {warning}", this);
         }
     }
 }

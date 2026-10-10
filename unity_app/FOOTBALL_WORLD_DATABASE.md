@@ -18,3 +18,9 @@ The football world is data-driven and split into JSON catalogs so gameplay, care
 5. Assign that asset to `FootballWorldCatalogLoader` and the transfer-market services.
 
 The V1 data is intentionally original and fictional. Real players, likenesses, club names, badges, leagues, kits, stadiums, and official competition branding require the appropriate licenses. The `likenessProfileId` field is a placeholder for future licensed or commissioned appearance data; it is not a real-person likeness by itself.
+
+## Parser and validation behavior
+
+`FootballWorldCatalogParser` is the shared parser used by both runtime loading and the Unity Editor importer. It parses each wrapped JSON catalog with `JsonUtility`, reports missing files, empty files, invalid JSON, and null parse results, and returns a `FootballWorldValidationReport`.
+
+`FootballWorldDatabase.Validate()` checks duplicate and empty IDs, player-to-club references, club-to-league references, competition eligibility references, rating ranges, unusual ages, missing likeness profile IDs, negative club budgets, and league club-count mismatches. Editor imports abort without replacing the existing asset when errors are found. Runtime loads retain the existing database when the incoming catalog is invalid and log the errors for diagnostics.

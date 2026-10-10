@@ -85,5 +85,47 @@ namespace FC2026
             leagues = leagueCatalog?.ToList() ?? new List<WorldLeagueDefinition>();
             competitions = competitionCatalog?.ToList() ?? new List<WorldCompetitionDefinition>();
         }
+
+        public FootballWorldValidationReport Validate()
+        {
+            var report = new FootballWorldValidationReport();
+            ValidateUniqueIds(players.ConvertAll(item => item.id), "player", report);
+            ValidateUniqueIds(clubs.ConvertAll(item => item.id), "club", report);
+            ValidateUniqueIds(leagues.ConvertAll(item => item.id), "league", report);
+            ValidateUniqueIds(competitions.ConvertAll(item => item.id), "competition", report);
+            var clubIds = new HashSet<string>(clubs.ConvertAll(item => item.id));
+            var leagueIds = new HashSet<string>(leagues.ConvertAll(item => item.id));
+            foreach (var player in players)
+            {
+                if (!clubIds.Contains(player.clubId)) report.Error($"Player '{player.id}' references missing club '{player.clubId}'.");
+                if (player.overall < 1 || player.overall > 99) report.Error($"Player '{player.id}' has invalid overall '{player.overall}'.");
+                if (player.age < 15 || player.age > 60) report.Warning($"Player '{player.id}' has unusual age '{player.age}'.");
+                if (string.IsNullOrWhiteSpace(player.likenessProfileId)) report.Warning($"Player '{player.id}' has no likeness profile ID.");
+            }
+            foreach (var club in clubs)
+            {
+                if (!leagueIds.Contains(club.leagueId)) report.Error($"Club '{club.id}' references missing league '{club.leagueId}'.");
+                if (club.startingBudget < 0) report.Error($"Club '{club.id}' has a negative starting budget.");
+            }
+            foreach (var competition in competitions)
+                foreach (var leagueId in competition.eligibleLeagueIds ?? Array.Empty<string>())
+                    if (!leagueIds.Contains(leagueId)) report.Error($"Competition '{competition.id}' references missing league '{leagueId}'.");
+            foreach (var league in leagues)
+            {
+                var actualCount = clubs.Count(item => item.leagueId == league.id);
+                if (actualCount != league.clubCount) report.Warning($"League '{league.id}' declares {league.clubCount} clubs but has {actualCount}.");
+            }
+            return report;
+        }
+
+        private static void ValidateUniqueIds(IEnumerable<string> ids, string type, FootballWorldValidationReport report)
+        {
+            var seen = new HashSet<string>();
+            foreach (var id in ids)
+            {
+                if (string.IsNullOrWhiteSpace(id)) { report.Error($"A {type} has an empty ID."); continue; }
+                if (!seen.Add(id)) report.Error($"Duplicate {type} ID: '{id}'.");
+            }
+        }
     }
 }
