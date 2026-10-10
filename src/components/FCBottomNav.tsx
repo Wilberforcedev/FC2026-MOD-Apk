@@ -13,33 +13,40 @@ export const FCBottomNav: React.FC<FCBottomNavProps> = ({
   onSelectTab,
 }) => {
   const items: { id: FCNavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'home', label: 'HOME', icon: <Home className="w-4 h-4" /> },
-    { id: 'play', label: 'PLAY', icon: <Play className="w-4 h-4" /> },
-    { id: 'club', label: 'CLUB', icon: <Shield className="w-4 h-4" /> },
-    { id: 'store', label: 'STORE', icon: <ShoppingBag className="w-4 h-4" /> },
+    { id: 'home', label: 'Home', icon: <Home className="h-4 w-4" aria-hidden="true" /> },
+    { id: 'play', label: 'Play', icon: <Play className="h-4 w-4" aria-hidden="true" /> },
+    { id: 'club', label: 'Club', icon: <Shield className="h-4 w-4" aria-hidden="true" /> },
+    { id: 'store', label: 'Store', icon: <ShoppingBag className="h-4 w-4" aria-hidden="true" /> },
   ];
 
   return (
-    <div className="w-full flex justify-center py-3 px-4 shrink-0 pointer-events-none z-30">
-      <div className="pointer-events-auto bg-slate-950/90 backdrop-blur-xl border border-cyan-500/30 rounded-full px-6 py-2 flex items-center gap-6 sm:gap-10 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_20px_rgba(6,182,212,0.2)]">
+    <nav
+      aria-label="Primary navigation"
+      className="z-30 flex w-full shrink-0 justify-center px-3 pt-2 pointer-events-none"
+      style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+    >
+      <div className="pointer-events-auto flex items-center gap-1 rounded-2xl border border-white/10 bg-slate-950/90 p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.65),0_0_20px_rgba(6,182,212,0.12)] backdrop-blur-xl sm:gap-2">
         {items.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
+              type="button"
               onClick={() => onSelectTab(item.id)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full transition-all duration-200 font-['Chakra_Petch'] font-black text-xs uppercase tracking-wider ${
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={item.label}
+              className={`flex min-h-11 min-w-[4.25rem] items-center justify-center gap-2 rounded-xl px-3 text-[10px] font-black uppercase tracking-[0.12em] transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 active:scale-95 touch-manipulation sm:min-w-[5.5rem] sm:px-4 sm:text-xs ${
                 isActive
-                  ? 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.5)] scale-105'
-                  : 'text-white/60 hover:text-white hover:bg-slate-900/60'
+                  ? 'bg-cyan-300 text-slate-950 shadow-[0_0_18px_rgba(34,211,238,0.28)]'
+                  : 'text-white/55 hover:bg-white/[0.06] hover:text-white'
               }`}
             >
               {item.icon}
-              <span className="font-bold">{item.label}</span>
+              <span>{item.label}</span>
             </button>
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 };
