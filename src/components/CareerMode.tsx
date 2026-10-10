@@ -531,11 +531,28 @@ export const CareerMode: React.FC<CareerModeProps> = ({
                   <h3 className="text-xl font-black font-['Chakra_Petch'] text-white uppercase tracking-wider group-hover:text-teal-300 transition">
                     DIRECTIVES & CONTRACTS
                   </h3>
-                  <ul className="text-xs text-white/60 space-y-1 mt-2">
-                    <li className="flex items-center gap-2">• Board Objectives: Qualify for Top 4</li>
-                    <li className="flex items-center gap-2">• 2 Contract Extensions Due</li>
-                    <li className="flex items-center gap-2">• Press Conference Available</li>
-                  </ul>
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between rounded-xl border border-teal-400/15 bg-teal-400/5 px-3 py-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">Board target</span>
+                      <span className={`text-[10px] font-black uppercase tracking-wider ${userPosition <= 4 ? 'text-emerald-300' : 'text-amber-300'}`}>
+                        {userPosition <= 4 ? 'TOP 4 ON TRACK' : 'TOP 4 REQUIRED'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                        <span className="block text-white/35 uppercase">League</span>
+                        <span className="mt-0.5 block font-black text-white">#{userPosition} / {career.table.length}</span>
+                      </div>
+                      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                        <span className="block text-white/35 uppercase">Next priority</span>
+                        <span className="mt-0.5 block font-black text-teal-300">{nextFixture ? 'WIN NEXT MATCH' : 'SEASON COMPLETE'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-white/45">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                      <span>Contracts and press briefings remain available from the Manager Desk.</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-3 border-t border-cyan-900/30 text-xs text-teal-400 font-['Chakra_Petch'] font-bold uppercase tracking-wider">
