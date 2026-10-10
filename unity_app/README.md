@@ -45,3 +45,7 @@ The runtime prototype also includes a generated pitch, ball passing and shooting
 ## Shared UI direction
 
 All screens follow one FC 2026 presentation system inspired by the supplied kit-selection reference: dark stadium backdrops, soft spotlighting, bold white uppercase headings, cyan focus brackets, muted blue-gray secondary text, collectible card silhouettes, and a consistent controller/touch interaction rail. The shared `FC2026UITheme` ScriptableObject stores the palette, card tiers, spacing, panel radius, focus treatment, and interaction colors so screens do not drift visually. See `UI_STYLE_GUIDE.md` before creating any new screen or component.
+
+## Transfer market
+
+`TransferMarketScreen` is the first full screen built on `FC2026UITheme`. It presents searchable collectible player cards, bronze/silver/gold/elite tier colors, position and club context, player attributes, transfer fees, focused-player details, budget checks, squad insertion after purchase, and themed success/failure states. Add it to a scene with `FC2026UITheme`, `CareerManager`, and `SquadManager` references to use the runtime screen.
