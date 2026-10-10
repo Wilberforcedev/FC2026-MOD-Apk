@@ -70,3 +70,11 @@ EditMode tests live under `Assets/Tests/Editor/FootballWorldCatalogTests.cs`. Th
 ## Career live match
 
 `CareerMatchSimulationEngine` runs a deterministic 90-minute offline simulation from the next season fixture. It calculates team strength from database players, emits kickoff, shot, goal, card, halftime, and full-time events, supports pause/speed/skip controls, and records the final result back into `SeasonCalendarManager`. `CareerMatchLiveScreen` presents the themed scoreboard, clock, commentary feed, match details, and controls using `FC2026UITheme`.
+
+## Player progression
+
+`PlayerProgressionManager` stores per-player form, morale, potential, training XP, sessions, starts, and wins. Training supports balanced, pace, shooting, passing, dribbling, defending, and physicality focuses with intensity levels. Attribute growth is capped by potential; match results affect form and morale; weekly advancement normalizes both values.
+
+## Career Dashboard and League Table
+
+`CareerDashboardScreen` uses `FC2026UITheme` to present live standings from `SeasonCalendarManager`, positions, played matches, goal difference, points, next fixture, matchweek, transfer budget, club objectives, and player-development status. Objectives currently include finishing top two, winning three matches, and achieving a positive goal difference. Automated coverage is in `Assets/Tests/Editor/PlayerProgressionTests.cs`.
