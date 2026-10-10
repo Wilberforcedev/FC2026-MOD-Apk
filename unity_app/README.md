@@ -58,3 +58,7 @@ The original fictional V1 world is now stored under `Assets/Data/FootballWorld`:
 ## Football World browser
 
 `FootballWorldBrowserScreen` displays the ScriptableObject database through the shared `FC2026UITheme`. It provides player and club modes, catalog counts, themed cards, rating and value details, club stadium/budget details, focus states, and lightweight search filters. Add it to a scene with `FootballWorldDatabase`, `FC2026UITheme`, and a Canvas reference; it can also discover the database from `FootballWorldCatalogLoader`.
+
+## Automated catalog tests
+
+EditMode tests live under `Assets/Tests/Editor/FootballWorldCatalogTests.cs`. They cover wrapped JSON parsing, malformed and missing catalogs, duplicate IDs, broken cross-catalog references, successful loader replacement, and protection of an existing database after an invalid load. Run them from **Window → General → Test Runner → EditMode** or with Unity batch mode in CI.

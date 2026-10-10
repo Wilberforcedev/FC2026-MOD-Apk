@@ -23,12 +23,17 @@ namespace FC2026
         public FootballWorldValidationReport LastReport { get; private set; }
         public bool LastLoadSucceeded { get; private set; }
 
-        private void Awake() => LoadIntoDatabase();
+        private void Awake()
+        {
+            if (playersJson != null || clubsJson != null || leaguesJson != null || competitionsJson != null) LoadIntoDatabase();
+        }
 
-        public FootballWorldDatabase LoadIntoDatabase()
+        public FootballWorldDatabase LoadIntoDatabase() => LoadIntoDatabase(playersJson, clubsJson, leaguesJson, competitionsJson);
+
+        public FootballWorldDatabase LoadIntoDatabase(TextAsset players, TextAsset clubs, TextAsset leagues, TextAsset competitions)
         {
             database ??= ScriptableObject.CreateInstance<FootballWorldDatabase>();
-            var bundle = FootballWorldCatalogParser.Parse(playersJson, clubsJson, leaguesJson, competitionsJson);
+            var bundle = FootballWorldCatalogParser.Parse(players, clubs, leagues, competitions);
             LastReport = bundle.Report;
             if (LastReport.IsValid)
             {
