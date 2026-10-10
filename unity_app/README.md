@@ -41,3 +41,7 @@ The runtime prototype also includes a generated pitch, ball passing and shooting
 6. Add interpolation, client prediction, server reconciliation, reconnect flow, host migration, anti-cheat, and match results validation.
 7. Add durable player authentication, cloud saves, transfers, player development, stadium upgrades, and Android builds.
 8. Add ranked play only after online friend matches are stable at 30 FPS on target devices.
+
+## Shared UI direction
+
+All screens follow one FC 2026 presentation system inspired by the supplied kit-selection reference: dark stadium backdrops, soft spotlighting, bold white uppercase headings, cyan focus brackets, muted blue-gray secondary text, collectible card silhouettes, and a consistent controller/touch interaction rail. The shared `FC2026UITheme` ScriptableObject stores the palette, card tiers, spacing, panel radius, focus treatment, and interaction colors so screens do not drift visually. See `UI_STYLE_GUIDE.md` before creating any new screen or component.
