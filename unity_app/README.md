@@ -78,3 +78,9 @@ EditMode tests live under `Assets/Tests/Editor/FootballWorldCatalogTests.cs`. Th
 ## Career Dashboard and League Table
 
 `CareerDashboardScreen` uses `FC2026UITheme` to present live standings from `SeasonCalendarManager`, positions, played matches, goal difference, points, next fixture, matchweek, transfer budget, club objectives, and player-development status. Objectives currently include finishing top two, winning three matches, and achieving a positive goal difference. Automated coverage is in `Assets/Tests/Editor/PlayerProgressionTests.cs`.
+
+## Transfer negotiation and scouting network
+
+`TransferNegotiationManager` supports opening a player negotiation, submitting fee/wage/term offers, receiving counter-offers, accepting or rejecting deals, and completing the transfer through the career budget and squad. `ScoutingNetworkManager` supports regional scout assignments, multi-week reports, confidence, estimated overall/potential, fee estimates, recommendations, network upgrades, and report completion events.
+
+`TransferSocialFeedScreen` is the mobile-first presentation for this system. It replaces the desktop-style transfer grid with a vertical dark social/news feed inspired by the supplied reference: Dynamic News Feed, Club Inbox, and Social Buzz tabs; cyan navigation; magenta transfer/scouting labels; unread badges; verified handles; engagement rows; stacked post cards; and direct **SCOUT PLAYER** / **OPEN NEGOTIATION** actions. The screen intentionally uses fictional in-game network accounts and original content.

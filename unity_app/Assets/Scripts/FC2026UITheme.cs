@@ -24,6 +24,7 @@ namespace FC2026
         public Color success = new(0.68f, 0.93f, 0.28f, 1f);
         public Color warning = new(1f, 0.68f, 0.2f, 1f);
         public Color danger = new(1f, 0.28f, 0.31f, 1f);
+        public Color socialAccent = new(0.95f, 0.25f, 0.68f, 1f);
 
         [Header("Collectible cards")]
         public Color bronzeCard = new(0.82f, 0.48f, 0.3f, 1f);
