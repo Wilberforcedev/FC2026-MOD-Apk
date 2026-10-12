@@ -5,8 +5,21 @@ interface MatchControlsOverlayProps {
   onInputChange: (input: UserInputState) => void;
 }
 
+const JOYSTICK_RADIUS = 60;
+const LEFT_HANDED_KEY = 'fc26-left-handed';
+
+const findTouch = (list: React.TouchList, id: number): React.Touch | undefined => {
+  for (let i = 0; i < list.length; i++) {
+    const t = list[i];
+    if (t && t.identifier === id) return t;
+  }
+  return undefined;
+};
+
 export const MatchControlsOverlay: React.FC<MatchControlsOverlayProps> = ({ onInputChange }) => {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [leftHanded, setLeftHanded] = useState(false);
+  const [portrait, setPortrait] = useState(false);
 
   // Active inputs state
   const inputRef = useRef<UserInputState>({
@@ -37,17 +50,27 @@ export const MatchControlsOverlay: React.FC<MatchControlsOverlayProps> = ({ onIn
   // Keyboard keys active tracking
   const keysActive = useRef<Record<string, boolean>>({});
 
-  // Virtual Joystick state
-  const joystickContainerRef = useRef<HTMLDivElement | null>(null);
+  // Floating dynamic joystick state (anchors where the thumb lands)
+  const [joystickOrigin, setJoystickOrigin] = useState<{ x: number; y: number } | null>(null);
   const [joystickKnobPos, setJoystickKnobPos] = useState({ x: 0, y: 0 });
-  const isDraggingJoystick = useRef(false);
+  const joystickTouchId = useRef<number | null>(null);
 
   useEffect(() => {
-    // Detect touch device
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-      setIsTouchDevice(true);
-    }
+    const touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (touch) setIsTouchDevice(true);
+    setLeftHanded(localStorage.getItem(LEFT_HANDED_KEY) === '1');
 
+    const readOrientation = () => setPortrait(window.innerHeight > window.innerWidth);
+    readOrientation();
+    window.addEventListener('resize', readOrientation);
+    window.addEventListener('orientationchange', readOrientation);
+    return () => {
+      window.removeEventListener('resize', readOrientation);
+      window.removeEventListener('orientationchange', readOrientation);
+    };
+  }, []);
+
+  useEffect(() => {
     const updateKeyboardMovement = () => {
       let mx = 0;
       let my = 0;
@@ -63,7 +86,7 @@ export const MatchControlsOverlay: React.FC<MatchControlsOverlayProps> = ({ onIn
         my /= mag;
       }
 
-      if (!isDraggingJoystick.current) {
+      if (joystickTouchId.current === null) {
         inputRef.current.moveX = mx;
         inputRef.current.moveY = my;
       }
@@ -161,38 +184,39 @@ export const MatchControlsOverlay: React.FC<MatchControlsOverlayProps> = ({ onIn
     };
   }, [onInputChange]);
 
-  // Touch Joystick handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    isDraggingJoystick.current = true;
-    handleTouchMove(e);
+  // Floating joystick handlers: the stick anchors wherever the thumb lands
+  const handleZoneTouchStart = (e: React.TouchEvent) => {
+    if (joystickTouchId.current !== null) return;
+    const touch = e.changedTouches[0];
+    joystickTouchId.current = touch.identifier;
+    setJoystickOrigin({ x: touch.clientX, y: touch.clientY });
+    setJoystickKnobPos({ x: 0, y: 0 });
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDraggingJoystick.current || !joystickContainerRef.current) return;
-    const rect = joystickContainerRef.current.getBoundingClientRect();
-    const touch = e.touches[0];
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
+  const handleZoneTouchMove = (e: React.TouchEvent) => {
+    if (joystickTouchId.current === null) return;
+    const touch = findTouch(e.changedTouches, joystickTouchId.current);
+    if (!touch || !joystickOrigin) return;
 
-    const dx = touch.clientX - centerX;
-    const dy = touch.clientY - centerY;
+    const dx = touch.clientX - joystickOrigin.x;
+    const dy = touch.clientY - joystickOrigin.y;
     const dist = Math.hypot(dx, dy);
-    const maxRadius = rect.width / 2;
-
-    const clampedDist = Math.min(dist, maxRadius);
+    const clamped = Math.min(dist, JOYSTICK_RADIUS);
     const angle = Math.atan2(dy, dx);
-    const knobX = Math.cos(angle) * clampedDist;
-    const knobY = Math.sin(angle) * clampedDist;
+    const knobX = Math.cos(angle) * clamped;
+    const knobY = Math.sin(angle) * clamped;
 
     setJoystickKnobPos({ x: knobX, y: knobY });
-
-    inputRef.current.moveX = knobX / maxRadius;
-    inputRef.current.moveY = knobY / maxRadius;
+    inputRef.current.moveX = knobX / JOYSTICK_RADIUS;
+    inputRef.current.moveY = knobY / JOYSTICK_RADIUS;
     onInputChange({ ...inputRef.current });
   };
 
-  const handleTouchEnd = () => {
-    isDraggingJoystick.current = false;
+  const handleZoneTouchEnd = (e: React.TouchEvent) => {
+    const touch = findTouch(e.changedTouches, joystickTouchId.current);
+    if (!touch) return;
+    joystickTouchId.current = null;
+    setJoystickOrigin(null);
     setJoystickKnobPos({ x: 0, y: 0 });
     inputRef.current.moveX = 0;
     inputRef.current.moveY = 0;
@@ -225,36 +249,74 @@ export const MatchControlsOverlay: React.FC<MatchControlsOverlayProps> = ({ onIn
     }, 50);
   };
 
+  const toggleLeftHanded = () => {
+    setLeftHanded(prev => {
+      const next = !prev;
+      localStorage.setItem(LEFT_HANDED_KEY, next ? '1' : '0');
+      return next;
+    });
+  };
+
+  const joystickSide = leftHanded ? 'right' : 'left';
+  const clusterSide = leftHanded ? 'left' : 'right';
+  const safeBottom = 'calc(1.25rem + env(safe-area-inset-bottom))';
+  const clusterStyle: React.CSSProperties = {
+    bottom: safeBottom,
+    [clusterSide]: `calc(1.25rem + env(safe-area-inset-${clusterSide}))`,
+  } as React.CSSProperties;
+
   return (
     <div className="absolute inset-0 pointer-events-none select-none z-10">
-      {/* On-Screen Touch Joystick (Visible on mobile/tablet or when touched) */}
-      <div className={`absolute bottom-6 left-6 pointer-events-auto ${isTouchDevice ? 'block' : 'hidden md:block opacity-60 hover:opacity-100 transition'}`}>
+      {/* Floating joystick thumb zone (DLS-style: stick anchors where the thumb lands) */}
+      {isTouchDevice && (
         <div
-          ref={joystickContainerRef}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchEnd}
-          className="touch-none w-32 h-32 rounded-full bg-slate-950/60 border-2 border-white/20 backdrop-blur-md relative flex items-center justify-center shadow-2xl"
+          className="absolute bottom-0 top-[32%] w-[46%] pointer-events-auto touch-none"
+          style={{ [joystickSide]: 0 } as React.CSSProperties}
+          onTouchStart={handleZoneTouchStart}
+          onTouchMove={handleZoneTouchMove}
+          onTouchEnd={handleZoneTouchEnd}
+          onTouchCancel={handleZoneTouchEnd}
+        />
+      )}
+
+      {/* Dynamic joystick visual */}
+      {joystickOrigin && (
+        <div
+          className="fixed pointer-events-none z-20"
+          style={{ left: joystickOrigin.x - 64, top: joystickOrigin.y - 64 }}
         >
-          {/* Outer compass marks */}
-          <div className="absolute top-1 text-[10px] text-white/30 font-bold">▲</div>
-          <div className="absolute bottom-1 text-[10px] text-white/30 font-bold">▼</div>
-          <div className="absolute left-1 text-[10px] text-white/30 font-bold">◀</div>
-          <div className="absolute right-1 text-[10px] text-white/30 font-bold">▶</div>
-
-          {/* Draggable Knob */}
-          <div
-            className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 shadow-xl border-2 border-white/80 absolute transition-transform duration-75"
-            style={{
-              transform: `translate(${joystickKnobPos.x}px, ${joystickKnobPos.y}px)`,
-            }}
-          />
+          <div className="w-32 h-32 rounded-full bg-slate-950/50 border-2 border-white/20 backdrop-blur-md relative flex items-center justify-center shadow-2xl">
+            <div
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 shadow-xl border-2 border-white/80 absolute"
+              style={{ transform: `translate(${joystickKnobPos.x}px, ${joystickKnobPos.y}px)` }}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* On-Screen Action Buttons (Right side diamond cluster) */}
-      <div className={`absolute bottom-6 right-6 pointer-events-auto ${isTouchDevice ? 'block' : 'hidden md:block opacity-85 hover:opacity-100 transition'}`}>
+      {/* Left/right handed layout toggle */}
+      {isTouchDevice && (
+        <button
+          id="touch-btn-hand-toggle"
+          onClick={toggleLeftHanded}
+          className="absolute left-1/2 -translate-x-1/2 pointer-events-auto touch-none px-3 py-1.5 rounded-full bg-slate-800/80 border border-white/25 text-white/85 font-['Chakra_Petch'] font-bold text-[10px] uppercase shadow-lg active:scale-95 transition"
+          style={{
+            bottom: 'calc(0.6rem + env(safe-area-inset-bottom))',
+          } as React.CSSProperties}
+        >
+          ⇄ {leftHanded ? 'Left' : 'Right'} hand
+        </button>
+      )}
+
+      {/* Portrait rotate hint */}
+      {isTouchDevice && portrait && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-slate-950/85 border border-amber-400/40 text-amber-200 font-['Chakra_Petch'] font-bold text-[11px] uppercase tracking-wider shadow-xl whitespace-nowrap">
+          ⟳ Rotate for the broadcast view
+        </div>
+      )}
+
+      {/* On-Screen Action Buttons (diamond cluster, safe-area aware) */}
+      <div className={`absolute pointer-events-auto ${isTouchDevice ? 'block' : 'hidden md:block opacity-85 hover:opacity-100 transition'}`} style={clusterStyle}>
         <div className="relative w-48 h-48 flex items-center justify-center">
           {/* THROUGH BALL (Top / Y) */}
           <button

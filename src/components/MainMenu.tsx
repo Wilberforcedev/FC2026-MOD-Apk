@@ -4,7 +4,7 @@ import { TEAMS } from '../data/teams';
 import { Player, Team } from '../types/soccer';
 import { FCBottomNav, FCNavTab } from './FCBottomNav';
 import { FCHeaderBar } from './FCHeaderBar';
-import { PlayerFaceAvatar } from './PlayerFaceCard';
+import { PlayerFaceAvatar, PlayerFaceCard } from './PlayerFaceCard';
 
 export type MainMenuDestination = 'team-select' | 'career' | 'tournament' | 'penalties' | 'practice' | 'squad';
 
@@ -113,7 +113,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         </section>
 
         <section className="spotlight-row">
-          <div className="spotlight-card"><div className="spotlight-top"><span className="section-kicker">PLAYER SPOTLIGHT</span><Sparkles size={16} /></div><div className="spotlight-content"><div className="spotlight-avatar"><PlayerFaceAvatar skinTone={selectedPlayer.likeness?.skinTone} hairStyle={selectedPlayer.likeness?.hairStyle} hairColor={selectedPlayer.likeness?.hairColor} facialHair={selectedPlayer.likeness?.facialHair} jerseyColor={team.kit?.primary} size={80} /></div><div><h3>{selectedPlayer.name}</h3><p>{selectedPlayer.position} · {team.shortName}</p><div className="mini-stats"><span><b>{selectedPlayer.stats.pace}</b><small>PAC</small></span><span><b>{selectedPlayer.stats.shooting}</b><small>SHO</small></span><span><b>{selectedPlayer.stats.passing}</b><small>PAS</small></span></div></div><div className="spotlight-rating"><strong>{selectedPlayer.rating}</strong><span>OVR</span></div></div></div>
+          <div className="spotlight-card"><div className="spotlight-top"><span className="section-kicker">PLAYER SPOTLIGHT</span><Sparkles size={16} /></div><div className="spotlight-content"><PlayerFaceCard player={selectedPlayer} team={team} size="xs" showDetails={false} /><div><h3>{selectedPlayer.name}</h3><p>{selectedPlayer.position} · {team.shortName}</p><div className="mini-stats"><span><b>{selectedPlayer.stats.pace}</b><small>PAC</small></span><span><b>{selectedPlayer.stats.shooting}</b><small>SHO</small></span><span><b>{selectedPlayer.stats.passing}</b><small>PAS</small></span></div></div></div></div>
           <button className="quick-card" onClick={() => onNavigate('tournament')}><span className="quick-icon"><Zap size={18} /></span><strong>Champions<br />Cup</strong><span className="quick-meta">QUARTER-FINALS <ArrowRight size={14} /></span></button>
           <button className="quick-card alt" onClick={() => onNavigate('squad')}><span className="quick-icon"><Users size={18} /></span><strong>Squad<br />management</strong><span className="quick-meta">11 STARTERS <ArrowRight size={14} /></span></button>
         </section>

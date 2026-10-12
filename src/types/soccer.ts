@@ -27,7 +27,7 @@ export interface PlayerStats {
 
 export type HairStyle = 'short' | 'fade' | 'curly' | 'dreads' | 'slick' | 'buzz' | 'afro' | 'mohawk';
 export type FacialHair = 'none' | 'stubble' | 'beard' | 'goatee';
-export type FaceCardTheme = 'gold' | 'tots' | 'totw' | 'future_stars' | 'icon';
+export type FaceCardTheme = 'gold' | 'silver' | 'bronze' | 'tots' | 'totw' | 'future_stars' | 'icon';
 
 export interface PlayerLikeness {
   skinTone: string;     // Hex e.g. '#f5d0b0'

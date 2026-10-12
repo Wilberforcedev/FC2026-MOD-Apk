@@ -4,6 +4,7 @@ import { PITCH } from '../game/constants';
 import { MatchPlayerEntity, ReplayPlayerState, Team } from '../types/soccer';
 import { Camera, FastForward, Play, Pause, X, Sparkles } from 'lucide-react';
 import { getStadiumForTeam, StadiumLikeness } from '../data/stadiums';
+import { performanceService } from '../services/performanceService';
 
 interface PitchCanvasProps {
   engine: MatchEngine;
@@ -31,13 +32,14 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({ engine, weather = 'Nig
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
     if (!ctx) return;
 
     let animFrameId: number;
 
     const render = () => {
-      const dpr = window.devicePixelRatio || 1;
+      const frameStart = performance.now();
+      const dpr = (window.devicePixelRatio || 1) * performanceService.getRenderScale();
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
 
@@ -96,7 +98,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({ engine, weather = 'Nig
       // Camera Shake impact effect
       let shakeOffsetX = 0;
       let shakeOffsetY = 0;
-      if (engine.cameraShake > 0.01) {
+      if (engine.cameraShake > 0.01 && performanceService.getTier() !== 'low') {
         shakeOffsetX = (Math.random() - 0.5) * engine.cameraShake * 16;
         shakeOffsetY = (Math.random() - 0.5) * engine.cameraShake * 16;
       }
@@ -165,6 +167,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({ engine, weather = 'Nig
 
       ctx.restore();
 
+      performanceService.reportFrame(performance.now() - frameStart);
       animFrameId = requestAnimationFrame(render);
     };
 

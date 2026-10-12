@@ -119,6 +119,24 @@ const CARD_THEMES: Record<FaceCardTheme, { bg: string; border: string; ratingCol
     bannerBg: 'bg-amber-950/20 border-amber-950/30 text-amber-950',
     accentGlow: 'from-amber-300/40 via-yellow-400/20 to-transparent',
   },
+  silver: {
+    bg: 'bg-gradient-to-b from-[#f8fafc] via-[#94a3b8] to-[#334155]',
+    border: 'border-slate-200 shadow-[0_0_22px_rgba(148,163,184,0.35)]',
+    ratingColor: 'text-slate-900',
+    labelColor: 'text-slate-800',
+    statsColor: 'text-slate-900',
+    bannerBg: 'bg-slate-900/20 border-slate-900/30 text-slate-900',
+    accentGlow: 'from-slate-200/40 via-slate-400/20 to-transparent',
+  },
+  bronze: {
+    bg: 'bg-gradient-to-b from-[#f3c08b] via-[#b4652a] to-[#5c3113]',
+    border: 'border-orange-300 shadow-[0_0_22px_rgba(180,101,42,0.35)]',
+    ratingColor: 'text-orange-950',
+    labelColor: 'text-orange-900',
+    statsColor: 'text-orange-950',
+    bannerBg: 'bg-orange-950/20 border-orange-950/30 text-orange-950',
+    accentGlow: 'from-orange-300/40 via-amber-600/20 to-transparent',
+  },
   tots: {
     bg: 'bg-gradient-to-b from-[#0284c7] via-[#1e40af] to-[#0f172a]',
     border: 'border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.5)]',
@@ -264,7 +282,7 @@ export const PlayerFaceCard: React.FC<PlayerFaceCardProps> = ({
   onClick,
   showDetails = true,
 }) => {
-  const themeKey = player.likeness?.faceCardTheme || 'gold';
+  const themeKey = player.likeness?.faceCardTheme || rarityTier(player.rating);
   const theme = CARD_THEMES[themeKey] || CARD_THEMES.gold;
   const profile = getProceduralProfile(player);
 
@@ -334,3 +352,10 @@ const StatPill: React.FC<{ label: string; value: number; colorClass: string }> =
     <span className="text-[7px] md:text-[8px] opacity-75 uppercase tracking-tighter">{label}</span>
   </div>
 );
+
+// DLS/FIFA-style rarity tiers: gold for top flight, silver and bronze below.
+function rarityTier(rating: number): FaceCardTheme {
+  if (rating >= 75) return 'gold';
+  if (rating >= 65) return 'silver';
+  return 'bronze';
+}

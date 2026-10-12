@@ -7,18 +7,20 @@ import './index.css';
 
 const isNativeAndroid = Capacitor.isNativePlatform();
 
-// High-end Android phones often expose 3x-4x device pixel ratios. The pitch
-// renderer uses devicePixelRatio for its backing canvas, which can create far
-// more pixels than are useful on a handheld screen. Cap it at 2x in the native
-// shell to reduce GPU fill-rate and memory pressure while keeping the game sharp.
-if (isNativeAndroid && window.devicePixelRatio > 2) {
+// High-end phones often expose 3x-4x device pixel ratios. The pitch renderer
+// uses devicePixelRatio for its backing canvas, which can create far more
+// pixels than are useful on a handheld screen. Cap it at 2x on any touch
+// device (native shell or mobile browser) to reduce GPU fill-rate and memory
+// pressure while keeping the game sharp.
+const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+if (isTouchDevice && window.devicePixelRatio > 2) {
   const nativeDpr = window.devicePixelRatio;
   try {
     Object.defineProperty(window, 'devicePixelRatio', {
       configurable: true,
       get: () => 2,
     });
-    console.log(`[Android] Render density capped from ${nativeDpr.toFixed(2)}x to 2x.`);
+    console.log(`[Mobile] Render density capped from ${nativeDpr.toFixed(2)}x to 2x.`);
   } catch {
     // Some WebView versions may not allow redefining devicePixelRatio. In that
     // case the game safely falls back to the device-provided value.

@@ -30,6 +30,14 @@ FC 2026 is evolving into a Unity 6 mobile football game with a reusable 3D match
 - **Bubblewrap / TWA Ready**: Manifest and asset bundle structured for native Android `.apk` generation using `@bubblewrap/cli` or PWABuilder.
 - **Touch-Optimized Virtual Controls**: Dual virtual thumbstick and touch action buttons (Pass, Shoot, Sprint, Tackle) engineered for mobile ergonomics.
 
+### 📲 Mobile Performance & Ergonomics
+- **Adaptive Render Scaling**: A frame-time monitor automatically steps the canvas render scale (100% → 80% → 65%) on weaker GPUs so matches stay smooth on low-end Android and iOS devices.
+- **Touch Density Cap**: `devicePixelRatio` is capped at 2x on any coarse-pointer device, cutting GPU fill-rate dramatically on 3x-4x phone panels.
+- **Floating Dynamic Joystick**: DLS-style thumb stick that anchors wherever the thumb lands in the movement zone, with full 360° movement and multi-touch alongside shoot and sprint.
+- **Left-Handed Layout**: One tap mirrors the stick and action cluster sides; the preference persists per device.
+- **Safe-Area Aware HUD**: Controls respect notches, gesture bars and rounded corners through CSS environment insets in portrait and landscape.
+- **Orientation Guidance**: Portrait phones get a rotate hint during matches; the standalone PWA and Capacitor shell run fullscreen landscape.
+
 ---
 
 ## Project Structure
