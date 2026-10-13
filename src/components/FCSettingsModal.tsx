@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { X, Volume2, VolumeX, Monitor, Shield, Gamepad2, Download, WifiOff } from 'lucide-react';
+import { X, Volume2, VolumeX, Monitor, Shield, Gamepad2, Download, WifiOff, Smartphone, Gauge } from 'lucide-react';
 import { PWAInstallModal } from './PWAInstallModal';
 import { usePWAInstall } from './usePWAInstall';
+import { performanceService, QualityMode } from '../services/performanceService';
+import { haptics } from '../services/haptics';
 
 interface FCSettingsModalProps {
   isOpen: boolean;
@@ -18,8 +20,29 @@ export const FCSettingsModal: React.FC<FCSettingsModalProps> = ({
 }) => {
   const [showInstallModal, setShowInstallModal] = useState(false);
   const { isInstalled, isInstallable, os } = usePWAInstall();
+  const [qualityMode, setQualityMode] = useState<QualityMode>(performanceService.getMode());
+  const [hapticsOn, setHapticsOn] = useState(haptics.isEnabled());
 
   if (!isOpen) return null;
+
+  const QUALITY_OPTIONS: Array<{ mode: QualityMode; label: string }> = [
+    { mode: 'auto', label: 'AUTO' },
+    { mode: 'high', label: 'HIGH' },
+    { mode: 'balanced', label: 'BALANCED' },
+    { mode: 'low', label: 'LOW' },
+  ];
+
+  const selectQuality = (mode: QualityMode) => {
+    performanceService.setMode(mode);
+    setQualityMode(mode);
+  };
+
+  const toggleHaptics = () => {
+    const next = !hapticsOn;
+    haptics.setEnabled(next);
+    setHapticsOn(next);
+    if (next) haptics.uiTap();
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 select-none animate-fadeIn">
@@ -93,6 +116,63 @@ export const FCSettingsModal: React.FC<FCSettingsModalProps> = ({
                 <span className="text-white/60">Sprint & Skill Move</span>
               </div>
             </div>
+          </div>
+
+          {/* Graphics Quality */}
+          <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="font-bold text-sm text-white flex items-center gap-2">
+                  <Gauge className="w-4 h-4 text-cyan-400" />
+                  Graphics Quality
+                </div>
+                <div className="text-xs text-white/50 mt-0.5">
+                  Auto adapts render scale to measured frame times.
+                  {qualityMode === 'auto' && (
+                    <span className="ml-1 text-cyan-300 font-mono font-bold uppercase">Current: {performanceService.getTier()}</span>
+                  )}
+                </div>
+              </div>
+              <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-2.5 py-1 rounded-full font-mono font-bold">
+                60 FPS
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5 bg-slate-950/80 p-1.5 rounded-xl border border-white/5">
+              {QUALITY_OPTIONS.map(({ mode, label }) => (
+                <button
+                  key={mode}
+                  onClick={() => selectQuality(mode)}
+                  className={`px-2 py-2 rounded-lg text-[11px] font-['Chakra_Petch'] font-bold uppercase tracking-wider transition ${
+                    qualityMode === mode
+                      ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                      : 'text-white/50 hover:text-white/80 hover:bg-slate-800/60'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Haptic Feedback */}
+          <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+            <div>
+              <div className="font-bold text-sm text-white flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-cyan-400" />
+                Haptic Feedback
+              </div>
+              <div className="text-xs text-white/50 mt-0.5">Vibration pulses for kicks, tackles, goals & whistles on supported devices.</div>
+            </div>
+            <button
+              onClick={toggleHaptics}
+              className={`px-4 py-2 rounded-xl text-xs font-['Chakra_Petch'] font-bold uppercase tracking-wider flex items-center gap-2 border transition ${
+                hapticsOn
+                  ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                  : 'bg-red-500/20 border-red-400 text-red-300'
+              }`}
+            >
+              <span>{hapticsOn ? 'ON' : 'OFF'}</span>
+            </button>
           </div>
 
           {/* Engine Quality */}

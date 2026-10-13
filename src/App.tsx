@@ -5,7 +5,7 @@
 
 import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { TEAMS } from './data/teams';
-import { CareerState, SeasonFixture, Team, TournamentMatch } from './types/soccer';
+import { CareerState, Player, SeasonFixture, Team, TournamentMatch } from './types/soccer';
 import { MatchEngine, UserInputState } from './game/engine';
 import { PitchCanvas } from './components/PitchCanvas';
 import { OnPitchLikenessLayer } from './components/OnPitchLikenessLayer';
@@ -29,12 +29,14 @@ import {
   loadTournament,
   saveTournament,
 } from './services/tournamentService';
+import { PackDefinition } from './services/packService';
 
 const CareerMode = lazy(() => import('./components/CareerMode').then(module => ({ default: module.CareerMode })));
 const TournamentBracket = lazy(() => import('./components/TournamentBracket').then(module => ({ default: module.TournamentBracket })));
 const PenaltyMode = lazy(() => import('./components/PenaltyMode').then(module => ({ default: module.PenaltyMode })));
 const PracticeArena = lazy(() => import('./components/PracticeArena').then(module => ({ default: module.PracticeArena })));
 const SquadManagement = lazy(() => import('./components/SquadManagement').then(module => ({ default: module.SquadManagement })));
+const PackShopModal = lazy(() => import('./components/PackShopModal').then(module => ({ default: module.PackShopModal })));
 
 type ScreenType =
   | 'main-menu'
@@ -44,7 +46,8 @@ type ScreenType =
   | 'career'
   | 'penalties'
   | 'practice'
-  | 'squad';
+  | 'squad'
+  | 'pack-store';
 
 interface MatchContext {
   tournamentMatch?: TournamentMatch;
@@ -122,6 +125,27 @@ export default function App() {
     saveCareer(updated);
   }, []);
 
+  const handlePackPurchase = useCallback((pack: PackDefinition, pulled: Player[]) => {
+    const squad: Player[] = [...userTeam.players];
+    const signed = pulled.map((p) => {
+      let number = p.number;
+      while (squad.some(existing => existing.number === number)) {
+        number = Math.floor(Math.random() * 48) + 2;
+      }
+      const player: Player = { ...p, number };
+      squad.push(player);
+      return player;
+    });
+    const shared = TEAMS.find(t => t.id === userTeam.id);
+    if (shared) shared.players = squad;
+    setUserTeam({ ...userTeam, players: squad });
+    setCareerState(prev => {
+      const updated = { ...prev, budget: Math.max(0, prev.budget - pack.cost / 1_000_000) };
+      saveCareer(updated);
+      return updated;
+    });
+  }, [userTeam]);
+
   const handleToggleMute = useCallback(() => {
     setIsMuted(previous => {
       const next = !previous;
@@ -146,7 +170,7 @@ export default function App() {
     if (tab === 'home') setCurrentScreen('main-menu');
     else if (tab === 'play') setCurrentScreen('team-select');
     else if (tab === 'club') setCurrentScreen('squad');
-    else if (tab === 'store') setCurrentScreen('career');
+    else if (tab === 'store') setCurrentScreen('pack-store');
   };
 
   const handleMainMenuNavigate = (destination: MainMenuDestination) => {
@@ -157,6 +181,7 @@ export default function App() {
     if (currentScreen === 'main-menu') setNavTab('home');
     else if (currentScreen === 'team-select') setNavTab('play');
     else if (currentScreen === 'squad') setNavTab('club');
+    else if (currentScreen === 'pack-store') setNavTab('store');
     else if (currentScreen === 'career') setNavTab('store');
   }, [currentScreen]);
 
@@ -515,6 +540,24 @@ export default function App() {
                 onOpenSocial={handleOpenSocial}
                 onOpenSettings={() => setShowSettingsModal(true)}
                 currentMatchday={careerState.currentMatchday || 1}
+              />
+            </Suspense>
+          </div>
+          <FCBottomNav activeTab={navTab} onSelectTab={handleSelectNavTab} />
+        </div>
+      )}
+
+      {currentScreen === 'pack-store' && (
+        <div className="h-full flex flex-col justify-between">
+          <div className="flex-1 overflow-hidden">
+            <Suspense fallback={lazyFallback}>
+              <PackShopModal
+                coins={coinsBalance}
+                onPurchase={handlePackPurchase}
+                onBack={() => setCurrentScreen('main-menu')}
+                onOpenInbox={handleOpenInbox}
+                onOpenSocial={handleOpenSocial}
+                onOpenSettings={() => setShowSettingsModal(true)}
               />
             </Suspense>
           </div>
