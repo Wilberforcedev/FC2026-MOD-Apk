@@ -23,6 +23,7 @@ import {
 import { HighlightReplayModal } from './HighlightReplayModal';
 import { PitchHeatmapViewer } from './PitchHeatmapViewer';
 import { MatchHighlightsReportModal } from './MatchHighlightsReportModal';
+import { ClubEmblem } from './ClubEmblem';
 import { 
   getSavedHighlights, 
   saveHighlightToVault, 
@@ -163,7 +164,7 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
                 <div className="font-black text-white text-base sm:text-lg font-['Outfit']">{homeTeam.name}</div>
                 <div className="text-xs text-white/70">Player</div>
               </div>
-              <span className="text-2xl sm:text-3xl">{homeTeam.badgeIcon}</span>
+              <ClubEmblem teamId={homeTeam.id} shortName={homeTeam.shortName} fallbackIcon={homeTeam.badgeIcon} size="xl" glow />
             </div>
 
             <div className="bg-black/40 px-4 py-1.5 rounded-2xl border border-white/20 font-['Chakra_Petch'] font-black text-3xl sm:text-4xl text-white">
@@ -171,7 +172,7 @@ export const MatchEndModal: React.FC<MatchEndModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 text-left">
-              <span className="text-2xl sm:text-3xl">{awayTeam.badgeIcon}</span>
+              <ClubEmblem teamId={awayTeam.id} shortName={awayTeam.shortName} fallbackIcon={awayTeam.badgeIcon} size="xl" glow />
               <div>
                 <div className="font-black text-white text-base sm:text-lg font-['Outfit']">{awayTeam.name}</div>
                 <div className="text-xs text-white/70">CPU</div>

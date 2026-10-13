@@ -5,6 +5,7 @@ import { commentary } from '../services/commentaryEngine';
 import { ChevronLeft, RotateCcw, Target, Shield } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { FCHeaderBar } from './FCHeaderBar';
+import { ClubEmblem } from './ClubEmblem';
 
 interface PenaltyModeProps {
   homeTeam: Team;
@@ -196,7 +197,7 @@ export const PenaltyMode: React.FC<PenaltyModeProps> = ({
         {/* Penalty Scoreboard Pill */}
         <div className="flex items-center gap-6 bg-slate-900/90 border border-cyan-500/30 px-6 py-2 rounded-2xl shadow-[0_0_20px_rgba(6,182,212,0.15)]">
           <div className="flex items-center gap-2">
-            <span className="text-xl">{homeTeam.badgeIcon}</span>
+            <ClubEmblem teamId={homeTeam.id} shortName={homeTeam.shortName} fallbackIcon={homeTeam.badgeIcon} size="md" />
             <span className="font-['Chakra_Petch'] font-bold text-sm text-white">{homeTeam.shortName}</span>
             <span className="font-['Chakra_Petch'] font-black text-2xl text-cyan-300">{homeScore}</span>
           </div>
@@ -222,7 +223,7 @@ export const PenaltyMode: React.FC<PenaltyModeProps> = ({
           <div className="flex items-center gap-2">
             <span className="font-['Chakra_Petch'] font-black text-2xl text-rose-400">{awayScore}</span>
             <span className="font-['Chakra_Petch'] font-bold text-sm text-white">{awayTeam.shortName}</span>
-            <span className="text-xl">{awayTeam.badgeIcon}</span>
+            <ClubEmblem teamId={awayTeam.id} shortName={awayTeam.shortName} fallbackIcon={awayTeam.badgeIcon} size="md" />
           </div>
         </div>
 

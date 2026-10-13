@@ -3,6 +3,7 @@ import { TournamentMatch, Team } from '../types/soccer';
 import { Trophy, ChevronLeft, Play, Award, CheckCircle2, RotateCcw } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { FCHeaderBar } from './FCHeaderBar';
+import { ClubEmblem } from './ClubEmblem';
 
 interface TournamentBracketProps {
   userTeam: Team;
@@ -114,8 +115,8 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
             <div className="text-xs font-mono font-bold text-amber-300 uppercase tracking-widest mt-2">
               TOURNAMENT CHAMPIONS
             </div>
-            <h2 className="text-3xl md:text-5xl font-black font-['Chakra_Petch'] text-white mt-1 flex items-center gap-3">
-              <span>{championTeam.badgeIcon}</span>
+            <h2 className="text-3xl md:text-5xl font-black font-['Chakra_Petch'] text-white mt-2 flex items-center gap-3">
+              <ClubEmblem teamId={championTeam.id} shortName={championTeam.shortName} fallbackIcon={championTeam.badgeIcon} size="2xl" glow />
               <span>{championTeam.name.toUpperCase()}</span>
             </h2>
             <p className="text-sm text-cyan-300 font-bold mt-2 font-mono">
@@ -183,7 +184,8 @@ const BracketCard: React.FC<{ match: TournamentMatch; userTeam: Team; isFinal?: 
         <div className="flex items-center gap-2">
           {match.homeTeam ? (
             <>
-              <span className="text-base">{match.homeTeam.badgeIcon}</span>
+              <span className="w-1 h-5 rounded-full" style={{ backgroundColor: match.homeTeam.kit?.primary || '#06b6d4' }} />
+              <ClubEmblem teamId={match.homeTeam.id} shortName={match.homeTeam.shortName} fallbackIcon={match.homeTeam.badgeIcon} size="sm" />
               <span className={`text-xs font-['Chakra_Petch'] font-bold ${match.winner?.id === match.homeTeam.id ? 'text-cyan-300 font-black' : 'text-white/80'}`}>
                 {match.homeTeam.shortName}
               </span>
@@ -207,7 +209,8 @@ const BracketCard: React.FC<{ match: TournamentMatch; userTeam: Team; isFinal?: 
         <div className="flex items-center gap-2">
           {match.awayTeam ? (
             <>
-              <span className="text-base">{match.awayTeam.badgeIcon}</span>
+              <span className="w-1 h-5 rounded-full" style={{ backgroundColor: match.awayTeam.kit?.primary || '#06b6d4' }} />
+              <ClubEmblem teamId={match.awayTeam.id} shortName={match.awayTeam.shortName} fallbackIcon={match.awayTeam.badgeIcon} size="sm" />
               <span className={`text-xs font-['Chakra_Petch'] font-bold ${match.winner?.id === match.awayTeam.id ? 'text-cyan-300 font-black' : 'text-white/80'}`}>
                 {match.awayTeam.shortName}
               </span>

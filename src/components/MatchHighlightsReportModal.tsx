@@ -20,6 +20,7 @@ import {
   Award,
   Users
 } from 'lucide-react';
+import { ClubEmblem } from './ClubEmblem';
 
 interface MatchHighlightsReportModalProps {
   homeTeam: Team;
@@ -442,7 +443,7 @@ ${manOfTheMatch.accolade}: ${manOfTheMatch.description}
             {/* Scoreboard pill */}
             <div className="flex items-center justify-center space-x-4 py-2 px-4 rounded-xl bg-black/40 border border-white/10 w-fit">
               <div className="flex items-center space-x-2 font-black text-white text-sm sm:text-base">
-                <span className="text-xl">{homeTeam.badgeIcon}</span>
+                <ClubEmblem teamId={homeTeam.id} shortName={homeTeam.shortName} fallbackIcon={homeTeam.badgeIcon} size="md" />
                 <span>{homeTeam.name}</span>
               </div>
               <div className="font-['Chakra_Petch'] text-2xl sm:text-3xl font-black text-cyan-400 px-2">
@@ -450,7 +451,7 @@ ${manOfTheMatch.accolade}: ${manOfTheMatch.description}
               </div>
               <div className="flex items-center space-x-2 font-black text-white text-sm sm:text-base">
                 <span>{awayTeam.name}</span>
-                <span className="text-xl">{awayTeam.badgeIcon}</span>
+                <ClubEmblem teamId={awayTeam.id} shortName={awayTeam.shortName} fallbackIcon={awayTeam.badgeIcon} size="md" />
               </div>
             </div>
           </div>

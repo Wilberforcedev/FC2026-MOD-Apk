@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Team, MatchHeatmapData, PlayerHeatmapRecord, HeatmapSample } from '../types/soccer';
 import { PITCH } from '../game/constants';
 import { getStadiumForTeam, StadiumLikeness } from '../data/stadiums';
+import { ClubEmblem } from './ClubEmblem';
 import { 
   Flame, 
   Users, 
@@ -557,7 +558,7 @@ export const PitchHeatmapViewer: React.FC<PitchHeatmapViewerProps> = ({
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>{homeTeam.badgeIcon}</span>
+                <ClubEmblem teamId={homeTeam.id} shortName={homeTeam.shortName} fallbackIcon={homeTeam.badgeIcon} size="xs" />
                 <span>{homeTeam.shortName}</span>
               </button>
               <button
@@ -569,7 +570,7 @@ export const PitchHeatmapViewer: React.FC<PitchHeatmapViewerProps> = ({
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>{awayTeam.badgeIcon}</span>
+                <ClubEmblem teamId={awayTeam.id} shortName={awayTeam.shortName} fallbackIcon={awayTeam.badgeIcon} size="xs" />
                 <span>{awayTeam.shortName}</span>
               </button>
             </div>
@@ -621,7 +622,7 @@ export const PitchHeatmapViewer: React.FC<PitchHeatmapViewerProps> = ({
         {/* Direction of Attack Badges */}
         <div className="flex items-center justify-between text-xs text-slate-400 font-mono mb-2 px-1">
           <div className="flex items-center space-x-1.5">
-            <span className="text-base">{homeTeam.badgeIcon}</span>
+            <ClubEmblem teamId={homeTeam.id} shortName={homeTeam.shortName} fallbackIcon={homeTeam.badgeIcon} size="sm" />
             <span className="font-bold text-white">{homeTeam.shortName}</span>
             <span className="text-cyan-400 font-black">ATTACKING ➔</span>
           </div>
@@ -667,7 +668,7 @@ export const PitchHeatmapViewer: React.FC<PitchHeatmapViewerProps> = ({
           <div className="flex items-center space-x-1.5">
             <span className="text-rose-400 font-black">⬅ ATTACKING</span>
             <span className="font-bold text-white">{awayTeam.shortName}</span>
-            <span className="text-base">{awayTeam.badgeIcon}</span>
+            <ClubEmblem teamId={awayTeam.id} shortName={awayTeam.shortName} fallbackIcon={awayTeam.badgeIcon} size="sm" />
           </div>
         </div>
 
