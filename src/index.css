@@ -41,3 +41,7 @@ button { -webkit-tap-highlight-color:transparent; }
 .pack-shake { animation:pack-shake 1.4s ease-in-out; }
 .pack-card-in { animation:pack-card-in .5s cubic-bezier(.2,.8,.3,1.1) both; perspective:600px; }
 .pack-card-hidden { opacity:0; transform:translateY(24px); }
+
+/* EA FC 26-style shield card silhouette */
+.fc-card-shield { clip-path:polygon(0% 0%, 100% 0%, 100% 86%, 86% 94%, 50% 100%, 14% 94%, 0% 86%); }
+

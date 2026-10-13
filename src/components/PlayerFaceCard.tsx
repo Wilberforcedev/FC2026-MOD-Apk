@@ -1,6 +1,7 @@
 import React from 'react';
 import { Player, Team, HairStyle, FacialHair, FaceCardTheme } from '../types/soccer';
 import { ClubEmblem } from './ClubEmblem';
+import { NationFlag } from './NationFlag';
 import { Sparkles } from 'lucide-react';
 
 interface PlayerFaceCardProps {
@@ -109,69 +110,103 @@ function getProceduralProfile(player: Player): FaceProfile {
   return generated;
 }
 
-const CARD_THEMES: Record<FaceCardTheme, { bg: string; border: string; ratingColor: string; labelColor: string; statsColor: string; bannerBg: string; accentGlow: string }> = {
+interface CardTheme {
+  bg: string;
+  frame: string;
+  border: string;
+  ratingColor: string;
+  labelColor: string;
+  statsColor: string;
+  bannerBg: string;
+  accentGlow: string;
+  rayColor: string;
+  footerBg: string;
+}
+
+const CARD_THEMES: Record<FaceCardTheme, CardTheme> = {
   gold: {
-    bg: 'bg-gradient-to-b from-[#fce988] via-[#eab308] to-[#92400e]',
-    border: 'border-[#fef08a] shadow-[0_0_25px_rgba(234,179,8,0.4)]',
+    bg: 'bg-gradient-to-b from-[#fce988] via-[#e3a512] to-[#8a3b09]',
+    frame: 'bg-gradient-to-b from-[#fff7d1] via-[#f0b100] to-[#9a4a0c]',
+    border: 'drop-shadow-[0_6px_16px_rgba(234,179,8,0.45)]',
     ratingColor: 'text-amber-950',
     labelColor: 'text-amber-900',
     statsColor: 'text-amber-950',
-    bannerBg: 'bg-amber-950/20 border-amber-950/30 text-amber-950',
-    accentGlow: 'from-amber-300/40 via-yellow-400/20 to-transparent',
+    bannerBg: 'bg-amber-950/25 text-amber-950 border-amber-950/25',
+    accentGlow: 'from-amber-200/45 via-yellow-400/15 to-transparent',
+    rayColor: 'rgba(255,255,255,0.34)',
+    footerBg: 'bg-amber-950/15',
   },
   silver: {
-    bg: 'bg-gradient-to-b from-[#f8fafc] via-[#94a3b8] to-[#334155]',
-    border: 'border-slate-200 shadow-[0_0_22px_rgba(148,163,184,0.35)]',
+    bg: 'bg-gradient-to-b from-[#f8fafc] via-[#9aa8b8] to-[#2f3d4d]',
+    frame: 'bg-gradient-to-b from-white via-[#cbd5e1] to-[#64748b]',
+    border: 'drop-shadow-[0_6px_16px_rgba(148,163,184,0.4)]',
     ratingColor: 'text-slate-900',
     labelColor: 'text-slate-800',
     statsColor: 'text-slate-900',
-    bannerBg: 'bg-slate-900/20 border-slate-900/30 text-slate-900',
-    accentGlow: 'from-slate-200/40 via-slate-400/20 to-transparent',
+    bannerBg: 'bg-slate-900/20 text-slate-900 border-slate-900/25',
+    accentGlow: 'from-slate-100/50 via-slate-300/20 to-transparent',
+    rayColor: 'rgba(255,255,255,0.4)',
+    footerBg: 'bg-slate-900/15',
   },
   bronze: {
     bg: 'bg-gradient-to-b from-[#f3c08b] via-[#b4652a] to-[#5c3113]',
-    border: 'border-orange-300 shadow-[0_0_22px_rgba(180,101,42,0.35)]',
+    frame: 'bg-gradient-to-b from-[#f8d3a9] via-[#c2703a] to-[#6b3a17]',
+    border: 'drop-shadow-[0_6px_16px_rgba(180,101,42,0.4)]',
     ratingColor: 'text-orange-950',
     labelColor: 'text-orange-900',
     statsColor: 'text-orange-950',
-    bannerBg: 'bg-orange-950/20 border-orange-950/30 text-orange-950',
-    accentGlow: 'from-orange-300/40 via-amber-600/20 to-transparent',
+    bannerBg: 'bg-orange-950/25 text-orange-950 border-orange-950/25',
+    accentGlow: 'from-orange-200/45 via-amber-600/20 to-transparent',
+    rayColor: 'rgba(255,240,220,0.26)',
+    footerBg: 'bg-orange-950/18',
   },
   tots: {
-    bg: 'bg-gradient-to-b from-[#0284c7] via-[#1e40af] to-[#0f172a]',
-    border: 'border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.5)]',
-    ratingColor: 'text-cyan-300',
-    labelColor: 'text-cyan-200',
+    bg: 'bg-gradient-to-b from-[#0284c7] via-[#1e3a8a] to-[#0b1120]',
+    frame: 'bg-gradient-to-b from-[#7dd3fc] via-[#2563eb] to-[#0b1220]',
+    border: 'drop-shadow-[0_6px_16px_rgba(6,182,212,0.55)]',
+    ratingColor: 'text-cyan-200',
+    labelColor: 'text-cyan-200/90',
     statsColor: 'text-white',
-    bannerBg: 'bg-cyan-950/80 border-cyan-400/40 text-cyan-300',
-    accentGlow: 'from-cyan-400/40 via-blue-500/20 to-transparent',
+    bannerBg: 'bg-cyan-950/70 text-cyan-100 border-cyan-400/40',
+    accentGlow: 'from-cyan-300/40 via-blue-500/20 to-transparent',
+    rayColor: 'rgba(125,211,252,0.32)',
+    footerBg: 'bg-cyan-950/50',
   },
   totw: {
-    bg: 'bg-gradient-to-b from-[#18181b] via-[#09090b] to-black',
-    border: 'border-amber-400/80 shadow-[0_0_25px_rgba(251,191,36,0.3)]',
+    bg: 'bg-gradient-to-b from-[#27272a] via-[#0b0b0d] to-black',
+    frame: 'bg-gradient-to-b from-[#fcd34d] via-[#b45309] to-[#1c1917]',
+    border: 'drop-shadow-[0_6px_16px_rgba(251,191,36,0.4)]',
     ratingColor: 'text-amber-400',
     labelColor: 'text-amber-300/80',
     statsColor: 'text-amber-100',
-    bannerBg: 'bg-amber-500/15 border-amber-400/30 text-amber-300',
-    accentGlow: 'from-amber-400/20 via-yellow-500/10 to-transparent',
+    bannerBg: 'bg-amber-500/15 text-amber-200 border-amber-400/30',
+    accentGlow: 'from-amber-400/25 via-yellow-500/10 to-transparent',
+    rayColor: 'rgba(251,191,36,0.24)',
+    footerBg: 'bg-black/50',
   },
   future_stars: {
-    bg: 'bg-gradient-to-b from-[#c026d3] via-[#7e22ce] to-[#0f172a]',
-    border: 'border-pink-400 shadow-[0_0_25px_rgba(244,114,182,0.45)]',
-    ratingColor: 'text-pink-200',
-    labelColor: 'text-pink-300',
+    bg: 'bg-gradient-to-b from-[#d946ef] via-[#7e22ce] to-[#120a2a]',
+    frame: 'bg-gradient-to-b from-[#f9a8d4] via-[#a21caf] to-[#0f172a]',
+    border: 'drop-shadow-[0_6px_16px_rgba(244,114,182,0.5)]',
+    ratingColor: 'text-pink-100',
+    labelColor: 'text-pink-200/90',
     statsColor: 'text-white',
-    bannerBg: 'bg-pink-950/60 border-pink-400/40 text-pink-200',
-    accentGlow: 'from-pink-500/40 via-purple-500/20 to-transparent',
+    bannerBg: 'bg-pink-950/60 text-pink-100 border-pink-400/40',
+    accentGlow: 'from-pink-400/40 via-purple-500/20 to-transparent',
+    rayColor: 'rgba(249,168,212,0.3)',
+    footerBg: 'bg-purple-950/50',
   },
   icon: {
-    bg: 'bg-gradient-to-b from-[#fefce8] via-[#f5f5f4] to-[#d6d3d1]',
-    border: 'border-amber-300 shadow-[0_0_25px_rgba(217,119,6,0.3)]',
+    bg: 'bg-gradient-to-b from-[#fefce8] via-[#f0ede8] to-[#c9c2b8]',
+    frame: 'bg-gradient-to-b from-white via-[#e7e5e4] to-[#a8a29e]',
+    border: 'drop-shadow-[0_6px_16px_rgba(217,119,6,0.35)]',
     ratingColor: 'text-stone-900',
     labelColor: 'text-stone-700',
     statsColor: 'text-stone-950',
-    bannerBg: 'bg-amber-900/15 border-amber-800/30 text-stone-900',
+    bannerBg: 'bg-amber-900/15 text-stone-900 border-amber-800/30',
     accentGlow: 'from-amber-200/50 via-stone-200/30 to-transparent',
+    rayColor: 'rgba(217,119,6,0.22)',
+    footerBg: 'bg-stone-900/10',
   },
 };
 
@@ -287,60 +322,117 @@ export const PlayerFaceCard: React.FC<PlayerFaceCardProps> = ({
   const profile = getProceduralProfile(player);
 
   const sizeClasses = {
-    xs: 'w-24 h-36 p-1.5 text-[9px] rounded-xl',
-    sm: 'w-32 h-48 p-2 text-[10px] rounded-2xl',
-    md: 'w-44 h-64 p-3 text-xs rounded-2xl',
-    lg: 'w-56 h-80 p-4 text-sm rounded-3xl',
-    xl: 'w-64 h-[23rem] p-5 text-sm rounded-3xl',
+    xs: 'w-24 h-40 text-[9px]',
+    sm: 'w-32 h-52 text-[10px]',
+    md: 'w-44 h-72 text-xs',
+    lg: 'w-56 h-[22rem] text-sm',
+    xl: 'w-64 h-[25rem] text-sm',
   };
-  const avatarSizes = { xs: 50, sm: 70, md: 96, lg: 125, xl: 145 };
+  const padClasses = { xs: 'p-1.5', sm: 'p-2', md: 'p-3', lg: 'p-4', xl: 'p-5' };
+  const pointSpacer = { xs: 24, sm: 30, md: 42, lg: 50, xl: 58 };
+  const avatarSizes = { xs: 42, sm: 54, md: 78, lg: 100, xl: 116 };
+  const flagSize = { xs: 18, sm: 22, md: 28, lg: 34, xl: 38 };
+  const crestSize = { xs: 'xs', sm: 'xs', md: 'sm', lg: 'sm', xl: 'md' } as const;
   const jerseyColor = team?.kit?.primary || '#0284c7';
+  const displayName = player.shortName || player.name.split(' ').pop() || player.name;
+  const nation = player.nationality || team?.country;
+  const showGrid = showDetails && size !== 'xs';
 
   return (
-    <div onClick={onClick} className={`relative select-none border-2 flex flex-col justify-between overflow-hidden transition-transform duration-200 ${theme.bg} ${theme.border} ${sizeClasses[size]} ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''} ${className}`}>
-      <div className={`absolute inset-0 bg-gradient-to-tr ${theme.accentGlow} pointer-events-none`} />
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none" />
+    <div
+      onClick={onClick}
+      className={`relative select-none transition-transform duration-200 ${sizeClasses[size]} ${theme.border} ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''} ${className}`}
+    >
+      {/* Metallic frame ring */}
+      <div className={`absolute inset-0 fc-card-shield ${theme.frame}`} />
 
-      <div className="relative z-10 flex items-start justify-between">
-        <div className="flex flex-col leading-none">
-          <span className={`font-black tracking-tighter ${theme.ratingColor} ${size === 'xs' ? 'text-base' : size === 'sm' ? 'text-xl' : size === 'md' ? 'text-2xl' : 'text-3xl'}`}>{player.rating}</span>
-          <span className={`font-mono font-bold uppercase tracking-wider ${theme.labelColor} ${size === 'xs' ? 'text-[8px]' : 'text-[10px]'}`}>{player.position}</span>
-          {player.preferredFoot && size !== 'xs' && <span className={`text-[8px] font-mono opacity-75 ${theme.labelColor}`}>{player.preferredFoot === 'Left' ? 'L-FT' : 'R-FT'}</span>}
-        </div>
-        {team ? <ClubEmblem teamId={team.id} shortName={team.shortName} size={size === 'xs' ? 'xs' : 'sm'} /> : <div className="w-6 h-6 rounded-full bg-black/20 flex items-center justify-center text-[10px]">⚽</div>}
-      </div>
-
-      <div className="relative z-10 my-auto flex items-center justify-center">
-        <PlayerFaceAvatar
-          skinTone={player.likeness?.skinTone || '#d49b6a'}
-          hairStyle={player.likeness?.hairStyle || 'short'}
-          hairColor={player.likeness?.hairColor || '#1f2937'}
-          facialHair={player.likeness?.facialHair || 'none'}
-          jerseyColor={jerseyColor}
-          size={avatarSizes[size]}
-          profile={profile}
+      {/* Card face */}
+      <div className={`absolute inset-[2.5px] fc-card-shield overflow-hidden ${theme.bg}`}>
+        {/* Sunburst rays behind the player */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `repeating-conic-gradient(from 0deg at 50% 40%, ${theme.rayColor} 0deg 5deg, transparent 5deg 11deg)`,
+            maskImage: 'radial-gradient(130% 105% at 50% 38%, #000 30%, transparent 76%)',
+            WebkitMaskImage: 'radial-gradient(130% 105% at 50% 38%, #000 30%, transparent 76%)',
+          }}
         />
-        {player.playStyles?.length && size !== 'xs' ? (
-          <div className="absolute bottom-0 right-1 p-1 rounded-full bg-black/60 border border-white/20 text-cyan-300 shadow" title={`PlayStyle: ${player.playStyles[0]}`}>
-            <Sparkles className="w-3 h-3" />
-          </div>
-        ) : null}
-      </div>
+        <div className={`absolute inset-0 bg-gradient-to-t ${theme.accentGlow} pointer-events-none`} />
+        <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none" />
 
-      <div className="relative z-10 w-full">
-        <div className={`w-full py-0.5 px-1 rounded-lg border text-center font-black uppercase tracking-wider truncate mb-1 ${theme.bannerBg}`}>
-          {player.shortName || player.name.split(' ').pop()}
-        </div>
-        {showDetails && size !== 'xs' && (
-          <div className="grid grid-cols-6 gap-0.5 text-center font-mono">
-            <StatPill label="PAC" value={player.stats.pace} colorClass={theme.statsColor} />
-            <StatPill label="SHO" value={player.stats.shooting} colorClass={theme.statsColor} />
-            <StatPill label="PAS" value={player.stats.passing} colorClass={theme.statsColor} />
-            <StatPill label="DRI" value={player.stats.dribbling} colorClass={theme.statsColor} />
-            <StatPill label="DEF" value={player.stats.defending} colorClass={theme.statsColor} />
-            <StatPill label="PHY" value={player.stats.physicality} colorClass={theme.statsColor} />
+        <div className={`relative z-10 h-full flex flex-col justify-between ${padClasses[size]}`}>
+          {/* Rating + position */}
+          <div className="flex items-start justify-between leading-none">
+            <div className="flex flex-col items-start">
+              <span className={`font-black tracking-tighter ${theme.ratingColor} ${size === 'xs' ? 'text-lg' : size === 'sm' ? 'text-2xl' : size === 'md' ? 'text-3xl' : 'text-4xl'}`}>
+                {player.rating}
+              </span>
+              <span className={`font-mono font-black uppercase tracking-widest ${theme.labelColor} ${size === 'xs' ? 'text-[8px]' : 'text-[11px]'}`}>
+                {player.position}
+              </span>
+            </div>
+            {player.preferredFoot && size !== 'xs' && (
+              <span className={`mt-0.5 text-[8px] font-mono font-bold uppercase px-1 py-0.5 rounded ${theme.bannerBg}`}>
+                {player.preferredFoot === 'Left' ? 'LFT' : 'RFT'}
+              </span>
+            )}
           </div>
-        )}
+
+          {/* Player avatar on the rays */}
+          <div className="relative flex items-center justify-center">
+            <PlayerFaceAvatar
+              skinTone={player.likeness?.skinTone || '#d49b6a'}
+              hairStyle={player.likeness?.hairStyle || 'short'}
+              hairColor={player.likeness?.hairColor || '#1f2937'}
+              facialHair={player.likeness?.facialHair || 'none'}
+              jerseyColor={jerseyColor}
+              size={avatarSizes[size]}
+              profile={profile}
+            />
+            {player.playStyles?.length && size !== 'xs' ? (
+              <div
+                className="absolute bottom-0 right-1 p-1 rounded-full bg-black/60 border border-white/20 text-cyan-300 shadow"
+                title={`PlayStyle: ${player.playStyles[0]}`}
+              >
+                <Sparkles className="w-3 h-3" />
+              </div>
+            ) : null}
+          </div>
+
+          {/* Name + stats + nation/club footer */}
+          <div className="w-full flex flex-col gap-1">
+            <div className={`w-full py-0.5 px-1 rounded-md border text-center font-black uppercase tracking-wider truncate ${theme.bannerBg}`}>
+              {displayName}
+            </div>
+
+            {showGrid && (
+              <div className="grid grid-cols-6 gap-0.5 text-center font-mono">
+                <StatPill label="PAC" value={player.stats.pace} colorClass={theme.statsColor} />
+                <StatPill label="SHO" value={player.stats.shooting} colorClass={theme.statsColor} />
+                <StatPill label="PAS" value={player.stats.passing} colorClass={theme.statsColor} />
+                <StatPill label="DRI" value={player.stats.dribbling} colorClass={theme.statsColor} />
+                <StatPill label="DEF" value={player.stats.defending} colorClass={theme.statsColor} />
+                <StatPill label="PHY" value={player.stats.physicality} colorClass={theme.statsColor} />
+              </div>
+            )}
+
+            <div className={`mt-0.5 flex items-center justify-between gap-1 rounded-md px-1.5 py-1 ${theme.footerBg}`}>
+              {nation ? (
+                <NationFlag nation={nation} size={flagSize[size]} className="shrink-0" />
+              ) : (
+                <span className={`text-[8px] font-mono font-bold uppercase tracking-wider ${theme.statsColor} opacity-80`}>—</span>
+              )}
+              {team ? (
+                <ClubEmblem teamId={team.id} shortName={team.shortName} fallbackIcon={team.badgeIcon} size={crestSize[size]} />
+              ) : (
+                <span className={`text-[9px] leading-none ${theme.statsColor} opacity-80`}>⚽</span>
+              )}
+            </div>
+          </div>
+
+          {/* Spacer keeps the footer clear of the shield point */}
+          <div aria-hidden="true" style={{ height: pointSpacer[size] }} />
+        </div>
       </div>
     </div>
   );

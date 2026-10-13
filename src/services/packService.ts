@@ -1,4 +1,5 @@
 import { FaceCardTheme, HairStyle, FacialHair, Player, Position } from '../types/soccer';
+import { PACK_NATIONALITIES } from '../data/nationalities';
 
 export type PackId = 'bronze' | 'silver' | 'gold' | 'premium';
 
@@ -75,6 +76,7 @@ function generatePackPlayer(rating: number, isSpecial: boolean, index: number): 
     marketValue,
     wage: Math.max(5, Math.round(marketValue * 2000)),
     form: ['Excellent', 'Good', 'Average'][rand(0, 2)] as Player['form'],
+    nationality: PACK_NATIONALITIES[rand(0, PACK_NATIONALITIES.length - 1)],
     likeness: {
       skinTone: SKIN_TONES[rand(0, SKIN_TONES.length - 1)],
       hairStyle: HAIR_STYLES[rand(0, HAIR_STYLES.length - 1)],

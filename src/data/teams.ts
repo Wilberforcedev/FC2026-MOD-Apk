@@ -1,5 +1,6 @@
 import { Team, TeamKit, KitPattern } from '../types/soccer';
 import { getClubEmblemUrl, getClubLeague } from './emblems';
+import { getNationality } from './nationalities';
 
 const RAW_TEAMS: Team[] = [
   {
@@ -480,6 +481,7 @@ export const TEAMS: Team[] = RAW_TEAMS.map(team => {
       ...p,
       preferredFoot: isLeft ? ('Left' as const) : ('Right' as const),
       playStyles,
+      nationality: getNationality(p.shortName, team.country),
       likeness: {
         skinTone,
         hairStyle,

@@ -51,6 +51,7 @@ export interface Player {
   preferredFoot?: 'Left' | 'Right';
   playStyles?: PlayStyle[];
   likeness?: PlayerLikeness;
+  nationality?: string;
   // Career mode stats
   marketValue?: number; // In millions e.g. 95
   wage?: number;        // In thousands e.g. 250
