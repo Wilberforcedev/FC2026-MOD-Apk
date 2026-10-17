@@ -1,8 +1,18 @@
 # FC 2026 Soccer
 
-FC 2026 is evolving into a Unity 6 mobile football game with a reusable 3D match foundation, themed squad and transfer UI, online multiplayer, and a data-driven Football World Database. The repository also retains the earlier React/TypeScript web prototype for UI reference and lightweight browser play. Experience complete offline play, realistic 2D match simulation, physics-based ball mechanics, tactical formations, dynamic career mode with transfer market, dynamic news feed reporting on league-wide transfers and injuries, and an integrated player editor with custom SVG face cards.
+FC 2026 is evolving into a Unity 6 mobile football game with a reusable 3D match foundation, themed squad and transfer UI, online multiplayer, and a data-driven Football World Database. The repository also retains the React/TypeScript web game for UI reference and lightweight browser play. Experience complete offline play, realistic 2D match simulation, physics-based ball mechanics, tactical formations, dynamic career mode with transfer market, dynamic news feed reporting on league-wide transfers and injuries, and an integrated player editor with humanlike face cards.
 
 ---
+
+## UI Preview
+
+These screenshots show the updated React game interface: the squad hub and the pre-match club selector with featured player portrait cards.
+
+| Squad hub | Match setup |
+| --- | --- |
+| <img src="docs/screenshots/home-screen.jpg" alt="FC 2026 squad hub with player portrait cards" width="100%"> | <img src="docs/screenshots/team-selection.jpg" alt="FC 2026 match setup with team ratings and featured player portraits" width="100%"> |
+
+The player portraits are original generated in-game faces and are not presented as licensed likenesses of real athletes.
 
 ## Key Features
 
@@ -18,7 +28,7 @@ FC 2026 is evolving into a Unity 6 mobile football game with a reusable 3D match
 
 ### 🎨 Visual Identity & Authentic Crests
 - **High-Fidelity Club & League Emblems**: Authentic SVG vector crests for top clubs across Premier League, La Liga, Bundesliga, and International teams.
-- **Procedural Player Face Cards**: Dynamic ultimate-team style player cards featuring procedural facial likenesses (skin tone, hair style, facial hair, boot colors, jersey kits, and dynamic card themes).
+- **Photorealistic Player Face Cards**: Dynamic ultimate-team style player cards with original generated human portraits, ratings, stats, nation flags, and club crests.
 - **Player Creator & Attribute Editor**: In-depth creator modal allowing managers to edit player stats (Pace, Shooting, Passing, Dribbling, Defending, Physicality) and customize facial likenesses in real time.
 
 ### 📰 Dynamic League News & Medical Room
