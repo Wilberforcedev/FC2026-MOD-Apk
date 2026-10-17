@@ -4,7 +4,7 @@ namespace FC2026.Gameplay
 {
     public static class FootballVisualFactory
     {
-        public static FootballMotionAnimator EnsureAnimatedRig(GameObject player, bool goalkeeper, float styleSeed)
+        public static FootballMotionAnimator EnsureAnimatedRig(GameObject player, bool goalkeeper, float styleSeed, bool useOwnerFace = false)
         {
             var existingMotion = player.GetComponent<FootballMotionAnimator>();
             var existingRig = player.GetComponent<ProceduralHumanoidRig>();
@@ -28,7 +28,7 @@ namespace FC2026.Gameplay
 
             var rig = existingRig ?? player.AddComponent<ProceduralHumanoidRig>();
             if (!rig.IsReady)
-                rig.Build(shirt, shorts, skin, hair, socks, boots, heightScale, widthScale, goalkeeper);
+                rig.Build(shirt, shorts, skin, hair, socks, boots, heightScale, widthScale, goalkeeper, useOwnerFace);
 
             foreach (var renderer in originalRenderers)
                 renderer.enabled = false;
@@ -36,6 +36,12 @@ namespace FC2026.Gameplay
             var motion = existingMotion ?? player.AddComponent<FootballMotionAnimator>();
             motion.Configure(goalkeeper, styleSeed);
             return motion;
+        }
+
+        public static FootballMotionAnimator EnsureGeneratedPlayerRig(GameObject player, bool goalkeeper, float styleSeed)
+        {
+            // Existing scene players keep their assigned faces. New generated players can opt into the owner's face.
+            return EnsureAnimatedRig(player, goalkeeper, styleSeed, true);
         }
 
         private static Material FindMaterial(Renderer[] renderers, string objectName)

@@ -54,7 +54,7 @@ The first Unity migration includes:
 - 60 FPS target
 - fully offline runtime foundation
 
-Players use procedural humanoid body meshes with a tapered torso, shaped shoulders and hips, articulated limbs, hands and football boots. Three fictional photographic face textures are selected across players, with matching skin-tone variants, lightweight skin grain and a fine fabric weave on kits. Face maps are loaded from `Assets/Resources/PlayerFaces`. The current heads remain procedural, with face textures mapped onto their front; custom sculpted heads, side-profile textures and facial animation remain future upgrades.
+Players use procedural humanoid body meshes with a tapered torso, shaped shoulders and hips, articulated limbs, hands and football boots. Three fictional photographic face textures are selected across the existing match roster, with matching skin-tone variants, lightweight skin grain and a fine fabric weave on kits. Face maps are loaded from `Assets/Resources/PlayerFaces`. The owner portrait and face map are also included for future created players; call `FootballVisualFactory.EnsureGeneratedPlayerRig` when creating those players. Existing scene players keep their assigned face. The current heads remain procedural, with face textures mapped onto their front; custom sculpted heads, side-profile textures and facial animation remain future upgrades.
 
 ## Controls
 

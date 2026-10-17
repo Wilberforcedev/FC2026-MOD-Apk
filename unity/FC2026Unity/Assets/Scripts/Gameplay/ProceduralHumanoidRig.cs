@@ -7,6 +7,7 @@ namespace FC2026.Gameplay
         private static Texture2D skinGrainTexture;
         private static Texture2D kitWeaveTexture;
         private int faceVariantIndex;
+        private bool useOwnerFace;
 
         public Transform VisualRoot { get; private set; }
         public Transform Hips { get; private set; }
@@ -38,20 +39,24 @@ namespace FC2026.Gameplay
             Material boots,
             float heightScale,
             float widthScale,
-            bool goalkeeper)
+            bool goalkeeper,
+            bool ownerLikeness = false)
         {
             HeightScale = Mathf.Clamp(heightScale, 0.88f, 1.18f);
             WidthScale = Mathf.Clamp(widthScale, 0.82f, 1.18f);
             IsGoalkeeper = goalkeeper;
             faceVariantIndex = (GetInstanceID() & int.MaxValue) % 3;
+            useOwnerFace = ownerLikeness;
 
             var detailedShirt = CreateTexturedMaterial(shirt, GetKitWeaveTexture());
             var detailedShorts = CreateTexturedMaterial(shorts, GetKitWeaveTexture());
             var detailedSkin = CreateTexturedMaterial(skin, GetSkinGrainTexture());
             var detailedSocks = CreateTexturedMaterial(socks, GetKitWeaveTexture());
-            detailedSkin.color = faceVariantIndex == 1
-                ? new Color(0.46f, 0.30f, 0.22f)
-                : faceVariantIndex == 2 ? new Color(0.78f, 0.61f, 0.48f) : new Color(0.64f, 0.42f, 0.28f);
+            detailedSkin.color = useOwnerFace
+                ? new Color(0.64f, 0.42f, 0.30f)
+                : faceVariantIndex == 1
+                    ? new Color(0.46f, 0.30f, 0.22f)
+                    : faceVariantIndex == 2 ? new Color(0.78f, 0.61f, 0.48f) : new Color(0.64f, 0.42f, 0.28f);
 
             VisualRoot = CreateBone("Visual Rig", transform, Vector3.zero);
             Hips = CreateBone("Hips", VisualRoot, new Vector3(0f, 0.91f * HeightScale, 0f));
@@ -116,7 +121,8 @@ namespace FC2026.Gameplay
 
         private void CreateTexturedFace()
         {
-            var faceTexture = Resources.Load<Texture2D>("PlayerFaces/face_0" + (faceVariantIndex + 1));
+            var resourcePath = useOwnerFace ? "PlayerFaces/owner_face" : "PlayerFaces/face_0" + (faceVariantIndex + 1);
+            var faceTexture = Resources.Load<Texture2D>(resourcePath);
             if (faceTexture == null)
                 return;
 
