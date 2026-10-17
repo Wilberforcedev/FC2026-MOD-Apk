@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Team } from '../types/soccer';
 import { TEAMS } from '../data/teams';
-import { ChevronLeft, Play, ShieldCheck, Sun, Moon, CloudRain, Flame, Globe } from 'lucide-react';
+import { ChevronLeft, Play, ShieldCheck, Sun, Moon, CloudRain, Flame, Dices } from 'lucide-react';
 import { FCHeaderBar } from './FCHeaderBar';
 import { ClubEmblem } from './ClubEmblem';
 import { LeagueEmblem } from './LeagueEmblem';
@@ -74,6 +74,19 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
     });
   };
 
+  const selectHomeTeam = (team: Team) => {
+    setSelectedHomeId(team.id);
+    if (selectedAwayId === team.id) {
+      setSelectedAwayId(TEAMS.find(candidate => candidate.id !== team.id)?.id || team.id);
+    }
+  };
+
+  const selectRandomOpponent = () => {
+    const opponents = TEAMS.filter(team => team.id !== selectedHomeId);
+    const nextOpponent = opponents[Math.floor(Math.random() * opponents.length)];
+    if (nextOpponent) setSelectedAwayId(nextOpponent.id);
+  };
+
   return (
     <div className="h-full flex flex-col bg-[#070e17] text-white overflow-hidden select-none relative font-['Outfit']">
       {/* Background ambient lighting */}
@@ -103,7 +116,7 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
             <h1 className="text-xl md:text-2xl font-black font-['Chakra_Petch'] tracking-wide text-white">
               KICK-OFF EXHIBITION
             </h1>
-            <p className="text-[11px] text-white/50">Official Club Badges & Licensed League Competition</p>
+            <p className="text-[11px] text-white/50">Choose your clubs and set the conditions for kick-off.</p>
           </div>
         </div>
 
@@ -209,7 +222,7 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
                 {filteredTeams.map(team => (
                   <button
                     key={team.id}
-                    onClick={() => setSelectedHomeId(team.id)}
+                    onClick={() => selectHomeTeam(team)}
                     className={`p-2.5 rounded-xl border text-center transition flex flex-col items-center gap-1.5 cursor-pointer ${
                       selectedHomeId === team.id
                         ? 'bg-cyan-500/25 border-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] ring-1 ring-cyan-400'
@@ -230,9 +243,14 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
 
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-['Chakra_Petch'] font-black text-rose-300 uppercase tracking-widest bg-rose-500/20 px-3 py-1 rounded-full border border-rose-500/40">
-                  AWAY OPPONENT (CPU)
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-['Chakra_Petch'] font-black text-rose-300 uppercase tracking-widest bg-rose-500/20 px-3 py-1 rounded-full border border-rose-500/40">
+                    AWAY OPPONENT (CPU)
+                  </span>
+                  <button onClick={selectRandomOpponent} className="flex items-center gap-1 rounded-full border border-white/10 bg-slate-900 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white/70 transition hover:border-rose-400/50 hover:text-white" aria-label="Choose a random opponent">
+                    <Dices className="h-3 w-3" /> Random
+                  </button>
+                </div>
                 <ClubEmblem teamId={awayTeam.id} shortName={awayTeam.shortName} size="xl" glow />
               </div>
 
@@ -281,9 +299,12 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
                   <button
                     key={team.id}
                     onClick={() => setSelectedAwayId(team.id)}
+                    disabled={team.id === selectedHomeId}
                     className={`p-2.5 rounded-xl border text-center transition flex flex-col items-center gap-1.5 cursor-pointer ${
                       selectedAwayId === team.id
                         ? 'bg-rose-500/25 border-rose-400 text-white shadow-[0_0_15px_rgba(244,63,94,0.4)] ring-1 ring-rose-400'
+                        : team.id === selectedHomeId
+                        ? 'bg-slate-950/60 border-white/5 text-white/25 opacity-40 cursor-not-allowed'
                         : 'bg-slate-900/80 border-white/5 text-white/70 hover:bg-slate-800'
                     }`}
                   >
@@ -352,8 +373,8 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
               <Flame className="w-4 h-4 text-cyan-400" />
               Game Difficulty
             </label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {(['Semi-Pro', 'Professional', 'World Class'] as const).map(diff => (
+            <div className="grid grid-cols-5 gap-1.5">
+              {(['Beginner', 'Semi-Pro', 'Professional', 'World Class', 'Legendary'] as const).map(diff => (
                 <button
                   key={diff}
                   onClick={() => setDifficulty(diff)}
@@ -398,8 +419,8 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
               <Moon className="w-4 h-4 text-cyan-400" />
               Stadium Time & Weather
             </label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {(['Night', 'Sunset', 'Clear'] as const).map(w => (
+            <div className="grid grid-cols-4 gap-1.5">
+              {(['Night', 'Sunset', 'Clear', 'Rain'] as const).map(w => (
                 <button
                   key={w}
                   onClick={() => setWeather(w)}
@@ -412,6 +433,7 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
                   {w === 'Night' && <Moon className="w-3.5 h-3.5" />}
                   {w === 'Sunset' && <Sun className="w-3.5 h-3.5 text-amber-400" />}
                   {w === 'Clear' && <Sun className="w-3.5 h-3.5 text-yellow-300" />}
+                  {w === 'Rain' && <CloudRain className="w-3.5 h-3.5 text-sky-300" />}
                   <span>{w}</span>
                 </button>
               ))}
