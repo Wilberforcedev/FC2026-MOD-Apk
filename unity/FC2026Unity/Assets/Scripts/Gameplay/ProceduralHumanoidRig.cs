@@ -4,6 +4,12 @@ namespace FC2026.Gameplay
 {
     public sealed class ProceduralHumanoidRig : MonoBehaviour
     {
+        private static Material eyeWhiteMaterial;
+        private static Material irisMaterial;
+        private static Material pupilMaterial;
+        private static Material mouthMaterial;
+        private static Material nostrilMaterial;
+
         public Transform VisualRoot { get; private set; }
         public Transform Hips { get; private set; }
         public Transform Spine { get; private set; }
@@ -69,7 +75,10 @@ namespace FC2026.Gameplay
             CreatePart("Head Mesh", PrimitiveType.Sphere, Head, Vector3.zero, new Vector3(0.30f, 0.34f, 0.29f), skin);
             CreatePart("Left Ear", PrimitiveType.Sphere, Head, new Vector3(-0.145f, 0.005f, 0f), new Vector3(0.075f, 0.105f, 0.075f), skin);
             CreatePart("Right Ear", PrimitiveType.Sphere, Head, new Vector3(0.145f, 0.005f, 0f), new Vector3(0.075f, 0.105f, 0.075f), skin);
-            CreatePart("Hair", PrimitiveType.Sphere, Head, new Vector3(0f, 0.12f, -0.015f), new Vector3(0.31f, 0.14f, 0.30f), hair);
+            CreatePart("Left Ear Fold", PrimitiveType.Sphere, Head, new Vector3(-0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), skin);
+            CreatePart("Right Ear Fold", PrimitiveType.Sphere, Head, new Vector3(0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), skin);
+            CreatePart("Hair", PrimitiveType.Sphere, Head, new Vector3(0f, 0.12f, -0.065f), new Vector3(0.31f, 0.14f, 0.30f), hair);
+            CreateFace(skin, hair);
 
             CreateLimb(LeftUpperArm, "Left Sleeve", 0.28f, 0.125f, shirt);
             CreateLimb(LeftLowerArm, "Left Forearm", 0.28f, 0.092f, skin);
@@ -96,6 +105,56 @@ namespace FC2026.Gameplay
                 leftHand.transform.localScale *= 1.35f;
                 rightHand.transform.localScale *= 1.35f;
             }
+        }
+
+        private void CreateFace(Material skin, Material hair)
+        {
+            EnsureFaceMaterials();
+
+            // Subtle cheek and chin volume gives the head a jaw rather than a featureless oval.
+            CreatePart("Left Cheek", PrimitiveType.Sphere, Head, new Vector3(-0.105f, -0.055f, 0.175f), new Vector3(0.105f, 0.09f, 0.105f), skin);
+            CreatePart("Right Cheek", PrimitiveType.Sphere, Head, new Vector3(0.105f, -0.055f, 0.175f), new Vector3(0.105f, 0.09f, 0.105f), skin);
+            CreatePart("Chin", PrimitiveType.Sphere, Head, new Vector3(0f, -0.19f, 0.175f), new Vector3(0.12f, 0.065f, 0.085f), skin);
+
+            for (var side = -1; side <= 1; side += 2)
+            {
+                var x = side * 0.105f;
+                var label = side < 0 ? "Left" : "Right";
+                CreatePart(label + " Eye Socket", PrimitiveType.Sphere, Head, new Vector3(x, 0.065f, 0.222f), new Vector3(0.082f, 0.052f, 0.036f), skin);
+                CreatePart(label + " Eye White", PrimitiveType.Sphere, Head, new Vector3(x, 0.065f, 0.249f), new Vector3(0.064f, 0.033f, 0.018f), eyeWhiteMaterial);
+                CreatePart(label + " Iris", PrimitiveType.Sphere, Head, new Vector3(x, 0.064f, 0.265f), new Vector3(0.023f, 0.026f, 0.009f), irisMaterial);
+                CreatePart(label + " Pupil", PrimitiveType.Sphere, Head, new Vector3(x, 0.064f, 0.272f), new Vector3(0.011f, 0.016f, 0.006f), pupilMaterial);
+                CreatePart(label + " Brow", PrimitiveType.Capsule, Head, new Vector3(x, 0.126f, 0.225f), new Vector3(0.018f, 0.052f, 0.018f), hair);
+            }
+
+            // A narrow bridge, rounded tip and nostril shading make the profile read as a nose.
+            CreatePart("Nose Bridge", PrimitiveType.Capsule, Head, new Vector3(0f, 0.005f, 0.245f), new Vector3(0.033f, 0.078f, 0.036f), skin);
+            CreatePart("Nose Tip", PrimitiveType.Sphere, Head, new Vector3(0f, -0.055f, 0.27f), new Vector3(0.047f, 0.035f, 0.042f), skin);
+            CreatePart("Left Nostril", PrimitiveType.Sphere, Head, new Vector3(-0.025f, -0.079f, 0.288f), new Vector3(0.012f, 0.008f, 0.006f), nostrilMaterial);
+            CreatePart("Right Nostril", PrimitiveType.Sphere, Head, new Vector3(0.025f, -0.079f, 0.288f), new Vector3(0.012f, 0.008f, 0.006f), nostrilMaterial);
+
+            CreatePart("Upper Lip", PrimitiveType.Sphere, Head, new Vector3(0f, -0.125f, 0.248f), new Vector3(0.055f, 0.014f, 0.012f), mouthMaterial);
+            CreatePart("Lower Lip", PrimitiveType.Sphere, Head, new Vector3(0f, -0.147f, 0.244f), new Vector3(0.047f, 0.012f, 0.01f), mouthMaterial);
+        }
+
+        private static void EnsureFaceMaterials()
+        {
+            if (eyeWhiteMaterial != null)
+                return;
+
+            eyeWhiteMaterial = CreateFaceMaterial(new Color(0.91f, 0.88f, 0.82f));
+            irisMaterial = CreateFaceMaterial(new Color(0.22f, 0.12f, 0.065f));
+            pupilMaterial = CreateFaceMaterial(new Color(0.025f, 0.02f, 0.018f));
+            mouthMaterial = CreateFaceMaterial(new Color(0.39f, 0.19f, 0.17f));
+            nostrilMaterial = CreateFaceMaterial(new Color(0.31f, 0.19f, 0.16f));
+        }
+
+        private static Material CreateFaceMaterial(Color color)
+        {
+            var shader = Shader.Find("Standard");
+            var material = new Material(shader) { color = color };
+            material.SetFloat("_Glossiness", 0.28f);
+            return material;
         }
 
         private void CreateTaperedTorso(string name, Transform parent, Material material)
@@ -192,7 +251,7 @@ namespace FC2026.Gameplay
             part.transform.localPosition = localPosition;
             part.transform.localRotation = Quaternion.identity;
             part.transform.localScale = localScale;
-            part.GetComponent<Renderer>().material = material;
+            part.GetComponent<Renderer>().sharedMaterial = material;
 
             var collider = part.GetComponent<Collider>();
             if (collider != null)
