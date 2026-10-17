@@ -16,6 +16,7 @@ namespace FC2026.Core
 
         private BallController ball;
         private FootballPlayerController userPlayer;
+        private BroadcastCameraController broadcastCamera;
         private int homeScore;
         private int awayScore;
         private bool resetting;
@@ -24,6 +25,10 @@ namespace FC2026.Core
         private GUIStyle goalStyle;
         private float goalBannerUntil;
         private string goalBanner = string.Empty;
+        private float ballOutUntil;
+        private GUIStyle buttonStyle;
+        private GUIStyle labelSmallStyle;
+        private Texture2D joystickDisc;
 
         private readonly Vector3[] homeFormation =
         {
@@ -45,6 +50,38 @@ namespace FC2026.Core
             Screen.autorotateToLandscapeRight = true;
 
             BuildWorld();
+            CreateJoystickTexture();
+        }
+
+        private void Update()
+        {
+            if (userPlayer == null || !userPlayer.IsUserControlled)
+            {
+                var controllers = FindObjectsByType<FootballPlayerController>(FindObjectsSortMode.None);
+                foreach (var controller in controllers)
+                {
+                    if (controller == null || !controller.IsUserControlled || controller.TeamDirection != 1)
+                        continue;
+                    userPlayer = controller;
+                    broadcastCamera?.SetControlledPlayer(userPlayer.transform);
+                    break;
+                }
+            }
+
+            if (ball == null || resetting || Time.time < ballOutUntil)
+                return;
+
+            var position = ball.transform.position;
+            // Keep the prototype match playable: loose balls beyond the touchline,
+            // goal line or below the pitch are brought back for a centre restart.
+            if (Mathf.Abs(position.x) > PitchWidth * 0.5f + 7f ||
+                Mathf.Abs(position.z) > PitchLength * 0.5f + 7f || position.y < -2f)
+            {
+                ballOutUntil = Time.time + 1.25f;
+                ball.ResetBall(new Vector3(0f, 0.14f, 0f));
+                goalBanner = "BALL OUT — RESTART";
+                goalBannerUntil = Time.time + 1.15f;
+            }
         }
 
         private void BuildWorld()
@@ -411,6 +448,8 @@ namespace FC2026.Core
         {
             var homeMaterial = CreateMaterial(new Color(0.96f, 0.96f, 0.99f), 0.3f);
             var awayMaterial = CreateMaterial(new Color(0.07f, 0.28f, 0.72f), 0.32f);
+            var homeKeeperMaterial = CreateMaterial(new Color(0.95f, 0.65f, 0.08f), 0.3f);
+            var awayKeeperMaterial = CreateMaterial(new Color(0.88f, 0.17f, 0.22f), 0.3f);
             var homeShorts = CreateMaterial(new Color(0.08f, 0.1f, 0.18f), 0.35f);
             var awayShorts = CreateMaterial(new Color(0.03f, 0.08f, 0.2f), 0.35f);
 
@@ -421,7 +460,8 @@ namespace FC2026.Core
                 if (i == 9) height = 1.04f;
                 var width = i is 2 or 3 or 9 ? 1.07f : 0.96f;
                 var isUser = i == 9;
-                var player = CreatePlayer($"Home Player {i + 1}", homeFormation[i], homeMaterial, homeShorts, height, width, isUser, 1);
+                var goalkeeper = i == 0;
+                var player = CreatePlayer($"Home Player {i + 1}", homeFormation[i], goalkeeper ? homeKeeperMaterial : homeMaterial, homeShorts, height, width, isUser, 1, goalkeeper);
                 if (isUser)
                     userPlayer = player.GetComponent<FootballPlayerController>();
             }
@@ -433,11 +473,12 @@ namespace FC2026.Core
                 if (i == 0) height = 1.08f;
                 if (i == 9) height = 1.12f;
                 var width = i is 0 or 2 or 3 or 9 ? 1.08f : 0.97f;
-                CreatePlayer($"Away Player {i + 1}", mirrored, awayMaterial, awayShorts, height, width, false, -1);
+                var goalkeeper = i == 0;
+                CreatePlayer($"Away Player {i + 1}", mirrored, goalkeeper ? awayKeeperMaterial : awayMaterial, awayShorts, height, width, false, -1, goalkeeper);
             }
         }
 
-        private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts, float heightScale, float widthScale, bool user, int attackDirection)
+        private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts, float heightScale, float widthScale, bool user, int attackDirection, bool goalkeeper = false)
         {
             var player = new GameObject(name);
             player.transform.SetParent(transform);
@@ -488,17 +529,13 @@ namespace FC2026.Core
             hair.GetComponent<Renderer>().material = CreateMaterial(new Color(0.035f, 0.025f, 0.02f), 0.52f);
             Destroy(hair.GetComponent<Collider>());
 
-            if (user)
-            {
-                var controller = player.AddComponent<FootballPlayerController>();
-                controller.IsUserControlled = true;
-                controller.TeamDirection = attackDirection;
-            }
-            else
-            {
-                var ai = player.AddComponent<SimpleFootballAI>();
-                ai.Configure(start, attackDirection, 0.92f + Random.value * 0.16f);
-            }
+            var controller = player.AddComponent<FootballPlayerController>();
+            controller.SetUserControlled(user);
+            controller.TeamDirection = attackDirection;
+
+            var ai = player.AddComponent<SimpleFootballAI>();
+            ai.Configure(start, attackDirection, goalkeeper ? 0.9f : 0.92f + Random.value * 0.16f, goalkeeper);
+            ai.enabled = !user;
 
             playerStarts.Add((player.transform, start));
             return player;
@@ -513,8 +550,8 @@ namespace FC2026.Core
             camera.clearFlags = CameraClearFlags.Skybox;
             camera.allowHDR = true;
             cameraObject.AddComponent<AudioListener>();
-            var broadcast = cameraObject.AddComponent<BroadcastCameraController>();
-            broadcast.Configure(ball.transform, userPlayer != null ? userPlayer.transform : null);
+            broadcastCamera = cameraObject.AddComponent<BroadcastCameraController>();
+            broadcastCamera.Configure(ball.transform, userPlayer != null ? userPlayer.transform : null);
         }
 
         private Material CreateMaterial(Color color, float smoothness)
@@ -592,16 +629,126 @@ namespace FC2026.Core
                 normal = { textColor = new Color(1f, 0.83f, 0.12f) }
             };
 
-            GUI.Box(new Rect(Screen.width * 0.37f, 12f, Screen.width * 0.26f, 58f), string.Empty);
-            GUI.Label(new Rect(Screen.width * 0.37f, 12f, Screen.width * 0.26f, 58f), $"HOME  {homeScore}  —  {awayScore}  AWAY", scoreStyle);
+            buttonStyle ??= new GUIStyle(GUI.skin.button)
+            {
+                fontSize = Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.105f, 62f, 88f) / 6f), 10, 16),
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = Color.white },
+                hover = { textColor = Color.white },
+                active = { textColor = Color.white }
+            };
 
-            var help = Application.isMobilePlatform
-                ? "LEFT: drag to move   •   RIGHT: tap to kick"
-                : "WASD / arrows: move   •   Shift: sprint   •   Space: kick";
-            GUI.Label(new Rect(18f, Screen.height - 48f, Screen.width - 36f, 36f), help, helpStyle);
+            labelSmallStyle ??= new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = Mathf.Clamp(Screen.height / 65, 11, 18),
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = new Color(0.78f, 0.88f, 0.98f) }
+            };
+
+            var boardWidth = Mathf.Clamp(Screen.width * 0.34f, 260f, 470f);
+            var boardRect = new Rect((Screen.width - boardWidth) * 0.5f, 12f, boardWidth, 62f);
+            GUI.Box(boardRect, string.Empty);
+            GUI.Label(new Rect(boardRect.x, boardRect.y + 2f, boardRect.width, 36f), $"HOME   {homeScore}  —  {awayScore}   AWAY", scoreStyle);
+            GUI.Label(new Rect(boardRect.x, boardRect.y + 36f, boardRect.width, 20f), "FC 2026  •  FRIENDLY", labelSmallStyle);
+
+            if (Application.isMobilePlatform)
+                DrawMobileControls();
+            else
+                GUI.Label(new Rect(18f, Screen.height - 48f, Screen.width - 36f, 36f),
+                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch", helpStyle);
 
             if (Time.time < goalBannerUntil)
                 GUI.Label(new Rect(0, Screen.height * 0.33f, Screen.width, 100f), goalBanner, goalStyle);
+        }
+
+        private void DrawMobileControls()
+        {
+            if (userPlayer == null)
+                return;
+
+            var move = Vector2.zero;
+            var radius = Mathf.Clamp(Screen.height * 0.115f, 64f, 94f);
+            var joyCenter = new Vector2(radius + 28f, Screen.height - radius - 30f);
+            var stickOffset = Vector2.zero;
+            for (var i = 0; i < Input.touchCount; i++)
+            {
+                var touch = Input.GetTouch(i);
+                var point = new Vector2(touch.position.x, Screen.height - touch.position.y);
+                var delta = point - joyCenter;
+                if (point.x < Screen.width * 0.44f && delta.sqrMagnitude <= radius * radius * 2.6f)
+                {
+                    stickOffset = Vector2.ClampMagnitude(delta, radius);
+                    move = stickOffset / radius;
+                    break;
+                }
+            }
+
+            DrawJoystick(joyCenter, radius, stickOffset);
+
+            var right = Screen.width - 24f;
+            var bottom = Screen.height - 24f;
+            var actionSize = Mathf.Clamp(Screen.height * 0.105f, 62f, 88f);
+            var gap = actionSize * 0.13f;
+            Rect ActionRect(int column, int row) => new Rect(
+                right - actionSize - column * (actionSize + gap),
+                bottom - actionSize - row * (actionSize + gap), actionSize, actionSize);
+
+            if (GUI.Button(ActionRect(0, 0), "SHOOT", buttonStyle))
+                userPlayer.QueueShot();
+            if (GUI.Button(ActionRect(1, 0), "PASS", buttonStyle))
+                userPlayer.QueuePass();
+            if (GUI.Button(ActionRect(0, 1), "TACKLE", buttonStyle))
+                userPlayer.QueueTackle();
+            if (GUI.Button(ActionRect(1, 1), "THROUGH", buttonStyle))
+                userPlayer.QueueThroughBall();
+            var sprint = GUI.RepeatButton(ActionRect(0, 2), "SPRINT", buttonStyle);
+            if (GUI.Button(ActionRect(1, 2), "SWITCH", buttonStyle))
+                userPlayer.SwitchToNearestTeammate();
+            if (GUI.Button(ActionRect(0, 3), "CHIP", buttonStyle))
+                userPlayer.QueueChipShot();
+            if (GUI.Button(ActionRect(1, 3), "FINESSE", buttonStyle))
+                userPlayer.QueueFinesseShot();
+
+            // Keep the analogue stick live while another finger taps an action.
+            userPlayer.SetMobileMove(move, sprint);
+
+            GUI.color = Color.white;
+        }
+
+        private void DrawJoystick(Vector2 center, float radius, Vector2 offset)
+        {
+            if (joystickDisc == null)
+                CreateJoystickTexture();
+            GUI.color = new Color(0.03f, 0.08f, 0.13f, 0.55f);
+            GUI.DrawTexture(new Rect(center.x - radius, center.y - radius, radius * 2f, radius * 2f), joystickDisc);
+            var knobRadius = radius * 0.39f;
+            GUI.color = new Color(0.32f, 0.9f, 0.68f, 0.83f);
+            var knobCenter = center + offset;
+            GUI.DrawTexture(new Rect(knobCenter.x - knobRadius, knobCenter.y - knobRadius, knobRadius * 2f, knobRadius * 2f), joystickDisc);
+            GUI.color = Color.white;
+        }
+
+        private void CreateJoystickTexture()
+        {
+            if (joystickDisc != null)
+                return;
+            const int size = 64;
+            joystickDisc = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "FC 2026 Virtual Joystick Disc",
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Bilinear
+            };
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var distance = Vector2.Distance(new Vector2(x, y), new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f));
+                var alpha = Mathf.Clamp01((size * 0.48f - distance) / 2f);
+                joystickDisc.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+            joystickDisc.Apply(false, true);
         }
     }
 }

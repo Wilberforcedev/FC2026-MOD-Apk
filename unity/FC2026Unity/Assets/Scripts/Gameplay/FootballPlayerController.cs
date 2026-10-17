@@ -16,16 +16,28 @@ namespace FC2026.Gameplay
         private Rigidbody body;
         private BallController ball;
         private FootballMotionAnimator motion;
-        private Vector2 touchOrigin;
-        private bool leftTouchActive;
-        private float mobileSprintAmount;
         private bool passQueued;
+        private bool throughBallQueued;
         private bool shootQueued;
+        private bool chipShotQueued;
+        private bool finesseShotQueued;
         private bool tackleQueued;
         private Vector3 lastMoveDirection = Vector3.forward;
+        private Vector2 mobileMove;
+        private bool mobileSprint;
 
         public bool IsUserControlled { get; set; } = true;
         public int TeamDirection { get; set; } = 1;
+        public static FootballPlayerController ActiveUserPlayer { get; private set; }
+
+        public void SetUserControlled(bool active)
+        {
+            IsUserControlled = active;
+            if (active)
+                ActiveUserPlayer = this;
+            else if (ActiveUserPlayer == this)
+                ActiveUserPlayer = null;
+        }
 
         private void Awake()
         {
@@ -46,14 +58,24 @@ namespace FC2026.Gameplay
             if (!IsUserControlled)
                 return;
 
-            ReadMobileTouches();
+            // The on-screen controls are drawn by MatchManager3D. Clear a held
+            // direction as soon as the finger is lifted, including cancelled touches.
+            if (Application.isMobilePlatform && Input.touchCount == 0)
+            {
+                mobileMove = Vector2.zero;
+                mobileSprint = false;
+            }
 
             if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.JoystickButton0))
                 shootQueued = true;
             if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.JoystickButton2))
                 passQueued = true;
+            if (Input.GetKeyDown(KeyCode.Q))
+                throughBallQueued = true;
             if (Input.GetKeyDown(KeyCode.X) || Input.GetKeyDown(KeyCode.JoystickButton1))
                 tackleQueued = true;
+            if (Input.GetKeyDown(KeyCode.Tab))
+                SwitchToNearestTeammate();
         }
 
         private void FixedUpdate()
@@ -95,13 +117,21 @@ namespace FC2026.Gameplay
             if (passQueued)
             {
                 passQueued = false;
-                TryKick(false);
+                TryKick(false, false);
+            }
+
+            if (throughBallQueued)
+            {
+                throughBallQueued = false;
+                TryKick(false, true);
             }
 
             if (shootQueued)
             {
                 shootQueued = false;
-                TryKick(true);
+                TryKick(true, false, chipShotQueued, finesseShotQueued);
+                chipShotQueued = false;
+                finesseShotQueued = false;
             }
         }
 
@@ -109,21 +139,8 @@ namespace FC2026.Gameplay
         {
             var move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
 
-            if (leftTouchActive && Input.touchCount > 0)
-            {
-                for (var i = 0; i < Input.touchCount; i++)
-                {
-                    var touch = Input.GetTouch(i);
-                    if (touch.position.x >= Screen.width * 0.52f)
-                        continue;
-
-                    var delta = (touch.position - touchOrigin) / Mathf.Max(70f, Screen.dpi * 0.34f);
-                    mobileSprintAmount = Mathf.Clamp01(delta.magnitude);
-                    if (delta.sqrMagnitude > 1f) delta.Normalize();
-                    move = delta;
-                    break;
-                }
-            }
+            if (Application.isMobilePlatform)
+                move = mobileMove;
 
             return Vector2.ClampMagnitude(move, 1f);
         }
@@ -131,54 +148,55 @@ namespace FC2026.Gameplay
         private bool ReadSprint()
         {
             var keyboardSprint = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-            return keyboardSprint || mobileSprintAmount > 0.84f;
+            return keyboardSprint || (Application.isMobilePlatform && mobileSprint);
         }
 
-        private void ReadMobileTouches()
+        public void SetMobileMove(Vector2 direction, bool sprint = false)
         {
-            mobileSprintAmount = 0f;
+            mobileMove = Vector2.ClampMagnitude(direction, 1f);
+            mobileSprint = sprint;
+        }
 
-            if (Input.touchCount == 0)
-            {
-                leftTouchActive = false;
-                return;
-            }
+        public void QueuePass() => passQueued = true;
+        public void QueueThroughBall() => throughBallQueued = true;
+        public void QueueShot() => shootQueued = true;
+        public void QueueChipShot() { chipShotQueued = true; shootQueued = true; }
+        public void QueueFinesseShot() { finesseShotQueued = true; shootQueued = true; }
+        public void QueueTackle() => tackleQueued = true;
 
-            if (Input.touchCount >= 2)
+        public FootballPlayerController SwitchToNearestTeammate()
+        {
+            var allPlayers = FindObjectsByType<FootballPlayerController>(FindObjectsSortMode.None);
+            FootballPlayerController nearest = null;
+            var nearestDistance = float.MaxValue;
+            foreach (var candidate in allPlayers)
             {
-                for (var i = 0; i < Input.touchCount; i++)
+                if (candidate == null || candidate == this || candidate.TeamDirection != TeamDirection || candidate.IsUserControlled)
+                    continue;
+                if (candidate.GetComponent<SimpleFootballAI>() == null)
+                    continue;
+
+                var toBall = candidate.transform.position - (ball != null ? ball.transform.position : transform.position);
+                toBall.y = 0f;
+                if (toBall.sqrMagnitude < nearestDistance)
                 {
-                    if (Input.GetTouch(i).phase == TouchPhase.Began)
-                    {
-                        tackleQueued = true;
-                        break;
-                    }
+                    nearestDistance = toBall.sqrMagnitude;
+                    nearest = candidate;
                 }
             }
 
-            for (var i = 0; i < Input.touchCount; i++)
-            {
-                var touch = Input.GetTouch(i);
+            if (nearest == null)
+                return this;
 
-                if (touch.phase == TouchPhase.Began)
-                {
-                    if (touch.position.x < Screen.width * 0.52f)
-                    {
-                        touchOrigin = touch.position;
-                        leftTouchActive = true;
-                    }
-                    else if (Input.touchCount == 1)
-                    {
-                        if (touch.position.y >= Screen.height * 0.55f)
-                            shootQueued = true;
-                        else
-                            passQueued = true;
-                    }
-                }
+            var oldAi = GetComponent<SimpleFootballAI>();
+            if (oldAi != null) oldAi.enabled = true;
+            SetUserControlled(false);
+            enabled = true;
 
-                if ((touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled) && touch.position.x < Screen.width * 0.52f)
-                    leftTouchActive = false;
-            }
+            var newAi = nearest.GetComponent<SimpleFootballAI>();
+            if (newAi != null) newAi.enabled = false;
+            nearest.SetUserControlled(true);
+            return nearest;
         }
 
         private void PerformTackle()
@@ -188,7 +206,7 @@ namespace FC2026.Gameplay
             body.AddForce(direction.normalized * 1.8f, ForceMode.VelocityChange);
         }
 
-        private void TryKick(bool shot)
+        private void TryKick(bool shot, bool throughBall, bool chip = false, bool finesse = false)
         {
             if (ball == null)
                 ball = FindFirstObjectByType<BallController>();
@@ -207,14 +225,52 @@ namespace FC2026.Gameplay
 
             if (shot)
             {
+                var target = new Vector3(0f, 0.8f, TeamDirection * 52.5f);
+                direction = (target - ball.transform.position).normalized;
+                if (finesse)
+                    direction = (direction + transform.right * (TeamDirection * 0.14f)).normalized;
                 motion?.TriggerShot(useLeftFoot);
-                ball.Kick(direction, shotPower, 0.13f, transform);
+                ball.Kick(direction, shotPower * (chip ? 0.82f : 1f), chip ? 0.48f : (finesse ? 0.16f : 0.13f), transform);
             }
             else
             {
                 motion?.TriggerPass(useLeftFoot);
-                ball.Kick(direction, passPower, 0.045f, transform);
+                var target = FindPassTarget(throughBall);
+                if (target != null)
+                {
+                    var lead = throughBall ? target.GetComponent<Rigidbody>().linearVelocity * 0.45f : Vector3.zero;
+                    direction = (target.position + lead - ball.transform.position).normalized;
+                }
+                ball.Kick(direction, throughBall ? passPower * 1.18f : passPower, throughBall ? 0.19f : 0.045f, transform);
             }
+        }
+
+        private Transform FindPassTarget(bool throughBall)
+        {
+            var allPlayers = FindObjectsByType<FootballPlayerController>(FindObjectsSortMode.None);
+            Transform best = null;
+            var bestScore = float.MinValue;
+            var forward = lastMoveDirection.sqrMagnitude > 0.01f ? lastMoveDirection.normalized : transform.forward;
+            foreach (var candidate in allPlayers)
+            {
+                if (candidate == null || candidate == this || candidate.TeamDirection != TeamDirection || candidate.GetComponent<SimpleFootballAI>() == null)
+                    continue;
+                var offset = candidate.transform.position - transform.position;
+                offset.y = 0f;
+                var distance = offset.magnitude;
+                if (distance < 3f || distance > (throughBall ? 30f : 24f))
+                    continue;
+                var forwardAmount = Vector3.Dot(offset.normalized, forward);
+                if (forwardAmount < (throughBall ? 0.25f : -0.15f))
+                    continue;
+                var score = forwardAmount * 12f - distance * 0.16f + (throughBall ? offset.z * TeamDirection * 0.08f : 0f);
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    best = candidate.transform;
+                }
+            }
+            return best;
         }
     }
 }

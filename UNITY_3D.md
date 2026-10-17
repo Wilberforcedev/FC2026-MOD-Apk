@@ -62,13 +62,19 @@ The player bodies are currently procedural prototype meshes. Rigged/licensed pla
 
 - **WASD / Arrow keys** — move
 - **Shift** — sprint
-- **Space** — kick
+- **Space** — shoot
+- **E** — pass to a teammate
+- **Q** — through ball
+- **X** — tackle
+- **Tab** — switch to the nearest teammate to the ball
 
 ### Android
 
-- **Drag on left half of screen** — move
-- Push the drag farther from the starting point to sprint
-- **Tap right half of screen** — kick
+- **Virtual joystick (bottom left)** — move with analog direction and speed
+- **Sprint / Shoot / Pass / Through / Tackle / Chip / Finesse (bottom right)** — perform the selected action
+- **Switch** — select the nearest teammate to the ball
+
+Passes select a teammate based on the direction of play; through balls lead the runner. Shots are aimed toward goal, with separate chip and finesse options. The match HUD shows the score and restart banner. Goalkeepers use goalkeeper AI and have distinct kit colours. Balls that leave the playable area are returned to the centre for a restart.
 
 ## Build an APK from the Unity Editor
 

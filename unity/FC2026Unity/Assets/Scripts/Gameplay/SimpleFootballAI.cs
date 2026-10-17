@@ -21,6 +21,7 @@ namespace FC2026.Gameplay
         private float kickCooldown;
         private float tackleCooldown;
         private float diveCooldown;
+        private float teammateRefreshTimer;
         private bool goalkeeper;
 
         public int TeamDirection => attackDirection;
@@ -49,12 +50,7 @@ namespace FC2026.Gameplay
             if (anchor == Vector3.zero)
                 anchor = transform.position;
 
-            var allPlayers = FindObjectsByType<SimpleFootballAI>(FindObjectsSortMode.None);
-            foreach (var candidate in allPlayers)
-            {
-                if (candidate != null && candidate.attackDirection == attackDirection && !candidate.goalkeeper)
-                    teammates.Add(candidate);
-            }
+            RefreshTeammates();
         }
 
         private void FixedUpdate()
@@ -65,6 +61,12 @@ namespace FC2026.Gameplay
             kickCooldown = Mathf.Max(0f, kickCooldown - Time.fixedDeltaTime);
             tackleCooldown = Mathf.Max(0f, tackleCooldown - Time.fixedDeltaTime);
             diveCooldown = Mathf.Max(0f, diveCooldown - Time.fixedDeltaTime);
+            teammateRefreshTimer -= Time.fixedDeltaTime;
+            if (teammateRefreshTimer <= 0f)
+            {
+                teammateRefreshTimer = 0.75f;
+                RefreshTeammates();
+            }
 
             if (goalkeeper)
             {
@@ -73,6 +75,17 @@ namespace FC2026.Gameplay
             }
 
             UpdateOutfieldPlayer();
+        }
+
+        private void RefreshTeammates()
+        {
+            teammates.Clear();
+            var allPlayers = FindObjectsByType<SimpleFootballAI>(FindObjectsSortMode.None);
+            foreach (var candidate in allPlayers)
+            {
+                if (candidate != null && candidate != this && candidate.enabled && candidate.attackDirection == attackDirection && !candidate.goalkeeper)
+                    teammates.Add(candidate);
+            }
         }
 
         private void UpdateOutfieldPlayer()
@@ -155,7 +168,7 @@ namespace FC2026.Gameplay
 
             foreach (var teammate in teammates)
             {
-                if (teammate == null || teammate.goalkeeper)
+                if (teammate == null || !teammate.enabled || teammate.goalkeeper)
                     continue;
 
                 var distance = (teammate.transform.position - ball.transform.position).sqrMagnitude;
@@ -166,7 +179,17 @@ namespace FC2026.Gameplay
                 }
             }
 
-            return closest == this;
+            // A human-controlled teammate also counts when deciding whether this
+            // AI should press, even if that player's AI component is disabled.
+            var userPlayer = FootballPlayerController.ActiveUserPlayer;
+            if (userPlayer != null && userPlayer.TeamDirection == attackDirection)
+            {
+                var distance = (userPlayer.transform.position - ball.transform.position).sqrMagnitude;
+                if (distance < closestDistance)
+                    closestDistance = distance;
+            }
+
+            return closest == this && (transform.position - ball.transform.position).sqrMagnitude <= closestDistance;
         }
 
         private Transform FindForwardPassTarget()

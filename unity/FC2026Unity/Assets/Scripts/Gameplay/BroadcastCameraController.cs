@@ -23,6 +23,11 @@ namespace FC2026.Gameplay
             controlledPlayer = playerTarget;
         }
 
+        public void SetControlledPlayer(Transform playerTarget)
+        {
+            controlledPlayer = playerTarget;
+        }
+
         public void FocusCelebration(Transform scorer, float seconds = 2.4f)
         {
             if (scorer == null)
