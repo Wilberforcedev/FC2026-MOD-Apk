@@ -54,7 +54,7 @@ The first Unity migration includes:
 - 60 FPS target
 - fully offline runtime foundation
 
-The player bodies are currently procedural prototype meshes. Rigged/licensed player models, skeletal animation, facial meshes, detailed kits, stadium assets, crowds and motion-captured animation will replace them progressively.
+Players use procedural humanoid body meshes with a tapered torso, shaped shoulders and hips, articulated limbs, hands and football boots. Faces remain generic and non-identifying. Licensed player likenesses, detailed kit materials, stadium assets, crowds and motion-captured animation remain future upgrades.
 
 ## Controls
 
