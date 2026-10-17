@@ -4,11 +4,9 @@ namespace FC2026.Gameplay
 {
     public sealed class ProceduralHumanoidRig : MonoBehaviour
     {
-        private static Material eyeWhiteMaterial;
-        private static Material irisMaterial;
-        private static Material pupilMaterial;
-        private static Material mouthMaterial;
-        private static Material nostrilMaterial;
+        private static Texture2D skinGrainTexture;
+        private static Texture2D kitWeaveTexture;
+        private int faceVariantIndex;
 
         public Transform VisualRoot { get; private set; }
         public Transform Hips { get; private set; }
@@ -45,6 +43,15 @@ namespace FC2026.Gameplay
             HeightScale = Mathf.Clamp(heightScale, 0.88f, 1.18f);
             WidthScale = Mathf.Clamp(widthScale, 0.82f, 1.18f);
             IsGoalkeeper = goalkeeper;
+            faceVariantIndex = (GetInstanceID() & int.MaxValue) % 3;
+
+            var detailedShirt = CreateTexturedMaterial(shirt, GetKitWeaveTexture());
+            var detailedShorts = CreateTexturedMaterial(shorts, GetKitWeaveTexture());
+            var detailedSkin = CreateTexturedMaterial(skin, GetSkinGrainTexture());
+            var detailedSocks = CreateTexturedMaterial(socks, GetKitWeaveTexture());
+            detailedSkin.color = faceVariantIndex == 1
+                ? new Color(0.46f, 0.30f, 0.22f)
+                : faceVariantIndex == 2 ? new Color(0.78f, 0.61f, 0.48f) : new Color(0.64f, 0.42f, 0.28f);
 
             VisualRoot = CreateBone("Visual Rig", transform, Vector3.zero);
             Hips = CreateBone("Hips", VisualRoot, new Vector3(0f, 0.91f * HeightScale, 0f));
@@ -66,39 +73,39 @@ namespace FC2026.Gameplay
             RightFoot = CreateBone("Right Foot", RightLowerLeg, new Vector3(0f, -0.35f * HeightScale, 0.08f));
 
             // Smooth tapered trunk and rounded deltoids give the kit a shoulder-to-waist shape.
-            CreatePart("Pelvis / Shorts", PrimitiveType.Sphere, Hips, new Vector3(0f, -0.035f * HeightScale, 0f), new Vector3(0.48f * WidthScale, 0.31f * HeightScale, 0.37f * WidthScale), shorts);
-            CreateTaperedTorso("Athletic Torso", Spine, shirt);
-            CreatePart("Left Shoulder", PrimitiveType.Sphere, Chest, new Vector3(-0.275f * WidthScale, 0.09f * HeightScale, 0f), new Vector3(0.28f * WidthScale, 0.29f * HeightScale, 0.31f * WidthScale), shirt);
-            CreatePart("Right Shoulder", PrimitiveType.Sphere, Chest, new Vector3(0.275f * WidthScale, 0.09f * HeightScale, 0f), new Vector3(0.28f * WidthScale, 0.29f * HeightScale, 0.31f * WidthScale), shirt);
+            CreatePart("Pelvis / Shorts", PrimitiveType.Sphere, Hips, new Vector3(0f, -0.035f * HeightScale, 0f), new Vector3(0.48f * WidthScale, 0.31f * HeightScale, 0.37f * WidthScale), detailedShorts);
+            CreateTaperedTorso("Athletic Torso", Spine, detailedShirt);
+            CreatePart("Left Shoulder", PrimitiveType.Sphere, Chest, new Vector3(-0.275f * WidthScale, 0.09f * HeightScale, 0f), new Vector3(0.28f * WidthScale, 0.29f * HeightScale, 0.31f * WidthScale), detailedShirt);
+            CreatePart("Right Shoulder", PrimitiveType.Sphere, Chest, new Vector3(0.275f * WidthScale, 0.09f * HeightScale, 0f), new Vector3(0.28f * WidthScale, 0.29f * HeightScale, 0.31f * WidthScale), detailedShirt);
 
-            CreatePart("Neck", PrimitiveType.Capsule, Chest, new Vector3(0f, 0.14f * HeightScale, 0f), new Vector3(0.105f * WidthScale, 0.14f * HeightScale, 0.105f * WidthScale), skin);
-            CreatePart("Head Mesh", PrimitiveType.Sphere, Head, Vector3.zero, new Vector3(0.30f, 0.34f, 0.29f), skin);
-            CreatePart("Left Ear", PrimitiveType.Sphere, Head, new Vector3(-0.145f, 0.005f, 0f), new Vector3(0.075f, 0.105f, 0.075f), skin);
-            CreatePart("Right Ear", PrimitiveType.Sphere, Head, new Vector3(0.145f, 0.005f, 0f), new Vector3(0.075f, 0.105f, 0.075f), skin);
-            CreatePart("Left Ear Fold", PrimitiveType.Sphere, Head, new Vector3(-0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), skin);
-            CreatePart("Right Ear Fold", PrimitiveType.Sphere, Head, new Vector3(0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), skin);
+            CreatePart("Neck", PrimitiveType.Capsule, Chest, new Vector3(0f, 0.14f * HeightScale, 0f), new Vector3(0.105f * WidthScale, 0.14f * HeightScale, 0.105f * WidthScale), detailedSkin);
+            CreatePart("Head Mesh", PrimitiveType.Sphere, Head, Vector3.zero, new Vector3(0.30f, 0.34f, 0.29f), detailedSkin);
+            CreatePart("Left Ear", PrimitiveType.Sphere, Head, new Vector3(-0.145f, 0.005f, 0f), new Vector3(0.075f, 0.105f, 0.075f), detailedSkin);
+            CreatePart("Right Ear", PrimitiveType.Sphere, Head, new Vector3(0.145f, 0.005f, 0f), new Vector3(0.075f, 0.105f, 0.075f), detailedSkin);
+            CreatePart("Left Ear Fold", PrimitiveType.Sphere, Head, new Vector3(-0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), detailedSkin);
+            CreatePart("Right Ear Fold", PrimitiveType.Sphere, Head, new Vector3(0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), detailedSkin);
             CreatePart("Hair", PrimitiveType.Sphere, Head, new Vector3(0f, 0.12f, -0.065f), new Vector3(0.31f, 0.14f, 0.30f), hair);
-            CreateFace(skin, hair);
+            CreateTexturedFace();
 
-            CreateLimb(LeftUpperArm, "Left Sleeve", 0.28f, 0.125f, shirt);
-            CreateLimb(LeftLowerArm, "Left Forearm", 0.28f, 0.092f, skin);
-            CreateLimb(RightUpperArm, "Right Sleeve", 0.28f, 0.125f, shirt);
-            CreateLimb(RightLowerArm, "Right Forearm", 0.28f, 0.092f, skin);
-            CreatePart("Left Elbow", PrimitiveType.Sphere, LeftLowerArm, new Vector3(0f, 0.12f * HeightScale, 0f), new Vector3(0.19f, 0.17f, 0.19f), skin);
-            CreatePart("Right Elbow", PrimitiveType.Sphere, RightLowerArm, new Vector3(0f, 0.12f * HeightScale, 0f), new Vector3(0.19f, 0.17f, 0.19f), skin);
+            CreateLimb(LeftUpperArm, "Left Sleeve", 0.28f, 0.125f, detailedShirt);
+            CreateLimb(LeftLowerArm, "Left Forearm", 0.28f, 0.092f, detailedSkin);
+            CreateLimb(RightUpperArm, "Right Sleeve", 0.28f, 0.125f, detailedShirt);
+            CreateLimb(RightLowerArm, "Right Forearm", 0.28f, 0.092f, detailedSkin);
+            CreatePart("Left Elbow", PrimitiveType.Sphere, LeftLowerArm, new Vector3(0f, 0.12f * HeightScale, 0f), new Vector3(0.19f, 0.17f, 0.19f), detailedSkin);
+            CreatePart("Right Elbow", PrimitiveType.Sphere, RightLowerArm, new Vector3(0f, 0.12f * HeightScale, 0f), new Vector3(0.19f, 0.17f, 0.19f), detailedSkin);
 
-            CreateLimb(LeftUpperLeg, "Left Thigh", 0.37f, 0.14f * WidthScale, skin);
-            CreateLimb(LeftUpperLeg, "Left Shorts Leg", 0.22f, 0.15f * WidthScale, shorts);
-            CreateLimb(LeftLowerLeg, "Left Sock", 0.35f, 0.115f * WidthScale, socks);
-            CreateLimb(RightUpperLeg, "Right Thigh", 0.37f, 0.14f * WidthScale, skin);
-            CreateLimb(RightUpperLeg, "Right Shorts Leg", 0.22f, 0.15f * WidthScale, shorts);
-            CreateLimb(RightLowerLeg, "Right Sock", 0.35f, 0.115f * WidthScale, socks);
+            CreateLimb(LeftUpperLeg, "Left Thigh", 0.37f, 0.14f * WidthScale, detailedSkin);
+            CreateLimb(LeftUpperLeg, "Left Shorts Leg", 0.22f, 0.15f * WidthScale, detailedShorts);
+            CreateLimb(LeftLowerLeg, "Left Sock", 0.35f, 0.115f * WidthScale, detailedSocks);
+            CreateLimb(RightUpperLeg, "Right Thigh", 0.37f, 0.14f * WidthScale, detailedSkin);
+            CreateLimb(RightUpperLeg, "Right Shorts Leg", 0.22f, 0.15f * WidthScale, detailedShorts);
+            CreateLimb(RightLowerLeg, "Right Sock", 0.35f, 0.115f * WidthScale, detailedSocks);
 
             CreatePart("Left Boot", PrimitiveType.Capsule, LeftFoot, new Vector3(0f, -0.015f, 0.12f), new Vector3(0.09f, 0.075f, 0.17f), boots);
             CreatePart("Right Boot", PrimitiveType.Capsule, RightFoot, new Vector3(0f, -0.015f, 0.12f), new Vector3(0.09f, 0.075f, 0.17f), boots);
 
-            var leftHand = CreatePart("Left Hand", PrimitiveType.Sphere, LeftLowerArm, new Vector3(0f, -0.28f * HeightScale, 0.015f), new Vector3(0.105f, 0.14f, 0.08f), skin);
-            var rightHand = CreatePart("Right Hand", PrimitiveType.Sphere, RightLowerArm, new Vector3(0f, -0.28f * HeightScale, 0.015f), new Vector3(0.105f, 0.14f, 0.08f), skin);
+            var leftHand = CreatePart("Left Hand", PrimitiveType.Sphere, LeftLowerArm, new Vector3(0f, -0.28f * HeightScale, 0.015f), new Vector3(0.105f, 0.14f, 0.08f), detailedSkin);
+            var rightHand = CreatePart("Right Hand", PrimitiveType.Sphere, RightLowerArm, new Vector3(0f, -0.28f * HeightScale, 0.015f), new Vector3(0.105f, 0.14f, 0.08f), detailedSkin);
 
             if (goalkeeper)
             {
@@ -107,54 +114,124 @@ namespace FC2026.Gameplay
             }
         }
 
-        private void CreateFace(Material skin, Material hair)
+        private void CreateTexturedFace()
         {
-            EnsureFaceMaterials();
-
-            // Subtle cheek and chin volume gives the head a jaw rather than a featureless oval.
-            CreatePart("Left Cheek", PrimitiveType.Sphere, Head, new Vector3(-0.105f, -0.055f, 0.175f), new Vector3(0.105f, 0.09f, 0.105f), skin);
-            CreatePart("Right Cheek", PrimitiveType.Sphere, Head, new Vector3(0.105f, -0.055f, 0.175f), new Vector3(0.105f, 0.09f, 0.105f), skin);
-            CreatePart("Chin", PrimitiveType.Sphere, Head, new Vector3(0f, -0.19f, 0.175f), new Vector3(0.12f, 0.065f, 0.085f), skin);
-
-            for (var side = -1; side <= 1; side += 2)
-            {
-                var x = side * 0.105f;
-                var label = side < 0 ? "Left" : "Right";
-                CreatePart(label + " Eye Socket", PrimitiveType.Sphere, Head, new Vector3(x, 0.065f, 0.222f), new Vector3(0.082f, 0.052f, 0.036f), skin);
-                CreatePart(label + " Eye White", PrimitiveType.Sphere, Head, new Vector3(x, 0.065f, 0.249f), new Vector3(0.064f, 0.033f, 0.018f), eyeWhiteMaterial);
-                CreatePart(label + " Iris", PrimitiveType.Sphere, Head, new Vector3(x, 0.064f, 0.265f), new Vector3(0.023f, 0.026f, 0.009f), irisMaterial);
-                CreatePart(label + " Pupil", PrimitiveType.Sphere, Head, new Vector3(x, 0.064f, 0.272f), new Vector3(0.011f, 0.016f, 0.006f), pupilMaterial);
-                CreatePart(label + " Brow", PrimitiveType.Capsule, Head, new Vector3(x, 0.126f, 0.225f), new Vector3(0.018f, 0.052f, 0.018f), hair);
-            }
-
-            // A narrow bridge, rounded tip and nostril shading make the profile read as a nose.
-            CreatePart("Nose Bridge", PrimitiveType.Capsule, Head, new Vector3(0f, 0.005f, 0.245f), new Vector3(0.033f, 0.078f, 0.036f), skin);
-            CreatePart("Nose Tip", PrimitiveType.Sphere, Head, new Vector3(0f, -0.055f, 0.27f), new Vector3(0.047f, 0.035f, 0.042f), skin);
-            CreatePart("Left Nostril", PrimitiveType.Sphere, Head, new Vector3(-0.025f, -0.079f, 0.288f), new Vector3(0.012f, 0.008f, 0.006f), nostrilMaterial);
-            CreatePart("Right Nostril", PrimitiveType.Sphere, Head, new Vector3(0.025f, -0.079f, 0.288f), new Vector3(0.012f, 0.008f, 0.006f), nostrilMaterial);
-
-            CreatePart("Upper Lip", PrimitiveType.Sphere, Head, new Vector3(0f, -0.125f, 0.248f), new Vector3(0.055f, 0.014f, 0.012f), mouthMaterial);
-            CreatePart("Lower Lip", PrimitiveType.Sphere, Head, new Vector3(0f, -0.147f, 0.244f), new Vector3(0.047f, 0.012f, 0.01f), mouthMaterial);
-        }
-
-        private static void EnsureFaceMaterials()
-        {
-            if (eyeWhiteMaterial != null)
+            var faceTexture = Resources.Load<Texture2D>("PlayerFaces/face_0" + (faceVariantIndex + 1));
+            if (faceTexture == null)
                 return;
 
-            eyeWhiteMaterial = CreateFaceMaterial(new Color(0.91f, 0.88f, 0.82f));
-            irisMaterial = CreateFaceMaterial(new Color(0.22f, 0.12f, 0.065f));
-            pupilMaterial = CreateFaceMaterial(new Color(0.025f, 0.02f, 0.018f));
-            mouthMaterial = CreateFaceMaterial(new Color(0.39f, 0.19f, 0.17f));
-            nostrilMaterial = CreateFaceMaterial(new Color(0.31f, 0.19f, 0.16f));
+            const int rings = 18;
+            const int sides = 40;
+            const float faceRadiusX = 0.235f;
+            const float faceRadiusY = 0.285f;
+            const float faceCenterY = -0.005f;
+            var vertices = new Vector3[1 + rings * sides];
+            var uvs = new Vector2[vertices.Length];
+            var triangles = new int[sides * 3 + (rings - 1) * sides * 6];
+            vertices[0] = new Vector3(0f, faceCenterY, 0.294f);
+            uvs[0] = new Vector2(0.5f, 0.5f);
+
+            for (var ring = 1; ring <= rings; ring++)
+            {
+                var radius = ring / (float)rings;
+                for (var side = 0; side < sides; side++)
+                {
+                    var angle = side * Mathf.PI * 2f / sides;
+                    var x = Mathf.Cos(angle) * faceRadiusX * radius;
+                    var y = faceCenterY + Mathf.Sin(angle) * faceRadiusY * radius;
+                    var ellipsoid = Mathf.Max(0.04f, 1f - x * x / (0.30f * 0.30f) - y * y / (0.34f * 0.34f));
+                    var index = 1 + (ring - 1) * sides + side;
+                    vertices[index] = new Vector3(x, y, 0.29f * Mathf.Sqrt(ellipsoid) + 0.003f);
+                    uvs[index] = new Vector2(0.5f + x / (2f * faceRadiusX), 0.5f + (y - faceCenterY) / (2f * faceRadiusY));
+                }
+            }
+
+            var triangle = 0;
+            for (var side = 0; side < sides; side++)
+            {
+                triangles[triangle++] = 0;
+                triangles[triangle++] = 1 + side;
+                triangles[triangle++] = 1 + (side + 1) % sides;
+            }
+
+            for (var ring = 1; ring < rings; ring++)
+            for (var side = 0; side < sides; side++)
+            {
+                var next = (side + 1) % sides;
+                var inner = 1 + (ring - 1) * sides;
+                var outer = 1 + ring * sides;
+                triangles[triangle++] = inner + side;
+                triangles[triangle++] = outer + side;
+                triangles[triangle++] = outer + next;
+                triangles[triangle++] = inner + side;
+                triangles[triangle++] = outer + next;
+                triangles[triangle++] = inner + next;
+            }
+
+            var mesh = new Mesh { name = "Textured Player Face" };
+            mesh.vertices = vertices;
+            mesh.uv = uvs;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var shader = Shader.Find("Standard");
+            var faceMaterial = new Material(shader) { mainTexture = faceTexture };
+            faceMaterial.SetFloat("_Glossiness", 0.22f);
+            var face = new GameObject("Photographic Face Texture");
+            face.transform.SetParent(Head, false);
+            face.AddComponent<MeshFilter>().sharedMesh = mesh;
+            face.AddComponent<MeshRenderer>().sharedMaterial = faceMaterial;
         }
 
-        private static Material CreateFaceMaterial(Color color)
+        private static Material CreateTexturedMaterial(Material source, Texture2D detailTexture)
         {
-            var shader = Shader.Find("Standard");
-            var material = new Material(shader) { color = color };
-            material.SetFloat("_Glossiness", 0.28f);
+            var material = new Material(source);
+            material.mainTexture = detailTexture;
+            material.mainTextureScale = new Vector2(2f, 2f);
             return material;
+        }
+
+        private static Texture2D GetSkinGrainTexture()
+        {
+            if (skinGrainTexture != null)
+                return skinGrainTexture;
+
+            skinGrainTexture = CreateFineTexture("Subtle Skin Grain", 64, (x, y) =>
+            {
+                var smallPores = Mathf.Sin(x * Mathf.PI * 2f / 8f) * Mathf.Sin(y * Mathf.PI * 2f / 8f);
+                var broadVariation = Mathf.Sin(x * Mathf.PI * 14f / 64f) * Mathf.Sin(y * Mathf.PI * 22f / 64f);
+                var value = 0.975f + smallPores * 0.012f + broadVariation * 0.01f;
+                return new Color(value, value, value, 1f);
+            });
+            return skinGrainTexture;
+        }
+
+        private static Texture2D GetKitWeaveTexture()
+        {
+            if (kitWeaveTexture != null)
+                return kitWeaveTexture;
+
+            kitWeaveTexture = CreateFineTexture("Fine Kit Weave", 32, (x, y) =>
+            {
+                var thread = ((x + y) & 1) == 0 ? 0.96f : 1f;
+                var seam = x % 8 == 0 || y % 8 == 0 ? 0.94f : 1f;
+                var value = thread * seam;
+                return new Color(value, value, value, 1f);
+            });
+            return kitWeaveTexture;
+        }
+
+        private static Texture2D CreateFineTexture(string name, int size, System.Func<int, int, Color> pixel)
+        {
+            var texture = new Texture2D(size, size, TextureFormat.RGB24, true) { name = name, wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Bilinear };
+            var colors = new Color[size * size];
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+                colors[y * size + x] = pixel(x, y);
+            texture.SetPixels(colors);
+            texture.Apply(true, true);
+            return texture;
         }
 
         private void CreateTaperedTorso(string name, Transform parent, Material material)
@@ -164,6 +241,7 @@ namespace FC2026.Gameplay
             var radiusZ = new[] { 0.13f, 0.145f, 0.15f, 0.16f, 0.17f, 0.175f, 0.13f };
             const int sides = 20;
             var vertices = new Vector3[heights.Length * sides + 2];
+            var uvs = new Vector2[vertices.Length];
             var triangles = new int[(heights.Length - 1) * sides * 6 + sides * 6];
 
             for (var ring = 0; ring < heights.Length; ring++)
@@ -174,12 +252,15 @@ namespace FC2026.Gameplay
                     Mathf.Cos(angle) * radiusX[ring] * WidthScale,
                     heights[ring] * HeightScale,
                     Mathf.Sin(angle) * radiusZ[ring] * WidthScale);
+                uvs[ring * sides + side] = new Vector2(side / (float)sides, ring / (float)(heights.Length - 1));
             }
 
             var bottomCenter = vertices.Length - 2;
             var topCenter = vertices.Length - 1;
             vertices[bottomCenter] = new Vector3(0f, heights[0] * HeightScale, 0f);
             vertices[topCenter] = new Vector3(0f, heights[heights.Length - 1] * HeightScale, 0f);
+            uvs[bottomCenter] = new Vector2(0.5f, 0f);
+            uvs[topCenter] = new Vector2(0.5f, 1f);
 
             var index = 0;
             for (var ring = 0; ring < heights.Length - 1; ring++)
@@ -212,6 +293,7 @@ namespace FC2026.Gameplay
 
             var mesh = new Mesh { name = name + " Mesh" };
             mesh.vertices = vertices;
+            mesh.uv = uvs;
             mesh.triangles = triangles;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
