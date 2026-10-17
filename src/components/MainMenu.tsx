@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowRight, ChevronRight, Crown, Flame, Play, Shield, Sparkles, Trophy, Users, Zap } from 'lucide-react';
 import { TEAMS } from '../data/teams';
-import { Player, Team } from '../types/soccer';
+import { Player } from '../types/soccer';
 import { FCBottomNav, FCNavTab } from './FCBottomNav';
 import { FCHeaderBar } from './FCHeaderBar';
-import { PlayerFaceAvatar, PlayerFaceCard } from './PlayerFaceCard';
+import { PlayerFaceCard, PlayerPortrait } from './PlayerFaceCard';
 
 export type MainMenuDestination = 'team-select' | 'career' | 'tournament' | 'penalties' | 'practice' | 'squad';
 
@@ -37,21 +37,14 @@ const getPlayer = (players: Player[], position: string, index = 0) => {
   return matches[index] || matches[0] || players[index % players.length];
 };
 
-const MiniCard: React.FC<{ player: Player; team: Team; selected: boolean; onClick: () => void }> = ({ player, team, selected, onClick }) => (
+const MiniCard: React.FC<{ player: Player; selected: boolean; onClick: () => void }> = ({ player, selected, onClick }) => (
   <button onClick={onClick} className={`lineup-card ${selected ? 'lineup-card-selected' : ''}`} aria-label={`Select ${player.name}`}>
     <div className="lineup-card-shine" />
     <div className="lineup-card-top">
       <span className="lineup-rating">{player.rating}</span>
       <span className="lineup-position">{player.position}</span>
     </div>
-    <PlayerFaceAvatar
-      skinTone={player.likeness?.skinTone}
-      hairStyle={player.likeness?.hairStyle}
-      hairColor={player.likeness?.hairColor}
-      facialHair={player.likeness?.facialHair}
-      jerseyColor={team.kit?.primary}
-      size={48}
-    />
+    <PlayerPortrait player={player} className="z-[1] h-11 w-11 rounded-lg border border-white/30 shadow-lg" />
     <span className="lineup-name">{player.shortName}</span>
     <span className="lineup-stat">{player.stats.pace} PAC · {player.stats.dribbling} DRI</span>
   </button>
@@ -100,7 +93,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <div className="pitch-glow" />
             {lineup.map((slot) => {
               const player = mappedPlayers[slot.key as keyof typeof mappedPlayers];
-              return <div key={slot.key} className="lineup-slot" style={{ left: slot.x, top: slot.y }}><MiniCard player={player} team={team} selected={selectedKey === slot.key} onClick={() => { setSelectedKey(slot.key); }} /></div>;
+              return <div key={slot.key} className="lineup-slot" style={{ left: slot.x, top: slot.y }}><MiniCard player={player} selected={selectedKey === slot.key} onClick={() => { setSelectedKey(slot.key); }} /></div>;
             })}
             <span className="pitch-label top-label">ATTACK</span><span className="pitch-label bottom-label">DEFENCE</span>
           </div>

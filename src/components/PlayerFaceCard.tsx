@@ -52,6 +52,25 @@ function hashName(name: string): number {
   return Math.abs(hash >>> 0);
 }
 
+const PORTRAITS = Array.from({ length: 8 }, (_, index) => `/images/players/portrait-${index + 1}.webp`);
+
+export const getPlayerPortrait = (player: Pick<Player, 'id' | 'name'>) =>
+  PORTRAITS[hashName(`${player.id}:${player.name}`.toLowerCase()) % PORTRAITS.length];
+
+export const PlayerPortrait: React.FC<{
+  player: Pick<Player, 'id' | 'name'>;
+  className?: string;
+  alt?: string;
+}> = ({ player, className = '', alt }) => (
+  <img
+    src={getPlayerPortrait(player)}
+    alt={alt || `In-game portrait for ${player.name}`}
+    loading="lazy"
+    decoding="async"
+    className={`object-cover object-top ${className}`}
+  />
+);
+
 function seededVariation(seed: number, offset: number, range: number): number {
   const value = Math.sin(seed * 0.0001 + offset * 17.13) * 43758.5453;
   const unit = value - Math.floor(value);
@@ -319,8 +338,6 @@ export const PlayerFaceCard: React.FC<PlayerFaceCardProps> = ({
 }) => {
   const themeKey = player.likeness?.faceCardTheme || rarityTier(player.rating);
   const theme = CARD_THEMES[themeKey] || CARD_THEMES.gold;
-  const profile = getProceduralProfile(player);
-
   const sizeClasses = {
     xs: 'w-24 h-40 text-[9px]',
     sm: 'w-32 h-52 text-[10px]',
@@ -330,10 +347,8 @@ export const PlayerFaceCard: React.FC<PlayerFaceCardProps> = ({
   };
   const padClasses = { xs: 'p-1.5', sm: 'p-2', md: 'p-3', lg: 'p-4', xl: 'p-5' };
   const pointSpacer = { xs: 24, sm: 30, md: 42, lg: 50, xl: 58 };
-  const avatarSizes = { xs: 42, sm: 54, md: 78, lg: 100, xl: 116 };
   const flagSize = { xs: 18, sm: 22, md: 28, lg: 34, xl: 38 };
   const crestSize = { xs: 'xs', sm: 'xs', md: 'sm', lg: 'sm', xl: 'md' } as const;
-  const jerseyColor = team?.kit?.primary || '#0284c7';
   const displayName = player.shortName || player.name.split(' ').pop() || player.name;
   const nation = player.nationality || team?.country;
   const showGrid = showDetails && size !== 'xs';
@@ -379,16 +394,9 @@ export const PlayerFaceCard: React.FC<PlayerFaceCardProps> = ({
           </div>
 
           {/* Player avatar on the rays */}
-          <div className="relative flex items-center justify-center">
-            <PlayerFaceAvatar
-              skinTone={player.likeness?.skinTone || '#d49b6a'}
-              hairStyle={player.likeness?.hairStyle || 'short'}
-              hairColor={player.likeness?.hairColor || '#1f2937'}
-              facialHair={player.likeness?.facialHair || 'none'}
-              jerseyColor={jerseyColor}
-              size={avatarSizes[size]}
-              profile={profile}
-            />
+          <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl border border-white/20 bg-slate-950/30 shadow-[inset_0_0_22px_rgba(0,0,0,.28)]">
+            <PlayerPortrait player={player} className="h-full w-full object-cover object-top" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-white/10" />
             {player.playStyles?.length && size !== 'xs' ? (
               <div
                 className="absolute bottom-0 right-1 p-1 rounded-full bg-black/60 border border-white/20 text-cyan-300 shadow"

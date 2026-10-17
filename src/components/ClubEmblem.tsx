@@ -74,15 +74,18 @@ export const ClubEmblem: React.FC<ClubEmblemProps> = ({
       {/* Fallback Vector Shield if offline or image loading */}
       {(!emblemUrl || hasError || !isLoaded) && (
         <div
-          className={`absolute inset-0 rounded-full flex items-center justify-center font-['Chakra_Petch'] font-black border border-white/20 bg-gradient-to-br from-slate-800 to-slate-950 text-white shadow-inner ${
+          className={`absolute inset-0 fc-club-shield flex items-center justify-center font-['Chakra_Petch'] font-black border border-cyan-300/50 bg-gradient-to-br from-slate-700 via-slate-900 to-slate-950 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.35),0_0_14px_rgba(6,182,212,.15)] ${
             isLoaded && !hasError ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}
         >
+          <span className="absolute inset-[2px] fc-club-shield border border-amber-300/30" />
+          <span className="relative z-[1] drop-shadow-[0_1px_3px_rgba(0,0,0,.8)]">
           {fallbackIcon ? (
             <span className="leading-none">{fallbackIcon}</span>
           ) : (
             <span className="leading-none tracking-tighter scale-90">{displayShort}</span>
           )}
+          </span>
         </div>
       )}
     </div>

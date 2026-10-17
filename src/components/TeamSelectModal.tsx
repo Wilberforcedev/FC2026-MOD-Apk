@@ -13,6 +13,20 @@ import { LeagueEmblem } from './LeagueEmblem';
 import { LEAGUES } from '../data/emblems';
 import { getStadiumForTeam } from '../data/stadiums';
 import { MapPin, Users, Sparkles } from 'lucide-react';
+import { PlayerPortrait } from './PlayerFaceCard';
+
+const TeamFaceStrip: React.FC<{ team: Team }> = ({ team }) => (
+  <div className="mt-3 grid grid-cols-3 gap-2" aria-label={`${team.name} featured players`}>
+    {[...team.players].sort((a, b) => b.rating - a.rating).slice(0, 3).map((player) => (
+      <div key={player.id} className="relative h-24 overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-lg">
+        <PlayerPortrait player={player} className="h-full w-full object-cover object-top" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
+        <span className="absolute bottom-1 left-1 right-1 truncate text-[9px] font-black uppercase text-white drop-shadow">{player.shortName}</span>
+        <span className="absolute left-1 top-1 rounded bg-slate-950/75 px-1 text-[9px] font-black text-cyan-200">{player.rating}</span>
+      </div>
+    ))}
+  </div>
+);
 
 interface TeamSelectModalProps {
   onStartMatch: (config: {
@@ -183,6 +197,7 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
                   <span className="font-black text-white text-lg font-['Chakra_Petch']">{homeTeam.overallRating}</span>
                 </div>
               </div>
+              <TeamFaceStrip team={homeTeam} />
             </div>
 
             {/* Club Grid Picker */}
@@ -253,6 +268,7 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
                   <span className="font-black text-white text-lg font-['Chakra_Petch']">{awayTeam.overallRating}</span>
                 </div>
               </div>
+              <TeamFaceStrip team={awayTeam} />
             </div>
 
             {/* Club Grid Picker */}
