@@ -61,8 +61,7 @@ export const FCHeaderBar: React.FC<FCHeaderBarProps> = ({
                 </div>
               </div>
             )}
-            {/* Green Online Dot */}
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 border-2 border-slate-950 rounded-full shadow" />
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-amber-300 border-2 border-slate-950 rounded-full shadow" />
           </div>
 
           <div className="hidden sm:block">
@@ -70,8 +69,8 @@ export const FCHeaderBar: React.FC<FCHeaderBarProps> = ({
               <span className="text-xs font-black font-['Chakra_Petch'] text-white uppercase tracking-wider">
                 {team ? team.name : 'MANAGER ID'}
               </span>
-              <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.2 rounded font-mono font-bold">
-                LVL 42
+              <span className="text-[9px] bg-amber-400/10 text-amber-200 border border-amber-300/25 px-1.5 py-0.5 rounded font-mono font-bold tracking-wider">
+                FC 26
               </span>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-white/50 font-['Outfit']">
@@ -80,7 +79,7 @@ export const FCHeaderBar: React.FC<FCHeaderBarProps> = ({
                   <LeagueEmblem leagueId={team.leagueId} size="xs" />
                 </div>
               )}
-              <span>FC Online • Cloud Synced</span>
+              <span>CLUB HUB • MANAGER PROFILE</span>
             </div>
           </div>
         </div>

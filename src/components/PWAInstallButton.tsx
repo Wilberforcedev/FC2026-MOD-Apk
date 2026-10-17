@@ -42,15 +42,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
   };
 
   const getLabel = () => {
-    switch (os) {
-      case 'windows': return 'INSTALL FOR WINDOWS';
-      case 'mac': return 'INSTALL FOR MAC';
-      case 'ios': return 'INSTALL ON IOS';
-      case 'android': return 'INSTALL FOR ANDROID';
-      case 'linux': return 'INSTALL FOR LINUX';
-      case 'chromeos': return 'INSTALL ON CHROMEBOOK';
-      default: return 'INSTALL APP (ALL OS)';
-    }
+    return os === 'ios' ? 'ADD TO HOME SCREEN' : 'INSTALL APP';
   };
 
   return (
@@ -82,7 +74,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
           id="pwa-install-guide-btn"
           onClick={() => setShowModal(true)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-['Chakra_Petch'] font-bold hover:bg-cyan-500/25 transition cursor-pointer uppercase tracking-wider ${className}`}
-          title="Install FC 2026 on Windows, macOS, Linux, Android, or iOS"
+          title="Install FC 2026 on this device"
         >
           {getOSIcon()}
           <span className={showIconOnlyOnMobile ? 'hidden sm:inline' : ''}>{getLabel()}</span>

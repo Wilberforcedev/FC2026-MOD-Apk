@@ -52,13 +52,28 @@ function hashName(name: string): number {
   return Math.abs(hash >>> 0);
 }
 
-const PORTRAITS = Array.from({ length: 8 }, (_, index) => `/images/players/portrait-${index + 1}.webp`);
+const PORTRAITS_BY_COMPLEXION = {
+  fair: ['/images/players/portrait-2.webp', '/images/players/portrait-4.webp', '/images/players/portrait-5.webp', '/images/players/portrait-7.webp'],
+  medium: ['/images/players/portrait-3.webp', '/images/players/portrait-5.webp'],
+  eastAsian: ['/images/players/portrait-8.webp'],
+  deep: ['/images/players/portrait-1.webp', '/images/players/portrait-6.webp'],
+} as const;
 
-export const getPlayerPortrait = (player: Pick<Player, 'id' | 'name'>) =>
-  PORTRAITS[hashName(`${player.id}:${player.name}`.toLowerCase()) % PORTRAITS.length];
+export const getPlayerPortrait = (player: Pick<Player, 'id' | 'name'> & { likeness?: Player['likeness']; nationality?: string }) => {
+  if (player.nationality === 'Japan' || player.nationality === 'South Korea') {
+    return PORTRAITS_BY_COMPLEXION.eastAsian[hashName(`${player.id}:${player.name}`.toLowerCase()) % PORTRAITS_BY_COMPLEXION.eastAsian.length];
+  }
+  const tone = player.likeness?.skinTone || '';
+  const hex = tone.replace('#', '');
+  const rgb = hex.length === 6 ? [0, 2, 4].map((offset) => parseInt(hex.slice(offset, offset + 2), 16)) : [190, 150, 120];
+  const luminance = (rgb[0] * 0.299) + (rgb[1] * 0.587) + (rgb[2] * 0.114);
+  const family = luminance > 190 ? 'fair' : luminance > 115 ? 'medium' : 'deep';
+  const portraits = PORTRAITS_BY_COMPLEXION[family];
+  return portraits[hashName(`${player.id}:${player.name}`.toLowerCase()) % portraits.length];
+};
 
 export const PlayerPortrait: React.FC<{
-  player: Pick<Player, 'id' | 'name'>;
+  player: Pick<Player, 'id' | 'name'> & { likeness?: Player['likeness']; nationality?: string };
   className?: string;
   alt?: string;
 }> = ({ player, className = '', alt }) => (

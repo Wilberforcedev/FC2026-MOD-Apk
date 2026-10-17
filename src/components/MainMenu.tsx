@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowRight, ChevronRight, Crown, Flame, Play, Shield, Sparkles, Trophy, Users, Zap } from 'lucide-react';
+import { ArrowRight, ChevronRight, Crown, Play, Settings2, Shield, Sparkles, Trophy, Users, Zap } from 'lucide-react';
 import { TEAMS } from '../data/teams';
 import { Player } from '../types/soccer';
 import { FCBottomNav, FCNavTab } from './FCBottomNav';
 import { FCHeaderBar } from './FCHeaderBar';
-import { PlayerFaceCard, PlayerPortrait } from './PlayerFaceCard';
+import { PlayerPortrait } from './PlayerFaceCard';
 
 export type MainMenuDestination = 'team-select' | 'career' | 'tournament' | 'penalties' | 'practice' | 'squad';
 
@@ -18,97 +18,85 @@ interface MainMenuProps {
   onOpenSettings: () => void;
 }
 
-const lineup: Array<{ key: string; x: string; y: string }> = [
-  { key: 'GK', x: '50%', y: '88%' },
-  { key: 'LB', x: '15%', y: '69%' },
-  { key: 'CB1', x: '38%', y: '73%' },
-  { key: 'CB2', x: '62%', y: '73%' },
-  { key: 'RB', x: '85%', y: '69%' },
-  { key: 'CM1', x: '29%', y: '49%' },
-  { key: 'CM2', x: '50%', y: '55%' },
-  { key: 'CM3', x: '71%', y: '49%' },
-  { key: 'LW', x: '18%', y: '24%' },
-  { key: 'ST', x: '50%', y: '18%' },
-  { key: 'RW', x: '82%', y: '24%' },
-];
-
-const getPlayer = (players: Player[], position: string, index = 0) => {
-  const matches = players.filter((player) => player.position === position);
-  return matches[index] || matches[0] || players[index % players.length];
+const pick = (players: Player[], position: string, index = 0) => {
+  const exact = players.filter(player => player.position === position);
+  return exact[index] || exact[0] || players[index % players.length];
 };
 
-const MiniCard: React.FC<{ player: Player; selected: boolean; onClick: () => void }> = ({ player, selected, onClick }) => (
-  <button onClick={onClick} className={`lineup-card ${selected ? 'lineup-card-selected' : ''}`} aria-label={`Select ${player.name}`}>
-    <div className="lineup-card-shine" />
-    <div className="lineup-card-top">
-      <span className="lineup-rating">{player.rating}</span>
-      <span className="lineup-position">{player.position}</span>
-    </div>
-    <PlayerPortrait player={player} className="z-[1] h-11 w-11 rounded-lg border border-white/30 shadow-lg" />
-    <span className="lineup-name">{player.shortName}</span>
-    <span className="lineup-stat">{player.stats.pace} PAC · {player.stats.dribbling} DRI</span>
+const TopPlayerCard: React.FC<{ player: Player; teamColor: string; onClick: () => void }> = ({ player, teamColor, onClick }) => (
+  <button className="home-player-card" onClick={onClick} style={{ '--card-accent': teamColor } as React.CSSProperties}>
+    <div className="home-player-art"><PlayerPortrait player={player} alt={`Original in-game portrait for ${player.name}`} /></div>
+    <div className="home-player-shade" />
+    <div className="home-player-rating"><b>{player.rating}</b><span>{player.position}</span></div>
+    <div className="home-player-info"><strong>{player.shortName}</strong><span>{player.stats.pace} PAC <i /> {player.stats.shooting} SHO <i /> {player.stats.dribbling} DRI</span></div>
+    <span className="home-player-number">{String(player.number).padStart(2, '0')}</span>
   </button>
 );
 
 export const MainMenu: React.FC<MainMenuProps> = ({
-  coins,
-  navTab,
-  onNavigate,
-  onSelectNavTab,
-  onOpenInbox,
-  onOpenSocial,
-  onOpenSettings,
+  coins, navTab, onNavigate, onSelectNavTab, onOpenInbox, onOpenSocial, onOpenSettings,
 }) => {
   const team = TEAMS[0];
-  const players = team.players;
-  const [selectedKey, setSelectedKey] = useState('ST');
-  const selectedPlayer = useMemo(() => getPlayer(players, 'ST'), [players]);
-  const mappedPlayers = useMemo(() => ({
-    GK: getPlayer(players, 'GK'), LB: getPlayer(players, 'LB'), RB: getPlayer(players, 'RB'),
-    CB1: getPlayer(players, 'CB'), CB2: getPlayer(players, 'CB', 1),
-    CM1: getPlayer(players, 'CM'), CM2: getPlayer(players, 'CM', 1), CM3: getPlayer(players, 'CAM'),
-    LW: getPlayer(players, 'LW'), ST: getPlayer(players, 'ST'), RW: getPlayer(players, 'RW'),
-  }), [players]);
+  const [focus, setFocus] = useState('ST');
+  const spotlight = useMemo(() => pick(team.players, focus === 'ST' ? 'ST' : focus), [team.players, focus]);
+  const stars = useMemo(() => [...team.players].sort((a, b) => b.rating - a.rating).slice(0, 5), [team.players]);
+  const modes = [
+    { id: 'team-select' as const, eyebrow: 'PLAY NOW', title: 'Kick-off', detail: 'Choose your sides', icon: <Play size={18} fill="currentColor" />, tone: 'gold' },
+    { id: 'career' as const, eyebrow: 'BUILD A LEGACY', title: 'Career', detail: 'Take charge of the club', icon: <Trophy size={18} />, tone: 'blue' },
+    { id: 'tournament' as const, eyebrow: 'WIN IT ALL', title: 'Tournament', detail: 'Road to the final', icon: <Crown size={18} />, tone: 'violet' },
+    { id: 'practice' as const, eyebrow: 'HIT THE TRAINING GROUND', title: 'Practice', detail: 'Sharpen your touch', icon: <Zap size={18} />, tone: 'green' },
+  ];
 
   return (
     <div className="home-shell">
       <FCHeaderBar team={team} coins={coins} onOpenInbox={onOpenInbox} onOpenSocial={onOpenSocial} onOpenSettings={onOpenSettings} showTabs={false} />
       <main className="home-scroll">
-        <section className="home-hero">
-          <div className="hero-copy">
-            <div className="eyebrow"><span className="live-dot" /> MATCHDAY 07 <span className="eyebrow-divider" /> ELITE DIVISION</div>
-            <h1>Build your<br /><span>ultimate XI.</span></h1>
-            <p>Every card. Every decision. Your squad writes the story.</p>
+        <section className="home-cinematic" aria-label="FC 2026 matchday feature">
+          <div className="home-cinematic-background" />
+          <div className="home-cinematic-grain" />
+          <div className="home-cinematic-content">
+            <div className="home-feature-copy">
+              <div className="home-overline"><span className="home-live-dot" /> MATCHDAY 07 <b /> ELITE DIVISION</div>
+              <h1>MAKE<br /><em>THE MOMENT.</em></h1>
+              <p>One club. One season. Every match is yours to shape.</p>
+              <div className="home-feature-actions">
+                <button className="home-primary-cta" onClick={() => onNavigate('team-select')}><Play size={17} fill="currentColor" /> PLAY MATCH <ArrowRight size={17} /></button>
+                <button className="home-secondary-cta" onClick={() => onNavigate('career')}><span>CONTINUE CAREER</span><ChevronRight size={17} /></button>
+              </div>
+              <div className="home-feature-meta"><span><Shield size={14} /> {team.shortName}</span><span>·</span><span>{team.formation} FORMATION</span><span>·</span><span>OVR {team.overallRating}</span></div>
+            </div>
+            <div className="home-feature-player" key={spotlight.id}>
+              <div className="home-feature-orbit" />
+              <PlayerPortrait player={spotlight} className="home-feature-portrait" alt={`Original in-game player portrait of ${spotlight.name}`} />
+              <div className="home-feature-player-glow" />
+              <div className="home-feature-player-label"><span>MATCHDAY STAR</span><strong>{spotlight.shortName}</strong><small>{spotlight.position} <i /> {spotlight.rating} OVR</small></div>
+              <div className="home-feature-rating"><Crown size={13} /><span>OVR</span><b>{spotlight.rating}</b></div>
+            </div>
           </div>
-          <div className="hero-badge"><Crown size={15} /><span>OVR</span><strong>84</strong></div>
+          <div className="home-feature-bottom"><span>FC 2026 <b>—</b> FOOTBALL, REIMAGINED</span><button onClick={() => onNavigate('squad')}>SQUAD HUB <ArrowRight size={14} /></button></div>
         </section>
 
-        <section className="squad-panel">
-          <div className="panel-heading">
-            <div><span className="section-kicker">TACTICAL HUB</span><h2>{team.shortName} <span>starting XI</span></h2></div>
-            <button className="formation-pill" onClick={() => onNavigate('squad')}>{team.formation}<ChevronRight size={14} /></button>
+        <section className="home-mode-section">
+          <div className="home-section-heading"><div><span>YOUR NEXT CHAPTER</span><h2>Choose your mode</h2></div><button onClick={() => onNavigate('squad')}>CLUB HUB <ChevronRight size={15} /></button></div>
+          <div className="home-mode-grid">
+            {modes.map(mode => <button key={mode.id} className={`home-mode-card mode-${mode.tone}`} onClick={() => onNavigate(mode.id)}><span className="home-mode-icon">{mode.icon}</span><span className="home-mode-copy"><small>{mode.eyebrow}</small><strong>{mode.title}</strong><span>{mode.detail}</span></span><ArrowRight className="home-mode-arrow" size={18} /></button>)}
           </div>
-          <div className="pitch-board">
-            <div className="pitch-lines pitch-halfway" /><div className="pitch-lines pitch-box top" /><div className="pitch-lines pitch-box bottom" /><div className="pitch-circle" />
-            <div className="pitch-glow" />
-            {lineup.map((slot) => {
-              const player = mappedPlayers[slot.key as keyof typeof mappedPlayers];
-              return <div key={slot.key} className="lineup-slot" style={{ left: slot.x, top: slot.y }}><MiniCard player={player} selected={selectedKey === slot.key} onClick={() => { setSelectedKey(slot.key); }} /></div>;
-            })}
-            <span className="pitch-label top-label">ATTACK</span><span className="pitch-label bottom-label">DEFENCE</span>
-          </div>
-          <div className="squad-footer"><div><span className="footer-label">TEAM CHEMISTRY</span><strong>92 <small>/ 100</small></strong></div><div className="chemistry-bar"><span /></div><button className="edit-link" onClick={() => onNavigate('squad')}>EDIT SQUAD <ArrowRight size={14} /></button></div>
         </section>
 
-        <section className="feature-grid">
-          <button className="feature-card feature-match" onClick={() => onNavigate('team-select')}><span className="feature-icon"><Play size={16} fill="currentColor" /></span><span><small>READY TO PLAY</small><strong>Kick-off match</strong></span><ArrowRight size={18} /></button>
-          <button className="feature-card feature-career" onClick={() => onNavigate('career')}><span className="feature-icon"><Trophy size={16} /></span><span><small>MANAGER MODE</small><strong>Continue career</strong></span><ArrowRight size={18} /></button>
-        </section>
-
-        <section className="spotlight-row">
-          <div className="spotlight-card"><div className="spotlight-top"><span className="section-kicker">PLAYER SPOTLIGHT</span><Sparkles size={16} /></div><div className="spotlight-content"><PlayerFaceCard player={selectedPlayer} team={team} size="xs" showDetails={false} /><div><h3>{selectedPlayer.name}</h3><p>{selectedPlayer.position} · {team.shortName}</p><div className="mini-stats"><span><b>{selectedPlayer.stats.pace}</b><small>PAC</small></span><span><b>{selectedPlayer.stats.shooting}</b><small>SHO</small></span><span><b>{selectedPlayer.stats.passing}</b><small>PAS</small></span></div></div></div></div>
-          <button className="quick-card" onClick={() => onNavigate('tournament')}><span className="quick-icon"><Zap size={18} /></span><strong>Champions<br />Cup</strong><span className="quick-meta">QUARTER-FINALS <ArrowRight size={14} /></span></button>
-          <button className="quick-card alt" onClick={() => onNavigate('squad')}><span className="quick-icon"><Users size={18} /></span><strong>Squad<br />management</strong><span className="quick-meta">11 STARTERS <ArrowRight size={14} /></span></button>
+        <section className="home-roster-section">
+          <div className="home-section-heading"><div><span>THE STARTING XI</span><h2>{team.shortName}<i> / </i> Season squad</h2></div><button onClick={() => onNavigate('squad')}><Settings2 size={14} /> MANAGE SQUAD</button></div>
+          <div className="home-roster-layout">
+            <div className="home-player-shelf">
+              {stars.map((player, index) => <TopPlayerCard key={player.id} player={player} teamColor={index === 0 ? '#e9c567' : team.kit.secondary} onClick={() => setFocus(player.position)} />)}
+            </div>
+            <div className="home-squad-summary">
+              <div className="home-squad-crest"><span>FC</span><b>26</b></div>
+              <div className="home-squad-summary-title"><span>CLUB OVERVIEW</span><strong>{team.name}</strong><small>{team.stadium || 'Home ground'} · {team.formation}</small></div>
+              <div className="home-squad-stat"><b>{team.overallRating}</b><span>OVERALL</span></div>
+              <div className="home-squad-summary-line"><span>ATT <b>{team.attackRating}</b></span><i /><span>MID <b>{team.midfieldRating}</b></span><i /><span>DEF <b>{team.defenseRating}</b></span></div>
+              <button onClick={() => onNavigate('squad')}>OPEN CLUB <ArrowRight size={14} /></button>
+            </div>
+          </div>
         </section>
       </main>
       <FCBottomNav activeTab={navTab} onSelectTab={onSelectNavTab} />

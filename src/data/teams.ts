@@ -433,7 +433,16 @@ const teamKitMetadata: Record<string, {
   liverpool: { pattern: 'solid', sponsorText: 'STANDARD C.', crestShape: 'shield', budget: 155 },
 };
 
-const skinTones = ['#f7d0b3', '#ebd0b0', '#c89d7c', '#9c6b4e', '#66432c', '#402719'];
+const fairSkinTones = ['#f7d0b3', '#ebd0b0', '#e2b995'];
+const mediumSkinTones = ['#c89d7c', '#b9825f', '#d49b78'];
+const deepSkinTones = ['#9c6b4e', '#805238', '#66432c'];
+const deeperComplexionPlayers = new Set([
+  'Militão', 'Mendy', 'Camavinga', 'Vinícius Jr.', 'Rodrygo', 'Mbappé', 'Doku', 'Akanji',
+  'Balde', 'Saka', 'Saliba', 'Gabriel', 'Martinelli', 'Partey', 'Davies', 'Olise',
+  'Musiala', 'Gnabry', 'Coman', 'Tel', 'Maignan', 'T. Hernández', 'Dembélé', 'Barcola',
+  'Thuram', 'Fofana', 'Konaté', 'Díaz',
+]);
+const mediumComplexionPlayers = new Set(['Raphinha', 'Jesus', 'Alisson', 'Ederson', 'Savinho', 'Brahim', 'Güler', 'Kim', 'Yamal', 'Salah']);
 const hairColors = ['#1a1a1a', '#2c1810', '#4a2c11', '#c7a356', '#8d5524'];
 const bootColors = ['#22c55e', '#ef4444', '#06b6d4', '#eab308', '#f97316', '#ffffff', '#111827'];
 const hairStyles: Array<'short' | 'fade' | 'curly' | 'dreads' | 'slick' | 'buzz'> = ['short', 'fade', 'curly', 'dreads', 'slick', 'buzz'];
@@ -469,7 +478,12 @@ export const TEAMS: Team[] = RAW_TEAMS.map(team => {
     if (playStyles.length === 0) playStyles.push('Relentless');
 
     const isLeft = leftFootedStars.has(p.shortName) || idx === 4 || idx === 10;
-    const skinTone = skinTones[(p.id.length * 3 + idx) % skinTones.length];
+    const skinTonePool = deeperComplexionPlayers.has(p.shortName)
+      ? deepSkinTones
+      : mediumComplexionPlayers.has(p.shortName)
+        ? mediumSkinTones
+        : fairSkinTones;
+    const skinTone = skinTonePool[(p.number + idx) % skinTonePool.length];
     const hairColor = hairColors[(idx * 2 + p.number) % hairColors.length];
     const bootColor = bootColors[(p.number * 4 + idx) % bootColors.length];
     const hairStyle = hairStyles[(idx + p.number) % hairStyles.length];

@@ -1,161 +1,99 @@
 # FC 2026 Soccer
 
-FC 2026 is evolving into a Unity 6 mobile football game with a reusable 3D match foundation, themed squad and transfer UI, online multiplayer, and a data-driven Football World Database. The repository also retains the React/TypeScript web game for UI reference and lightweight browser play. Experience complete offline play, realistic 2D match simulation, physics-based ball mechanics, tactical formations, dynamic career mode with transfer market, dynamic news feed reporting on league-wide transfers and injuries, and an integrated player editor with humanlike face cards.
+FC 2026 is a football game project moving toward a mobile 3D experience in **Unity 6 and C#**. The repository also contains a playable React/TypeScript browser prototype and an experimental Flutter client. The Unity work is still split across two projects, so features and setup steps below identify which implementation they describe.
 
----
+<p align="center"><strong>BUILD YOUR CLUB · OWN THE MATCH · CHASE THE TROPHY</strong></p>
 
-## UI Preview
+## Current project status
 
-These screenshots show the updated React game interface: the squad hub and the pre-match club selector with featured player portrait cards.
+| Implementation | Current role | Location |
+| --- | --- | --- |
+| Unity 3D prototype | 3D pitch, player movement, ball physics, match camera and Android build path | [`unity/FC2026Unity`](unity/FC2026Unity) |
+| Unity Football World prototype | Career and squad systems, Football World data, transfer screens, UI theme and Unity multiplayer services | [`unity_app`](unity_app) |
+| Browser game | React/TypeScript 2D match prototype and management UI | [`src`](src) |
+| Flutter experiment | Separate early mobile UI experiment | [`flutter_app`](flutter_app) |
 
-| Squad hub | Match setup |
+**The two Unity folders are separate projects with different Unity editor versions.** The 3D prototype uses Unity `6000.3.24f1`; the Football World project uses `6000.0.1f1`. Consolidating them into one supported Unity project is the next architecture step. See [`UNITY_3D.md`](UNITY_3D.md) for the 3D prototype and [`unity_app/README.md`](unity_app/README.md) for the Football World project.
+
+## Screens
+
+The current React home screen has a cinematic night stadium backdrop, featured player portrait, match and career entry points, mode cards, and a club squad panel. The attached reference screenshots informed the visual direction; they are not bundled in this repository.
+
+The repository’s existing screenshots show an earlier React interface and are retained as historical web prototype references:
+
+| Previous squad hub | Previous match setup |
 | --- | --- |
-| <img src="docs/screenshots/home-screen.jpg" alt="FC 2026 squad hub with player portrait cards" width="100%"> | <img src="docs/screenshots/team-selection.jpg" alt="FC 2026 match setup with team ratings and featured player portraits" width="100%"> |
+| ![Earlier React squad hub](docs/screenshots/home-screen.jpg) | ![Earlier React team selector](docs/screenshots/team-selection.jpg) |
 
-The player portraits are original generated in-game faces and are not presented as licensed likenesses of real athletes.
+## Gameplay prototypes
 
-## Key Features
+### React/TypeScript browser game
 
-### ⚽ Gameplay & Match Engine
-- **Physics-Driven 2D Pitch Engine**: Real-time ball trajectory, swerve, rebound physics, sprint stamina, sliding tackles, shooting power bars, and chip shots.
-- **Dynamic AI & Tactics**: AI opponents adjust pressing intensity, defensive blocks, and attacking counter-runs based on difficulty and scoreline.
-- **Multiple Game Modes**:
-  - **Kickoff**: Quick exhibition matches with full club & league crest selector.
-  - **Career Mode**: Full season management across European leagues, table progression, prize money, fixture schedule, and squad rotation.
-  - **Champions Tournament**: Knockout cup bracket with quarter-finals, semi-finals, and finals.
-  - **Penalty Shootout**: High-pressure goalkeeper duels with direction and power indicators.
-  - **Tactical Squad Management**: Custom formation creator (4-3-3, 4-2-3-1, 3-5-2, etc.), starter/bench drag-and-drop, and role assignments.
+- Offline 2D matches with ball movement, shooting, passing, sprinting and tackling
+- Kick-off, career, tournament, penalty and practice screens
+- Squad management, player editor, generated face cards and local career saves
+- Responsive touch controls and PWA install support
 
-### 🎨 Visual Identity & Authentic Crests
-- **High-Fidelity Club & League Emblems**: Authentic SVG vector crests for top clubs across Premier League, La Liga, Bundesliga, and International teams.
-- **Photorealistic Player Face Cards**: Dynamic ultimate-team style player cards with original generated human portraits, ratings, stats, nation flags, and club crests.
-- **Player Creator & Attribute Editor**: In-depth creator modal allowing managers to edit player stats (Pace, Shooting, Passing, Dribbling, Defending, Physicality) and customize facial likenesses in real time.
-
-### 📰 Dynamic League News & Medical Room
-- **Dynamic News Feed**: Real-time reporting on league-wide blockbusters, breaking transfer rumors, injury reports, and fitness recovery updates.
-- **Physio Room**: Active tracker monitoring injured players across the league with weeks remaining, severity levels, and clinical diagnoses.
-
-### 📱 Android APK & PWA Compatibility
-- **WebAPK 1-Tap Installation**: Installs directly onto any Android device home screen as a standalone application.
-- **Bubblewrap / TWA Ready**: Manifest and asset bundle structured for native Android `.apk` generation using `@bubblewrap/cli` or PWABuilder.
-- **Touch-Optimized Virtual Controls**: Dual virtual thumbstick and touch action buttons (Pass, Shoot, Sprint, Tackle) engineered for mobile ergonomics.
-
-### 📲 Mobile Performance & Ergonomics
-- **Adaptive Render Scaling**: A frame-time monitor automatically steps the canvas render scale (100% → 80% → 65%) on weaker GPUs so matches stay smooth on low-end Android and iOS devices.
-- **Touch Density Cap**: `devicePixelRatio` is capped at 2x on any coarse-pointer device, cutting GPU fill-rate dramatically on 3x-4x phone panels.
-- **Floating Dynamic Joystick**: DLS-style thumb stick that anchors wherever the thumb lands in the movement zone, with full 360° movement and multi-touch alongside shoot and sprint.
-- **Left-Handed Layout**: One tap mirrors the stick and action cluster sides; the preference persists per device.
-- **Safe-Area Aware HUD**: Controls respect notches, gesture bars and rounded corners through CSS environment insets in portrait and landscape.
-- **Orientation Guidance**: Portrait phones get a rotate hint during matches; the standalone PWA and Capacitor shell run fullscreen landscape.
-
----
-
-## Project Structure
-
-```
-fc-2026-soccer/
-├── public/
-│   ├── icon.svg                     # Primary app icon
-│   ├── manifest.webmanifest         # PWA & WebAPK manifest
-│   └── pwa-192x192.png              # Android launcher icon
-├── src/
-│   ├── components/
-│   │   ├── AndroidAPKModal.tsx      # APK build & 1-tap install modal
-│   │   ├── CareerMode.tsx           # Full Career Mode dashboard & squad hub
-│   │   ├── ClubEmblem.tsx           # Vector SVG club badges
-│   │   ├── FCInboxModal.tsx         # Dynamic news feed & Physio Room
-│   │   ├── LeagueEmblem.tsx         # League crests (PL, La Liga, Bundesliga)
-│   │   ├── MatchEngine.tsx          # Canvas 2D soccer match simulation
-│   │   ├── PenaltyShootout.tsx      # Penalty shootout minigame
-│   │   ├── PlayerEditorModal.tsx    # Player creator & attribute editor
-│   │   ├── PlayerFaceCard.tsx       # Procedural SVG player face cards & avatars
-│   │   ├── SquadManagement.tsx      # Pitch tactical formation builder
-│   │   └── TournamentBracket.tsx    # Knockout tournament system
-│   ├── data/
-│   │   ├── emblems.ts               # Club & league emblem vector data
-│   │   └── teams.ts                 # Full player rosters, ratings, and kits
-│   ├── services/
-│   │   ├── careerNewsService.ts     # Matchday transfer & injury news engine
-│   │   └── careerService.ts         # Career league tables & fixture manager
-│   ├── types/
-│   │   └── soccer.ts                # TypeScript interfaces & domain types
-│   ├── App.tsx                      # Root application entry
-│   └── main.tsx                     # React DOM entry
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
-```
-
----
-
-## Getting Started
-
-### Prerequisites
-- Node.js 18+ or 20+
-- npm 9+
-
-### Installation
+Run it from the repository root:
 
 ```bash
-# Clone repository
-git clone https://github.com/your-username/fc-2026-soccer.git
-cd fc-2026-soccer
-
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
 
-The application will be accessible at `http://localhost:3000`.
-
-### Production Build
-
-```bash
-npm run build
-```
-
-The static bundle will be output to the `dist/` directory.
-
-### Code Validation
+Vite serves the browser prototype at `http://localhost:3000`.
 
 ```bash
 npm run lint
+npm run build
 ```
 
----
+### Unity 3D prototype
 
-## Android APK Generation
+The 3D match foundation is documented in [`UNITY_3D.md`](UNITY_3D.md). It uses procedural humanoid players, Rigidbody ball physics, positional AI, goal detection, match scoring, broadcast camera and touch controls. The current implementation is a prototype; advanced animation, complete career migration, mobile rendering optimization, and release signing remain development work.
 
-To package the game as a native Android APK:
+Open `unity/FC2026Unity` with Unity `6000.3.24f1`. Android builds require Android Build Support, Android SDK & NDK Tools, and OpenJDK. The Unity Editor build menu and command-line instructions are in [`UNITY_3D.md`](UNITY_3D.md).
 
-### Option 1: Using Google Bubblewrap CLI (Recommended)
-```bash
-# 1. Install CLI
-npm install -g @bubblewrap/cli
+### Football World and online services
 
-# 2. Initialize project from your deployment manifest
-bubblewrap init --manifest="https://your-domain.com/manifest.webmanifest"
+[`unity_app`](unity_app) contains the data-driven club/player catalog, career and transfer systems, themed screens, and Netcode for GameObjects with Lobby and Relay integration. Lobby and Relay provide session discovery and connectivity; they do not by themselves provide an authoritative anti-cheat match server.
 
-# 3. Build native Android APK & AAB
-bubblewrap build
+## Android packages
+
+The repository currently has two different Android routes:
+
+- **Capacitor APK:** packages the React/TypeScript browser game. See [`ANDROID.md`](ANDROID.md). The GitHub Actions workflow at [`.github/workflows/android-apk.yml`](.github/workflows/android-apk.yml) builds this APK.
+- **Unity APK:** built from `unity/FC2026Unity` using the Unity Editor or command line. See [`UNITY_3D.md`](UNITY_3D.md).
+
+The Capacitor workflow does not build the Unity game.
+
+## Technology direction
+
+- **Unity 6 + C#:** production mobile gameplay, 3D visuals, simulation, controls, menus and Android/iOS builds.
+- **React + TypeScript:** browser prototype and UI reference while gameplay and data migrate to Unity.
+- **Flutter + Dart:** experimental client; keep separate only if a distinct companion app is planned.
+- **Kotlin/Java or Swift:** platform integration plugins when Unity’s existing APIs are insufficient.
+
+The intended direction is one canonical Unity project, one validated Football World data source, and a separate web prototype rather than parallel production game clients.
+
+## Player and club assets
+
+The player portraits are original generated in-game faces and are not licensed likenesses of individual athletes. Portraits appear on the home screen, team selection, tactical lineup, substitute bench, career squad cards, and player cards. Each roster player has a stable portrait chosen from their saved complexion profile, and newly created players use their editable appearance profile. The current portrait set is a small pool of generated faces, so portraits can repeat across different players. The project also contains real-world club, player and competition references in prototype data and UI. Public release using names, likenesses, badges, kits or league branding requires the appropriate rights; generated portraits do not grant rights to those brands or athlete identities.
+
+## Repository map
+
+```text
+.
+├── src/                         # React and TypeScript browser prototype
+├── public/                      # PWA assets and browser-game imagery
+├── unity/FC2026Unity/           # 3D match prototype
+├── unity_app/                   # Football World Unity project
+├── flutter_app/                 # Flutter experiment
+├── docs/screenshots/            # Earlier browser UI reference images
+├── ANDROID.md                   # Capacitor Android packaging
+└── UNITY_3D.md                  # Unity 3D setup and Android build
 ```
-
-### Option 2: PWABuilder (No local Android SDK needed)
-1. Deploy your build to any public URL or Netlify/Vercel/Cloud Run.
-2. Go to [PWABuilder.com](https://www.pwabuilder.com).
-3. Enter your site URL and click **Package for Android**.
-4. Download the signed or unsigned `.apk` file directly to test on your phone.
-
----
 
 ## License
-Apache-2.0
 
-
-## Unity 6 Football World
-
-The active game foundation is under `unity_app/`. It includes the Unity 6 3D match prototype, Netcode multiplayer with Lobby and Relay, the shared `FC2026UITheme`, the Football World Database V1 JSON catalogs, ScriptableObject importer, transfer market, and the themed Football World browser for clubs and players.
-
-The current original fictional catalog contains 8 clubs, 2 leagues, 3 competitions, and 96 players. Real names, likenesses, badges, kits, stadiums, and league branding require appropriate licensing.
+The repository declares Apache-2.0. Third-party names, marks, likenesses and other assets remain subject to their respective rights holders and are not granted by that license.

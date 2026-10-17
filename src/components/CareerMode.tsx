@@ -35,7 +35,7 @@ import { LeagueEmblem } from './LeagueEmblem';
 import { LEAGUES } from '../data/emblems';
 import { initializeCareer } from '../services/careerService';
 import { createPlayerSigningNews, CareerNewsItem } from '../services/careerNewsService';
-import { PlayerFaceCard, PlayerFaceAvatar } from './PlayerFaceCard';
+import { PlayerFaceCard, PlayerPortrait } from './PlayerFaceCard';
 import { PlayerEditorModal } from './PlayerEditorModal';
 import { PlayerDevelopmentModal } from './PlayerDevelopmentModal';
 import { ScoutingHub } from './ScoutingHub';
@@ -1051,14 +1051,7 @@ export const CareerMode: React.FC<CareerModeProps> = ({
                       {/* Likeness Portrait Avatar */}
                       <div className="my-2 flex justify-center relative">
                         <div className="w-14 h-14 rounded-full border-2 border-white/20 flex items-center justify-center overflow-hidden shadow-inner bg-slate-900">
-                          <PlayerFaceAvatar
-                            skinTone={player.likeness?.skinTone || '#d49b6a'}
-                            hairStyle={player.likeness?.hairStyle || 'short'}
-                            hairColor={player.likeness?.hairColor || '#111827'}
-                            facialHair={player.likeness?.facialHair || 'none'}
-                            jerseyColor={originClub.kit?.primary || '#0284c7'}
-                            size={56}
-                          />
+                          <PlayerPortrait player={player} className="h-full w-full object-cover object-top" />
                         </div>
                         {/* Club watermark mini badge */}
                         <div className="absolute -bottom-1 right-1/4 bg-slate-950 rounded-full p-0.5 border border-white/20 shadow">

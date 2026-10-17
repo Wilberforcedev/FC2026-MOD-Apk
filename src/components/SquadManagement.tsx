@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Team, Player } from '../types/soccer';
 import { FORMATION_SLOTS } from '../game/formations';
-import { PlayerFaceCard, PlayerFaceAvatar } from './PlayerFaceCard';
+import { PlayerFaceCard, PlayerPortrait } from './PlayerFaceCard';
 import { PlayerEditorModal } from './PlayerEditorModal';
 import { 
   ChevronLeft, 
@@ -378,14 +378,7 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
 
                     {/* Likeness Portrait Avatar */}
                     <div className="w-7 h-7 rounded-full border border-white/20 flex items-center justify-center overflow-hidden shadow-inner bg-slate-900">
-                      <PlayerFaceAvatar
-                        skinTone={player.likeness?.skinTone || '#d49b6a'}
-                        hairStyle={player.likeness?.hairStyle || 'short'}
-                        hairColor={player.likeness?.hairColor || '#111827'}
-                        facialHair={player.likeness?.facialHair || 'none'}
-                        jerseyColor={team.kit.primary}
-                        size={28}
-                      />
+                      <PlayerPortrait player={player} className="h-full w-full object-cover object-top" />
                     </div>
 
                     {/* Surname Banner */}
@@ -430,14 +423,7 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
                     }`}
                   >
                     <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center overflow-hidden shadow bg-slate-950 shrink-0">
-                      <PlayerFaceAvatar
-                        skinTone={player.likeness?.skinTone || '#d49b6a'}
-                        hairStyle={player.likeness?.hairStyle || 'short'}
-                        hairColor={player.likeness?.hairColor || '#111827'}
-                        facialHair={player.likeness?.facialHair || 'none'}
-                        jerseyColor={team.kit.primary}
-                        size={32}
-                      />
+                      <PlayerPortrait player={player} className="h-full w-full object-cover object-top" />
                     </div>
 
                     <div className="text-left">
@@ -673,7 +659,9 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
                     }`}
                   >
                     <div className="relative">
-                      <PlayerFaceAvatar player={p} team={team} size="sm" />
+                      <div className="h-9 w-9 rounded-full border border-white/20 overflow-hidden bg-slate-950">
+                        <PlayerPortrait player={p} className="h-full w-full object-cover object-top" />
+                      </div>
                       {isStarter && (
                         <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-cyan-500 border border-slate-950 text-[8px] flex items-center justify-center font-black text-slate-950">
                           S
