@@ -1,17 +1,10 @@
-name: Build Android APK
+name: Legacy Capacitor WebView APK (manual only)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - improve/core-v1
-      - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  build-android:
+  build-legacy-webview-apk:
     runs-on: ubuntu-latest
 
     steps:
@@ -35,27 +28,27 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
-      - name: Build web assets
+      - name: Build browser prototype
         run: npm run build
 
-      - name: Generate native Android project
+      - name: Generate legacy Capacitor Android project
         run: npx cap add android
 
-      - name: Configure native Android shell
+      - name: Configure legacy Android shell
         run: node scripts/configure-android.mjs
 
-      - name: Sync offline assets into Android
+      - name: Sync browser assets into WebView
         run: npx cap sync android
 
-      - name: Build debug APK
+      - name: Build legacy debug APK
         run: |
           chmod +x android/gradlew
           cd android
           ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload legacy WebView APK
         uses: actions/upload-artifact@v4
         with:
-          name: FC2026-Android-Debug
+          name: FC2026-Legacy-WebView-Debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
