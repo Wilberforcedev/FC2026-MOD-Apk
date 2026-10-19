@@ -1,67 +1,23 @@
-# FC 2026 Native Android Build
+# Legacy Capacitor Android Prototype
 
-FC 2026 now supports a native Android APK through Capacitor. The Vite production bundle is packaged inside the Android application, so the core game can boot and remain playable without a hosted website or active internet connection.
+This document covers the **old WebView-based APK** that packages the React/TypeScript browser game. It is not the production mobile app build path.
 
-## Native package
+FC 2026 is now maintained as a native Unity mobile game. For the supported Android APK, open [`unity/FC2026Unity`](unity/FC2026Unity) and follow [`UNITY_3D.md`](UNITY_3D.md).
+
+## Legacy package details
 
 - Application ID: `com.wilberforcedev.fc2026`
 - App name: `FC 2026 Soccer`
-- Web bundle: `dist/`
-- Android runtime: Capacitor
-- Orientation: sensor landscape
-- Display: immersive fullscreen
-- Hardware acceleration: enabled
-- Keep screen awake during play: enabled
+- Runtime: Capacitor WebView loading a bundled Vite web build
+- This route retains browser application code and must not be used for new mobile features.
 
-## Offline behavior
-
-The Android APK packages the built React/TypeScript game locally. Club and league badge graphics are generated locally as SVG data rather than fetched from remote servers, and the app no longer depends on Google Fonts at launch.
-
-Remote/online features should be treated as optional enhancements. Core menus, gameplay, career saves, tournament saves and locally bundled visual assets should remain usable without connectivity.
-
-## Create the native project
+The legacy project can still be built for reference with:
 
 ```bash
 npm install
-npm run android:add
-```
-
-This builds the web app, creates the Android project, applies the FC 2026 native Android configuration and synchronizes the offline assets.
-
-## Re-sync after source changes
-
-```bash
-npm run android:sync
-```
-
-## Build a debug APK
-
-```bash
 npm run android:debug
 ```
 
-Expected output:
+This produces `android/app/build/outputs/apk/debug/app-debug.apk`. It does **not** build the Unity game.
 
-```text
-android/app/build/outputs/apk/debug/app-debug.apk
-```
-
-## Open in Android Studio
-
-```bash
-npm run android:open
-```
-
-From Android Studio you can run the game on a connected phone/emulator and configure signing for release builds.
-
-## Release build
-
-```bash
-npm run android:release
-```
-
-A production release still requires an Android signing key before distribution.
-
-## GitHub Actions
-
-`.github/workflows/android-apk.yml` builds the native debug APK on the Android improvement branch, pull requests to `main`, and manual workflow dispatch. Successful runs upload an artifact named `FC2026-Android-Debug`.
+Do not add new product features to this route. Migrate useful gameplay and data into the canonical Unity project before retiring the prototype.
