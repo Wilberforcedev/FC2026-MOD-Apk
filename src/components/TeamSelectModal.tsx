@@ -88,7 +88,7 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#070e17] text-white overflow-hidden select-none relative font-['Outfit']">
+    <div className="team-select-screen h-full flex flex-col bg-[#070e17] text-white overflow-hidden select-none relative font-['Outfit']">
       {/* Background ambient lighting */}
       <div className="absolute top-0 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -103,7 +103,7 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
       />
 
       {/* Mode Sub-Header */}
-      <div className="h-16 px-4 md:px-8 bg-slate-950/80 border-b border-cyan-900/30 flex items-center justify-between shrink-0 z-10">
+      <div className="team-select-header h-16 px-4 md:px-8 bg-slate-950/80 border-b border-cyan-900/30 flex items-center justify-between shrink-0 z-10">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
@@ -131,9 +131,9 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
       </div>
 
       {/* Main Body */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 max-w-6xl w-full mx-auto space-y-6">
+      <div className="team-select-body flex-1 overflow-y-auto p-4 md:p-6 max-w-6xl w-full mx-auto space-y-6">
         {/* League Category Filter Tabs */}
-        <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1">
+        <div className="team-select-leagues flex items-center justify-center gap-2 overflow-x-auto pb-1">
           <button
             onClick={() => setLeagueFilter('ALL')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-['Chakra_Petch'] font-black uppercase tracking-wider transition ${
@@ -163,9 +163,9 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
         </div>
 
         {/* Team Selection Dual Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="team-select-matchup-grid grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* User Team (Home) */}
-          <div className="bg-slate-950/80 border border-cyan-500/40 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between">
+          <div className="team-select-card team-select-card-home bg-slate-950/80 border border-cyan-500/40 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between">
             <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
 
             <div>
@@ -238,7 +238,7 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
           </div>
 
           {/* CPU Team (Away) */}
-          <div className="bg-slate-950/80 border border-teal-500/40 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between">
+          <div className="team-select-card team-select-card-away bg-slate-950/80 border border-teal-500/40 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between">
             <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
 
             <div>
@@ -321,7 +321,7 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
         {(() => {
           const stadium = getStadiumForTeam(homeTeam.id);
           return (
-            <div className="bg-gradient-to-r from-slate-900/90 via-slate-950/90 to-slate-900/90 border border-cyan-500/30 rounded-3xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl backdrop-blur-md">
+            <div className="team-select-stadium bg-gradient-to-r from-slate-900/90 via-slate-950/90 to-slate-900/90 border border-cyan-500/30 rounded-3xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl backdrop-blur-md">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(6,182,212,0.25)]">
                   🏟️
@@ -366,7 +366,7 @@ export const TeamSelectModal: React.FC<TeamSelectModalProps> = ({
         })()}
 
         {/* Match Parameters: Difficulty, Length, Weather */}
-        <div className="bg-slate-950/80 border border-cyan-500/30 rounded-3xl p-6 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-xl">
+        <div className="team-select-params bg-slate-950/80 border border-cyan-500/30 rounded-3xl p-6 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-xl">
           {/* Difficulty */}
           <div>
             <label className="text-xs font-['Chakra_Petch'] font-bold text-white/70 uppercase tracking-wider flex items-center gap-2 mb-2">

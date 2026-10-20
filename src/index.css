@@ -147,3 +147,59 @@ body { background:#02050a; }
   .home-feature-copy { width:100%; }
   .home-feature-copy h1 { max-width:280px; }
 }
+
+/* Phone-native kick-off layout: stacked navigation, compact matchup cards, fixed action rhythm. */
+@media (max-width:430px) {
+  .team-select-screen { background:radial-gradient(circle at 50% 18%,rgba(8,75,100,.32),transparent 42%),#06111d; }
+  .team-select-header { height:auto; min-height:92px; padding:11px 12px 12px; align-items:flex-start; gap:10px; }
+  .team-select-header > div { min-width:0; flex:1; }
+  .team-select-header h1 { font-size:20px; line-height:1.05; letter-spacing:.04em; }
+  .team-select-header p { max-width:180px; margin-top:4px; font-size:9px; line-height:1.25; }
+  .team-select-header > button:last-child { flex:none; align-self:center; min-height:44px; padding:0 12px; border-radius:14px; font-size:10px; line-height:1.05; }
+  .team-select-header > button:last-child svg { width:14px; height:14px; }
+  .team-select-body { padding:12px 12px 76px; gap:12px; }
+  .team-select-leagues { justify-content:flex-start; gap:7px; padding:0 1px 5px; scrollbar-width:none; }
+  .team-select-leagues::-webkit-scrollbar { display:none; }
+  .team-select-leagues > button { flex:none; min-height:38px; padding:0 11px; font-size:9px; letter-spacing:.08em; }
+  .team-select-leagues > button svg { width:14px; height:14px; }
+  .team-select-matchup-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; align-items:stretch; }
+  .team-select-card { min-width:0; padding:10px; border-radius:20px; }
+  .team-select-card > div:first-child { width:100%; }
+  .team-select-card > div:first-child > div:first-child { gap:4px; align-items:flex-start; }
+  .team-select-card > div:first-child > div:first-child > span { max-width:calc(100% - 35px); padding:5px 6px; font-size:7px; line-height:1.05; letter-spacing:.08em; }
+  .team-select-card > div:first-child > div:first-child > img,
+  .team-select-card > div:first-child > div:first-child > div:last-child { transform:scale(.72); transform-origin:top right; margin-right:-5px; margin-top:-4px; }
+  .team-select-card h2 { margin-top:7px; font-size:18px; line-height:.95; letter-spacing:.025em; overflow-wrap:anywhere; }
+  .team-select-card .mt-1 { min-height:28px; gap:3px; flex-wrap:wrap; }
+  .team-select-card .mt-1 span { font-size:7px; line-height:1.1; }
+  .team-select-card .mt-1 svg { width:10px; height:10px; }
+  .team-select-card .grid.grid-cols-4 { grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; margin-top:8px; }
+  .team-select-card .grid.grid-cols-4 > div { padding:5px 2px; border-radius:9px; }
+  .team-select-card .grid.grid-cols-4 > div span:first-child { font-size:7px; }
+  .team-select-card .grid.grid-cols-4 > div span:last-child { font-size:14px; }
+  .team-select-card .mt-3 { gap:4px; margin-top:8px; }
+  .team-select-card .mt-3 > div { height:56px; border-radius:8px; }
+  .team-select-card .mt-3 span { font-size:6px; }
+  .team-select-card .mt-3 span:first-of-type { font-size:7px; }
+  .team-select-card .mt-6 { margin-top:10px; }
+  .team-select-card .mt-6 label { margin-bottom:5px; font-size:7px; }
+  .team-select-card .mt-6 .grid.grid-cols-4 { grid-template-columns:repeat(4,minmax(0,1fr)); gap:3px; }
+  .team-select-card .mt-6 .grid.grid-cols-4 button { min-height:42px; padding:3px 2px; border-radius:8px; gap:1px; }
+  .team-select-card .mt-6 .grid.grid-cols-4 button span { font-size:7px; }
+  .team-select-card .mt-6 .grid.grid-cols-4 button > div { transform:scale(.7); margin:-5px 0; }
+  .team-select-card-away .flex.items-center.gap-2 { flex-wrap:wrap; }
+  .team-select-card-away .flex.items-center.gap-2 > button { min-height:24px; padding:3px 6px; font-size:7px; }
+  .team-select-stadium, .team-select-params { padding:12px; border-radius:18px; gap:10px; }
+  .team-select-stadium > div:first-child { align-items:flex-start; gap:9px; }
+  .team-select-stadium > div:first-child > div:first-child { width:42px; height:42px; flex:none; }
+  .team-select-stadium h3 { font-size:14px; line-height:1; }
+  .team-select-stadium p, .team-select-stadium span { font-size:8px; }
+  .team-select-stadium > div:last-child { width:100%; display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .team-select-stadium > div:last-child > div { padding:7px 5px; border-radius:10px; }
+  .team-select-stadium > div:last-child span { font-size:7px; }
+  .team-select-params { gap:12px; }
+  .team-select-params > div { min-width:0; }
+  .team-select-params label { font-size:8px; }
+  .team-select-params .grid { gap:4px; }
+  .team-select-params button { min-height:36px; padding:0 3px; font-size:8px; border-radius:9px; }
+}
