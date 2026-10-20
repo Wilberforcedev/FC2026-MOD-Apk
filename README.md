@@ -1,6 +1,6 @@
 # FC 2026 Soccer
 
-FC 2026 is a football game project moving toward a mobile 3D experience in **Unity 6 and C#**. The repository also contains a playable React/TypeScript browser prototype and an experimental Flutter client. The Unity work is still split across two projects, so features and setup steps below identify which implementation they describe.
+FC 2026 is a mobile-only football game project moving toward a mobile 3D experience in **Unity 6 and C#**. The React/TypeScript client is treated as a phone-first prototype and Capacitor Android packaging path; the Flutter client remains experimental. The Unity work is still split across two projects, so features and setup steps below identify which implementation they describe.
 
 <p align="center"><strong>BUILD YOUR CLUB · OWN THE MATCH · CHASE THE TROPHY</strong></p>
 
@@ -97,3 +97,7 @@ The player portraits are original generated in-game faces and are not licensed l
 ## License
 
 The repository declares Apache-2.0. Third-party names, marks, likenesses and other assets remain subject to their respective rights holders and are not granted by that license.
+
+## Mobile UI preview set
+
+The current phone-first UI captures are stored in [`ui-previews/`](./ui-previews/): home hub, kick-off setup, Kit Room, squad management, career hub, tournament bracket, practice arena, Ultimate Store, and in-match HUD.

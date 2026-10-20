@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowRight, ChevronRight, Crown, Play, Settings2, Shield, Sparkles, Trophy, Users, Zap } from 'lucide-react';
+import { ArrowRight, ChevronRight, Crown, Play, Settings2, Shirt, Shield, Sparkles, Trophy, Users, Zap } from 'lucide-react';
 import { TEAMS } from '../data/teams';
 import { Player } from '../types/soccer';
 import { FCBottomNav, FCNavTab } from './FCBottomNav';
 import { FCHeaderBar } from './FCHeaderBar';
 import { PlayerPortrait } from './PlayerFaceCard';
 
-export type MainMenuDestination = 'team-select' | 'career' | 'tournament' | 'penalties' | 'practice' | 'squad';
+export type MainMenuDestination = 'team-select' | 'career' | 'tournament' | 'penalties' | 'practice' | 'squad' | 'kits';
 
 interface MainMenuProps {
   coins: number;
@@ -45,6 +45,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
     { id: 'career' as const, eyebrow: 'BUILD A LEGACY', title: 'Career', detail: 'Take charge of the club', icon: <Trophy size={18} />, tone: 'blue' },
     { id: 'tournament' as const, eyebrow: 'WIN IT ALL', title: 'Tournament', detail: 'Road to the final', icon: <Crown size={18} />, tone: 'violet' },
     { id: 'practice' as const, eyebrow: 'HIT THE TRAINING GROUND', title: 'Practice', detail: 'Sharpen your touch', icon: <Zap size={18} />, tone: 'green' },
+    { id: 'kits' as const, eyebrow: 'CLUB CUSTOMISE', title: 'Kit Room', detail: 'Select your matchday look', icon: <Shirt size={18} />, tone: 'cyan' },
   ];
 
   return (

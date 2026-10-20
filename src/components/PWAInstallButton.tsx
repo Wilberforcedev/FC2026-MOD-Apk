@@ -63,7 +63,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
           id="pwa-install-btn"
           onClick={handleInstallClick}
           className={`flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 px-3 py-1.5 text-xs font-black text-slate-950 shadow-lg shadow-emerald-500/20 active:scale-95 transition font-['Chakra_Petch'] uppercase tracking-wider cursor-pointer ${className}`}
-          title="Install FC 2026 as a standalone offline desktop/mobile application"
+          title="Install FC 2026 as a standalone offline mobile application"
         >
           <Download className="w-3.5 h-3.5 stroke-[2.5]" />
           <span className={showIconOnlyOnMobile ? 'hidden sm:inline' : ''}>INSTALL APP</span>
@@ -87,4 +87,3 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
     </>
   );
 };
-

@@ -37,6 +37,7 @@ const PenaltyMode = lazy(() => import('./components/PenaltyMode').then(module =>
 const PracticeArena = lazy(() => import('./components/PracticeArena').then(module => ({ default: module.PracticeArena })));
 const SquadManagement = lazy(() => import('./components/SquadManagement').then(module => ({ default: module.SquadManagement })));
 const PackShopModal = lazy(() => import('./components/PackShopModal').then(module => ({ default: module.PackShopModal })));
+const KitSelectionScreen = lazy(() => import('./components/KitSelectionScreen').then(module => ({ default: module.KitSelectionScreen })));
 
 type ScreenType =
   | 'main-menu'
@@ -47,7 +48,8 @@ type ScreenType =
   | 'penalties'
   | 'practice'
   | 'squad'
-  | 'pack-store';
+  | 'pack-store'
+  | 'kits';
 
 interface MatchContext {
   tournamentMatch?: TournamentMatch;
@@ -365,7 +367,7 @@ export default function App() {
   const lazyFallback = <ModeLoading />;
 
   return (
-    <div className="w-screen h-screen overflow-hidden bg-[#070e17] text-white flex flex-col select-none relative">
+    <div className="mobile-app-root w-screen h-screen overflow-hidden bg-[#070e17] text-white flex flex-col select-none relative">
       <OfflineIndicator />
 
       {currentScreen === 'main-menu' && (
@@ -562,6 +564,18 @@ export default function App() {
             </Suspense>
           </div>
           <FCBottomNav activeTab={navTab} onSelectTab={handleSelectNavTab} />
+        </div>
+      )}
+      {currentScreen === 'kits' && (
+        <div className="h-full flex flex-col justify-between">
+          <div className="flex-1 overflow-hidden">
+            <Suspense fallback={lazyFallback}>
+              <KitSelectionScreen
+                team={userTeam}
+                onBack={() => setCurrentScreen('main-menu')}
+              />
+            </Suspense>
+          </div>
         </div>
       )}
 
