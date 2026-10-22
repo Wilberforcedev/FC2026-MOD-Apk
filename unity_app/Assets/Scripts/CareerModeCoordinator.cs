@@ -34,6 +34,7 @@ namespace FC2026
         public SeasonCalendarManager Calendar => calendar;
         public FootballWorldDatabase Database => database;
         public SquadManager Squad => squad;
+        public ScoutingNetworkManager Scouting => scouting;
         public SeasonCalendarManager SeasonCalendar => calendar;
         public bool HasActiveCareer => saveManager != null && saveManager.HasCareer;
 
@@ -314,6 +315,7 @@ namespace FC2026
             if (definition == null || squad.CurrentTeam.players.Any(item => item.id == playerId)) return false;
             if (!saveManager.TrySignPlayer(playerId, definition.displayName, fee, weeklyWage, contractYears)) return false;
             squad.CurrentTeam.players.Add(ToPlayerData(definition));
+            squad.NotifyRosterChanged();
             legacyCareer?.SetTransferBudget(saveManager.Career.transferBudget);
             SaveNow();
             return true;
@@ -325,6 +327,7 @@ namespace FC2026
             var player = squad.CurrentTeam.players.FirstOrDefault(item => item != null && item.id == playerId);
             if (player == null || !saveManager.TrySellPlayer(player.id, player.displayName, fee, weeklyWageSaved)) return false;
             squad.CurrentTeam.players.Remove(player);
+            squad.NotifyRosterChanged();
             legacyCareer?.SetTransferBudget(saveManager.Career.transferBudget);
             SaveNow();
             return true;
@@ -528,8 +531,15 @@ namespace FC2026
             {
                 string key = competition.id + "-s" + calendar.Season + "-r16";
                 if (createdCupRounds.Contains(key) || calendar.Fixtures.Any(item => item.competitionId == competition.id)) continue;
-                var eligible = database.clubs.Where(club => (competition.eligibleLeagueIds ?? Array.Empty<string>()).Contains(club.leagueId))
-                    .OrderBy(club => StableHash(club.id + calendar.Season + competition.id)).Take(16).ToList();
+                var allEligible = database.clubs.Where(club => (competition.eligibleLeagueIds ?? Array.Empty<string>()).Contains(club.leagueId))
+                    .OrderBy(club => StableHash(club.id + calendar.Season + competition.id)).ToList();
+                if (allEligible.Count < 4) continue;
+                // Ensure the managed club participates whenever its current league is eligible.
+                var managedClub = allEligible.FirstOrDefault(club => club.id == saveManager.Career.clubId);
+                var eligible = allEligible.Take(16).ToList();
+                if (managedClub != null && !eligible.Any(club => club.id == managedClub.id))
+                    eligible[eligible.Count - 1] = managedClub;
+                if (eligible.Count % 2 != 0) eligible.RemoveAt(eligible.Count - 1);
                 if (eligible.Count < 4) continue;
                 var fixtures = new List<SeasonFixture>();
                 string openingRound = eligible.Count >= 16 ? "Round of 16" : eligible.Count >= 8 ? "Quarter-final" : "Semi-final";
