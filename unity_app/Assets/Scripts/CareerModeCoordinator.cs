@@ -21,6 +21,7 @@ namespace FC2026
         [SerializeField] private TransferNegotiationManager negotiations;
         [SerializeField] private FootballWorldDatabase database;
         private bool bindingsReady;
+        private bool restoringState;
         private bool processingCupRounds;
         private readonly HashSet<string> createdCupRounds = new HashSet<string>();
 
@@ -114,9 +115,9 @@ namespace FC2026
             if (bindingsReady) return;
             if (calendar != null) calendar.CalendarChanged += OnCalendarChanged;
             if (matchEngine != null) matchEngine.MatchCompleted += OnMatchCompleted;
-            if (progression != null) progression.ProgressionChanged += SaveNow;
-            if (scouting != null) scouting.NetworkChanged += SaveNow;
-            if (squad != null) squad.SquadChanged += SaveNow;
+            if (progression != null) progression.ProgressionChanged += OnRuntimeSystemsChanged;
+            if (scouting != null) scouting.NetworkChanged += OnRuntimeSystemsChanged;
+            if (squad != null) squad.SquadChanged += OnRuntimeSystemsChanged;
             if (saveManager != null) saveManager.CareerChanged += OnCareerChanged;
             if (negotiations != null) negotiations.NegotiationChanged += OnNegotiationChanged;
             bindingsReady = calendar != null || matchEngine != null || progression != null || scouting != null || squad != null;
@@ -126,9 +127,9 @@ namespace FC2026
         {
             if (calendar != null) calendar.CalendarChanged -= OnCalendarChanged;
             if (matchEngine != null) matchEngine.MatchCompleted -= OnMatchCompleted;
-            if (progression != null) progression.ProgressionChanged -= SaveNow;
-            if (scouting != null) scouting.NetworkChanged -= SaveNow;
-            if (squad != null) squad.SquadChanged -= SaveNow;
+            if (progression != null) progression.ProgressionChanged -= OnRuntimeSystemsChanged;
+            if (scouting != null) scouting.NetworkChanged -= OnRuntimeSystemsChanged;
+            if (squad != null) squad.SquadChanged -= OnRuntimeSystemsChanged;
             if (saveManager != null) saveManager.CareerChanged -= OnCareerChanged;
             if (negotiations != null) negotiations.NegotiationChanged -= OnNegotiationChanged;
             bindingsReady = false;
@@ -162,11 +163,17 @@ namespace FC2026
                 var clubIds = database.ClubsForLeague(league.id).Select(item => item.id).ToList();
                 calendar.GenerateSeasonFromClubIds(league.id, saveManager.Career.season, clubIds);
                 SaveManager.Career.runtime.activeLeagueClubIds = clubIds;
+                createdCupRounds.Clear();
                 ScheduleCupOpeningRounds();
             }
+            // Starting squads receive baseline contracts so wages and expiry rules apply to incumbents too.
+            saveManager.Career.currentWeeklyWages = roster.Sum(item => item.overall * 700);
+            saveManager.Career.contracts.Clear();
+            foreach (var player in roster)
+                saveManager.Career.contracts.Add(new CareerContractRecord { playerId = player.id, playerName = player.displayName,
+                    weeklyWage = player.overall * 700, remainingYears = 3, signedSeason = saveManager.Career.season, expirySeason = saveManager.Career.season + 3 });
             legacyCareer?.SetTransferBudget(saveManager.Career.transferBudget);
             saveManager.CaptureRuntimeSnapshot(calendar, progression, scouting, squad);
-            createdCupRounds.Clear();
             return true;
         }
 
@@ -174,28 +181,39 @@ namespace FC2026
         {
             ResolveManagers();
             if (saveManager == null || !saveManager.HasCareer || database == null) return false;
-            var club = database.FindClub(saveManager.Career.clubId);
-            if (club != null && squad != null && (squad.CurrentTeam == null || squad.CurrentTeam.id != club.id))
+            restoringState = true;
+            try
             {
-                var team = new TeamData
+                var club = database.FindClub(saveManager.Career.clubId);
+                if (club != null && squad != null && (squad.CurrentTeam == null || squad.CurrentTeam.id != club.id))
                 {
-                    id = club.id, displayName = club.displayName, formation = "4-3-3",
-                    players = database.PlayersForClub(club.id).Select(ToPlayerData).ToList()
-                };
-                if (ColorUtility.TryParseHtmlString(club.primaryColorHex, out var primary)) team.primaryColor = primary;
-                squad.Initialize(team);
+                    var team = new TeamData
+                    {
+                        id = club.id, displayName = club.displayName, formation = "4-3-3",
+                        players = database.PlayersForClub(club.id).Select(ToPlayerData).ToList()
+                    };
+                    if (ColorUtility.TryParseHtmlString(club.primaryColorHex, out var primary)) team.primaryColor = primary;
+                    squad.Initialize(team);
+                }
+                if (calendar != null && SaveManager.Career.runtime != null &&
+                    (SaveManager.Career.runtime.fixtures == null || SaveManager.Career.runtime.fixtures.Count == 0))
+                {
+                    var clubIds = SaveManager.Career.runtime.activeLeagueClubIds;
+                    if (clubIds == null || clubIds.Count < 2)
+                        clubIds = database.ClubsForLeague(saveManager.Career.leagueId).Select(item => item.id).ToList();
+                    calendar.GenerateSeasonFromClubIds(saveManager.Career.leagueId, saveManager.Career.season, clubIds);
+                }
+                saveManager.RestoreRuntimeSnapshot(calendar, progression, scouting, squad);
             }
-            if (calendar != null && SaveManager.Career.runtime != null &&
-                (SaveManager.Career.runtime.fixtures == null || SaveManager.Career.runtime.fixtures.Count == 0))
+            finally
             {
-                var clubIds = SaveManager.Career.runtime.activeLeagueClubIds;
-                if (clubIds == null || clubIds.Count < 2)
-                    clubIds = database.ClubsForLeague(saveManager.Career.leagueId).Select(item => item.id).ToList();
-                calendar.GenerateSeasonFromClubIds(saveManager.Career.leagueId, saveManager.Career.season, clubIds);
+                restoringState = false;
             }
-            saveManager.RestoreRuntimeSnapshot(calendar, progression, scouting, squad);
+
+            createdCupRounds.Clear();
             if (calendar != null && !calendar.Fixtures.Any(item => !item.isLeagueFixture))
                 ScheduleCupOpeningRounds();
+            TryAdvanceCupRounds();
             legacyCareer?.SetTransferBudget(saveManager.Career.transferBudget);
             UpdateWindowState();
             return true;
@@ -327,7 +345,7 @@ namespace FC2026
 
         private void OnCalendarChanged()
         {
-            if (!HasActiveCareer) return;
+            if (restoringState || !HasActiveCareer) return;
             TryAdvanceCupRounds();
             UpdateWindowState();
             SaveNow();
@@ -352,7 +370,15 @@ namespace FC2026
             SaveNow();
         }
 
-        private void OnCareerChanged() { if (HasActiveCareer) UpdateWindowState(); }
+        private void OnCareerChanged()
+        {
+            if (HasActiveCareer) legacyCareer?.SetTransferBudget(saveManager.Career.transferBudget);
+        }
+
+        private void OnRuntimeSystemsChanged()
+        {
+            if (!restoringState) SaveNow();
+        }
         private void OnNegotiationChanged(NegotiationState state, string message)
         {
             if (state != NegotiationState.Completed || !HasActiveCareer || negotiations?.ActiveListing?.player == null) return;
