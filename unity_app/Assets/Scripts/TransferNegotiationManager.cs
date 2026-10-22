@@ -17,6 +17,7 @@ namespace FC2026
     {
         [SerializeField] private CareerManager career;
         [SerializeField] private SquadManager squad;
+        [SerializeField] private CareerModeCoordinator careerCoordinator;
         [SerializeField] private TransferListing activeListing;
         [SerializeField] private TransferOffer activeOffer;
         [SerializeField] private NegotiationState state;
@@ -28,10 +29,11 @@ namespace FC2026
         public int NegotiationRound => negotiationRound;
         public event Action<NegotiationState, string> NegotiationChanged;
 
-        public void Configure(CareerManager careerManager, SquadManager squadManager)
+        public void Configure(CareerManager careerManager, SquadManager squadManager, CareerModeCoordinator coordinator = null)
         {
             career = careerManager;
             squad = squadManager;
+            careerCoordinator = coordinator;
         }
 
         public bool OpenNegotiation(TransferListing listing)
@@ -72,8 +74,19 @@ namespace FC2026
 
         public bool CompleteAcceptedTransfer()
         {
-            if (state != NegotiationState.Accepted || activeListing == null || career == null || !career.SpendTransferBudget(activeOffer.transferFee)) return false;
-            if (squad?.CurrentTeam != null && !squad.CurrentTeam.players.Contains(activeListing.player)) squad.CurrentTeam.players.Add(activeListing.player);
+            if (state != NegotiationState.Accepted || activeListing?.player == null || activeOffer == null) return false;
+            if (careerCoordinator != null && careerCoordinator.HasActiveCareer)
+            {
+                bool signed = careerCoordinator.SignPlayer(activeListing.player.id, activeOffer.transferFee,
+                    activeOffer.weeklyWage, activeOffer.contractYears);
+                if (!signed) { Notify("Deal could not be registered. Check the transfer window, wage budget, and existing squad."); return false; }
+            }
+            else
+            {
+                if (career == null || !career.SpendTransferBudget(activeOffer.transferFee)) return false;
+                if (squad?.CurrentTeam != null && !squad.CurrentTeam.players.Any(player => player != null && player.id == activeListing.player.id))
+                    squad.CurrentTeam.players.Add(activeListing.player);
+            }
             state = NegotiationState.Completed;
             Notify($"Deal completed. {activeListing.player.displayName} has joined the squad.");
             return true;
