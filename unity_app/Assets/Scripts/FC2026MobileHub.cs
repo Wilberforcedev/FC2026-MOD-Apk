@@ -18,6 +18,8 @@ namespace FC2026
 
         [SerializeField] private FC2026UITheme theme;
         private Canvas canvas;
+        private Camera backdropCamera;
+        private GameObject backdropRoot;
         private RectTransform content;
         private ScrollRect scroll;
         private TMP_Text titleLabel;
@@ -59,6 +61,8 @@ namespace FC2026
         private void Start()
         {
             theme = Resources.Load<FC2026UITheme>("FC2026UITheme");
+            if (theme == null) theme = ScriptableObject.CreateInstance<FC2026UITheme>();
+            CreateStadiumBackdrop();
             BuildShell();
             Open(Page.Home);
             if (Match != null)
@@ -107,6 +111,7 @@ namespace FC2026
             }
 
             var shell = Panel(canvas.transform, "StadiumShell", C(t => t.background), Vector2.zero, Vector2.one);
+            shell.GetComponent<Image>().color = new Color(C(t => t.background).r, C(t => t.background).g, C(t => t.background).b, .68f);
             var top = Panel(shell.transform, "TopBar", C(t => t.overlay), new Vector2(0, 1), new Vector2(1, 1));
             SetRect(top, new Vector2(0, -154), Vector2.zero, new Vector2(0, 0));
             var brand = Label(top.transform, "FC 2026", 27, C(t => t.heading), TextAlignmentOptions.MidlineLeft);
@@ -160,6 +165,7 @@ namespace FC2026
         private void Open(Page next)
         {
             page = next;
+            if (backdropCamera != null) backdropCamera.enabled = page != Page.Match;
             foreach (Transform child in content) Destroy(child.gameObject);
             scroll.verticalNormalizedPosition = 1;
             titleLabel = null;
@@ -174,6 +180,62 @@ namespace FC2026
                 case Page.Match: BuildMatch(); break;
             }
             UpdateWallet();
+        }
+
+        private void CreateStadiumBackdrop()
+        {
+            // Small, procedural low-poly stadium dressing keeps the hub cinematic without shipping heavy textures.
+            backdropRoot = new GameObject("FC 2026 Stadium Backdrop");
+            var cameraObject = new GameObject("Stadium Backdrop Camera");
+            cameraObject.transform.SetParent(backdropRoot.transform, false);
+            cameraObject.transform.position = new Vector3(0, 13, -30);
+            cameraObject.transform.rotation = Quaternion.LookRotation(new Vector3(0, 1, 18) - cameraObject.transform.position);
+            backdropCamera = cameraObject.AddComponent<Camera>();
+            backdropCamera.clearFlags = CameraClearFlags.SolidColor;
+            backdropCamera.backgroundColor = new Color(.008f, .018f, .04f, 1);
+            backdropCamera.fieldOfView = 52;
+            backdropCamera.depth = -2;
+            backdropCamera.allowHDR = false;
+            backdropCamera.allowMSAA = false;
+
+            var pitch = BackdropPiece("Pitch", PrimitiveType.Cube, new Vector3(0, -.25f, 18), new Vector3(54, .35f, 100), new Color(.025f, .19f, .105f));
+            var centerLine = BackdropPiece("Center Stripe", PrimitiveType.Cube, new Vector3(0, -.055f, 18), new Vector3(.12f, .015f, 99), new Color(.3f, .42f, .34f));
+            BackdropPiece("West Stand Lower", PrimitiveType.Cube, new Vector3(-31, 2, 18), new Vector3(9, 5, 94), new Color(.025f, .035f, .065f));
+            BackdropPiece("East Stand Lower", PrimitiveType.Cube, new Vector3(31, 2, 18), new Vector3(9, 5, 94), new Color(.025f, .035f, .065f));
+            BackdropPiece("West Stand Upper", PrimitiveType.Cube, new Vector3(-28, 6, 18), new Vector3(5, 3, 82), new Color(.045f, .06f, .095f));
+            BackdropPiece("East Stand Upper", PrimitiveType.Cube, new Vector3(28, 6, 18), new Vector3(5, 3, 82), new Color(.045f, .06f, .095f));
+            BackdropPiece("North Stand", PrimitiveType.Cube, new Vector3(0, 3, 68), new Vector3(58, 7, 7), new Color(.03f, .045f, .075f));
+            BackdropPiece("South Stand", PrimitiveType.Cube, new Vector3(0, 3, -31), new Vector3(58, 7, 7), new Color(.03f, .045f, .075f));
+            BackdropPiece("West Floodlight Tower", PrimitiveType.Cube, new Vector3(-32, 10, -3), new Vector3(1.2f, 18, 1.2f), new Color(.12f, .15f, .21f));
+            BackdropPiece("East Floodlight Tower", PrimitiveType.Cube, new Vector3(32, 10, -3), new Vector3(1.2f, 18, 1.2f), new Color(.12f, .15f, .21f));
+            var light = new GameObject("Stadium Key Light").AddComponent<Light>();
+            light.transform.SetParent(backdropRoot.transform, false);
+            light.type = LightType.Directional;
+            light.intensity = .65f;
+            light.color = new Color(.58f, .72f, 1f);
+            light.transform.rotation = Quaternion.Euler(48, -24, 0);
+            RenderSettings.ambientLight = new Color(.16f, .19f, .25f);
+        }
+
+        private GameObject BackdropPiece(string pieceName, PrimitiveType type, Vector3 position, Vector3 scale, Color color)
+        {
+            var piece = GameObject.CreatePrimitive(type);
+            piece.name = pieceName;
+            piece.transform.SetParent(backdropRoot.transform, true);
+            piece.transform.position = position;
+            piece.transform.localScale = scale;
+            var collider = piece.GetComponent<Collider>();
+            if (collider != null) Destroy(collider);
+            var renderer = piece.GetComponent<Renderer>();
+            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            if (shader != null)
+            {
+                var material = new Material(shader);
+                material.color = color;
+                renderer.sharedMaterial = material;
+            }
+            return piece;
         }
 
         private void BuildHome()
