@@ -23,11 +23,18 @@ namespace FC2026
         private bool bindingsReady;
         private bool restoringState;
         private bool processingCupRounds;
+        private bool simulatingOtherMatches;
+        private MatchManager liveMatch;
+        private bool liveMatchSubscribed;
+        private SeasonFixture activePlayableFixture;
+        private bool activeLiveFixtureProcessed;
         private readonly HashSet<string> createdCupRounds = new HashSet<string>();
 
         public CareerModeManager SaveManager => saveManager;
         public SeasonCalendarManager Calendar => calendar;
         public FootballWorldDatabase Database => database;
+        public SquadManager Squad => squad;
+        public SeasonCalendarManager SeasonCalendar => calendar;
         public bool HasActiveCareer => saveManager != null && saveManager.HasCareer;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -66,11 +73,15 @@ namespace FC2026
         private void OnEnable()
         {
             BindEvents();
+            EnsureLiveMatchSubscription();
         }
 
         private void OnDisable()
         {
             UnbindEvents();
+            if (liveMatch != null && liveMatchSubscribed) liveMatch.StateChanged -= OnLiveMatchStateChanged;
+            liveMatchSubscribed = false;
+            liveMatch = null;
         }
 
         private void OnApplicationPause(bool paused)
@@ -84,6 +95,7 @@ namespace FC2026
         {
             // The database loader may finish after this persistent bootstrap; keep resolving until it is ready.
             if (!bindingsReady || database == null) { ResolveManagers(); BindEvents(); }
+            EnsureLiveMatchSubscription();
         }
 
         private void ResolveManagers()
@@ -108,6 +120,21 @@ namespace FC2026
             if (matchEngine != null && calendar != null && database != null) matchEngine.Configure(database, calendar);
             if (scouting != null) scouting.Configure(database, legacyCareer);
             if (negotiations != null) negotiations.Configure(legacyCareer, squad, this);
+            EnsureLiveMatchSubscription();
+        }
+
+        private void EnsureLiveMatchSubscription()
+        {
+            var candidate = GameBootstrap.Instance != null ? GameBootstrap.Instance.Match : FindFirstObjectByType<MatchManager>();
+            if (candidate == liveMatch) return;
+            if (liveMatch != null && liveMatchSubscribed) liveMatch.StateChanged -= OnLiveMatchStateChanged;
+            liveMatch = candidate;
+            liveMatchSubscribed = false;
+            if (isActiveAndEnabled && liveMatch != null)
+            {
+                liveMatch.StateChanged += OnLiveMatchStateChanged;
+                liveMatchSubscribed = true;
+            }
         }
 
         private void BindEvents()
@@ -236,10 +263,48 @@ namespace FC2026
         public bool StartNextCareerFixture()
         {
             ResolveManagers();
-            if (!HasActiveCareer || matchEngine == null || calendar == null) return false;
-            if (FindFirstObjectByType<CareerMatchLiveScreen>() == null)
-                gameObject.AddComponent<CareerMatchLiveScreen>();
-            return matchEngine.StartNextMatch();
+            var game = GameBootstrap.Instance;
+            if (!HasActiveCareer || database == null || calendar == null || game == null) return false;
+            var fixture = calendar.NextFixtureForClub(saveManager.Career.clubId);
+            if (fixture == null) return false;
+            var homeClub = database.FindClub(fixture.homeClubId);
+            var awayClub = database.FindClub(fixture.awayClubId);
+            if (homeClub == null || awayClub == null) return false;
+
+            var homeTeam = BuildTeamData(homeClub);
+            var awayTeam = BuildTeamData(awayClub);
+            game.ConfigureCareerMatch(homeTeam, awayTeam, saveManager.Career.clubId);
+            activePlayableFixture = fixture;
+            activeLiveFixtureProcessed = false;
+
+            // Rebuild the arena for the selected fixture so kits, sides, names, and squads are current.
+            var previousArena = FindFirstObjectByType<MatchArenaBootstrap>();
+            if (previousArena != null) Destroy(previousArena.gameObject);
+            new GameObject("AERO Career Match Arena").AddComponent<MatchArenaBootstrap>();
+            game.Modes?.OpenKickoff();
+            game.Match.StartMatch(new MatchConfig
+            {
+                homeTeam = homeTeam,
+                awayTeam = awayTeam,
+                mode = GameMode.Career,
+                halfLengthMinutes = 3f
+            });
+            FindFirstObjectByType<FC2026MobileHub>()?.OpenCareerMatch();
+            return true;
+        }
+
+        private TeamData BuildTeamData(WorldClubDefinition club)
+        {
+            var team = new TeamData
+            {
+                id = club.id,
+                displayName = club.displayName,
+                formation = "4-3-3",
+                players = database.PlayersForClub(club.id).Select(ToPlayerData).ToList()
+            };
+            if (ColorUtility.TryParseHtmlString(club.primaryColorHex, out var primary)) team.primaryColor = primary;
+            if (ColorUtility.TryParseHtmlString(club.secondaryColorHex, out var secondary)) team.secondaryColor = secondary;
+            return team;
         }
 
         public bool SignPlayer(string playerId, int fee, int weeklyWage, int contractYears = 3)
@@ -351,22 +416,79 @@ namespace FC2026
             SaveNow();
         }
 
+        private void OnLiveMatchStateChanged(MatchState state)
+        {
+            if (state != MatchState.FullTime || activePlayableFixture == null || activeLiveFixtureProcessed || liveMatch == null) return;
+            activeLiveFixtureProcessed = true;
+            var fixture = activePlayableFixture;
+            activePlayableFixture = null;
+
+            int homeGoals = liveMatch.HomeScore;
+            int awayGoals = liveMatch.AwayScore;
+            if (calendar == null || !calendar.RecordResult(fixture.fixtureId, homeGoals, awayGoals))
+            {
+                Debug.LogWarning("[AERO Career] The live result could not be recorded against its fixture: " + fixture.fixtureId, this);
+                SaveNow();
+                return;
+            }
+
+            string managedId = saveManager.Career.clubId;
+            bool managedClubWasHome = fixture.homeClubId == managedId;
+            int goalsFor = managedClubWasHome ? homeGoals : awayGoals;
+            int goalsAgainst = managedClubWasHome ? awayGoals : homeGoals;
+            if (fixture.isLeagueFixture)
+                saveManager.RecordMatch(fixture.fixtureId, fixture.competitionId,
+                    managedClubWasHome ? fixture.awayClubId : fixture.homeClubId,
+                    managedClubWasHome, goalsFor, goalsAgainst, fixture.matchweek);
+
+            var starterIds = new HashSet<string>((squad?.StartingEleven ?? Array.Empty<PlayerData>())
+                .Where(player => player != null && !string.IsNullOrWhiteSpace(player.id)).Select(player => player.id));
+            bool won = goalsFor > goalsAgainst;
+            foreach (var player in squad?.CurrentTeam?.players ?? new List<PlayerData>())
+                if (starterIds.Contains(player.id)) progression?.ApplyMatchResult(player, true, won);
+
+            UpdateWindowState();
+            SaveNow();
+            SimulateRemainingFixtures(fixture.matchweek, fixture.fixtureId);
+        }
+
         private void OnMatchCompleted(SeasonFixture fixture)
         {
             if (fixture == null || !HasActiveCareer || !fixture.isLeagueFixture) { SaveNow(); return; }
             string managedId = saveManager.Career.clubId;
             bool home = fixture.homeClubId == managedId;
             if (!home && fixture.awayClubId != managedId) { SaveNow(); return; }
+            // The legacy match simulator is retained for background/AI fixtures only.
             int forGoals = home ? fixture.homeGoals : fixture.awayGoals;
             int againstGoals = home ? fixture.awayGoals : fixture.homeGoals;
+            if (!simulatingOtherMatches && saveManager.Career.matchHistory.Any(item => item.fixtureId == fixture.fixtureId))
+            {
+                SaveNow();
+                return;
+            }
             saveManager.RecordMatch(fixture.fixtureId, fixture.competitionId, home ? fixture.awayClubId : fixture.homeClubId,
                 home, forGoals, againstGoals, fixture.matchweek);
-            foreach (var player in squad?.CurrentTeam?.players ?? new List<PlayerData>())
-            {
-                bool won = forGoals > againstGoals;
-                progression?.ApplyMatchResult(player, true, won);
-            }
             UpdateWindowState();
+            SaveNow();
+        }
+
+        private void SimulateRemainingFixtures(int matchweek, string completedFixtureId)
+        {
+            if (simulatingOtherMatches || matchEngine == null || calendar == null) return;
+            simulatingOtherMatches = true;
+            try
+            {
+                var remaining = calendar.FixturesForMatchweek(matchweek)
+                    .Where(item => !item.isPlayed && item.fixtureId != completedFixtureId)
+                    .OrderBy(item => item.isLeagueFixture ? 0 : 1).ThenBy(item => item.fixtureId).ToList();
+                foreach (var fixture in remaining)
+                {
+                    if (fixture.homeClubId == saveManager.Career.clubId || fixture.awayClubId == saveManager.Career.clubId)
+                        continue; // The manager must play each of their own fixtures.
+                    if (matchEngine.StartFixture(fixture)) matchEngine.SkipToFullTime();
+                }
+            }
+            finally { simulatingOtherMatches = false; }
             SaveNow();
         }
 
