@@ -220,19 +220,16 @@ namespace FC2026
                 string temporaryPath = SavePath + ".tmp";
                 string backupPath = SavePath + ".bak";
                 File.WriteAllText(temporaryPath, JsonUtility.ToJson(career, true));
-                if (File.Exists(SavePath))
-                {
-                    if (File.Exists(backupPath)) File.Delete(backupPath);
-                    File.Move(SavePath, backupPath);
-                }
+                // Keep the last known-good save as a rolling backup so it can recover from interrupted writes.
+                if (File.Exists(SavePath)) File.Copy(SavePath, backupPath, true);
                 try
                 {
+                    if (File.Exists(SavePath)) File.Delete(SavePath);
                     File.Move(temporaryPath, SavePath);
-                    if (File.Exists(backupPath)) File.Delete(backupPath);
                 }
                 catch
                 {
-                    if (!File.Exists(SavePath) && File.Exists(backupPath)) File.Move(backupPath, SavePath);
+                    if (!File.Exists(SavePath) && File.Exists(backupPath)) File.Copy(backupPath, SavePath, true);
                     throw;
                 }
                 return true;
