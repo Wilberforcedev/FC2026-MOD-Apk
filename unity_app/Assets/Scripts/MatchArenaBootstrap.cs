@@ -48,15 +48,16 @@ namespace FC2026
             var inputObject = new GameObject("Mobile Input");
             inputObject.transform.SetParent(transform, true);
             var input = inputObject.AddComponent<MobileInputController>();
+            inputObject.AddComponent<AEROMatchTouchHud>();
             spawned.Add(input.gameObject);
             CreateCamera(ball);
             bool userIsHome = game.UserTeamIsHome;
-            CreateTeamFormation(ball, game.UserTeam, userIsHome, true, userIsHome ? homeMaterial : awayMaterial);
-            CreateTeamFormation(ball, game.OpponentTeam, !userIsHome, false, userIsHome ? awayMaterial : homeMaterial);
+            CreateTeamFormation(ball, game.UserTeam, userIsHome, true, input, userIsHome ? homeMaterial : awayMaterial);
+            CreateTeamFormation(ball, game.OpponentTeam, !userIsHome, false, input, userIsHome ? awayMaterial : homeMaterial);
             if (GetComponent<AEROPitchPresentation>() == null) gameObject.AddComponent<AEROPitchPresentation>();
         }
 
-        private void CreateTeamFormation(BallController ball, TeamData team, bool home, bool userTeam, Material kit)
+        private void CreateTeamFormation(BallController ball, TeamData team, bool home, bool userTeam, MobileInputController input, Material kit)
         {
             var slots = new[]
             {
@@ -86,6 +87,7 @@ namespace FC2026
                 }
                 playerObject.name = $"{team.players[i].displayName} ({team.players[i].position})";
                 playerObject.transform.position = slots[i];
+                playerObject.transform.rotation = home ? Quaternion.identity : Quaternion.LookRotation(Vector3.back);
                 playerObject.transform.SetParent(transform, true);
                 var characterMotor = playerObject.AddComponent<CharacterController>();
                 characterMotor.center = Vector3.zero;
@@ -93,7 +95,7 @@ namespace FC2026
                 characterMotor.radius = 0.38f;
                 var controller = playerObject.AddComponent<FootballerController>();
                 bool isControlledPlayer = userTeam && i == 9;
-                controller.Initialize(team.players[i], isControlledPlayer ? FindFirstObjectByType<MobileInputController>() : null);
+                controller.Initialize(team.players[i], userTeam ? input : null, team, home);
                 controller.IsUserControlled = isControlledPlayer;
                 if (!isControlledPlayer)
                 {
