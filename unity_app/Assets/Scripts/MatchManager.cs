@@ -14,6 +14,9 @@ namespace FC2026
         public event Action MatchPaused;
         public event Action<int, int> ScoreChanged;
         public event Action<MatchState> StateChanged;
+        [SerializeField, Min(0f)] private float halfTimeBreakSeconds = 1.5f;
+        private float halfTimeElapsed;
+        private bool halfTimeAnnounced;
 
         public void StartMatch(MatchConfig config)
         {
@@ -21,6 +24,8 @@ namespace FC2026
             MatchSeconds = 0f;
             HomeScore = 0;
             AwayScore = 0;
+            halfTimeElapsed = 0f;
+            halfTimeAnnounced = false;
             SetState(MatchState.Playing);
             MatchStarted?.Invoke();
         }
@@ -40,10 +45,23 @@ namespace FC2026
 
         private void Update()
         {
-            if (State != MatchState.Playing || Config == null) return;
+            if (Config == null || State == MatchState.Menu || State == MatchState.Paused || State == MatchState.FullTime) return;
+            if (State == MatchState.HalfTime)
+            {
+                halfTimeElapsed += Time.deltaTime;
+                if (halfTimeElapsed >= halfTimeBreakSeconds) SetState(MatchState.Playing);
+                return;
+            }
+            if (State != MatchState.Playing) return;
             MatchSeconds += Time.deltaTime;
-            var halfSeconds = Config.halfLengthMinutes * 60f;
-            if (MatchSeconds >= halfSeconds && MatchSeconds < halfSeconds + 1f) SetState(MatchState.HalfTime);
+            float halfSeconds = Mathf.Max(1f, Config.halfLengthMinutes * 60f);
+            if (!halfTimeAnnounced && MatchSeconds >= halfSeconds)
+            {
+                halfTimeAnnounced = true;
+                halfTimeElapsed = 0f;
+                SetState(MatchState.HalfTime);
+                return;
+            }
             if (MatchSeconds >= halfSeconds * 2f) SetState(MatchState.FullTime);
         }
 
