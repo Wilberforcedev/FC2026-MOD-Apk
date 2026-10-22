@@ -41,6 +41,7 @@ namespace FC2026
         private MatchManager Match => Game != null ? Game.Match : FindFirstObjectByType<MatchManager>();
         private GameModeController Modes => Game != null ? Game.Modes : FindFirstObjectByType<GameModeController>();
         private CareerManager Career => FindFirstObjectByType<CareerManager>();
+        private CareerModeManager CareerSave => FindFirstObjectByType<CareerModeManager>();
         private SeasonCalendarManager Calendar => FindFirstObjectByType<SeasonCalendarManager>();
         private FootballWorldDatabase Database => FindFirstObjectByType<FootballWorldCatalogLoader>()?.Database;
 
@@ -332,16 +333,42 @@ namespace FC2026
             var career = Career;
             var calendar = Calendar;
             var team = Squad?.CurrentTeam;
-            StatRow("SEASON", calendar != null ? calendar.Season.ToString("00") : "01", "MATCHWEEK", calendar != null ? calendar.NextFixture?.matchweek.ToString("00") ?? "END" : "01");
-            StatRow("TRANSFER BUDGET", FormatMoney(career?.TransferBudget ?? 15000000), "SQUAD SIZE", (team?.players?.Count ?? 0).ToString("00"));
+            var careerSave = CareerSave;
+            var nextCareerFixture = careerSave != null && careerSave.HasCareer
+                ? calendar?.NextFixtureForClub(careerSave.Career.clubId) : calendar?.NextFixture;
+            StatRow("SEASON", careerSave != null && careerSave.HasCareer ? careerSave.Career.season.ToString("00") : calendar != null ? calendar.Season.ToString("00") : "01",
+                "NEXT MATCHWEEK", nextCareerFixture?.matchweek.ToString("00") ?? "END");
+            StatRow("TRANSFER BUDGET", FormatMoney(careerSave != null && careerSave.HasCareer ? careerSave.Career.transferBudget : career?.TransferBudget ?? 15000000),
+                "SQUAD SIZE", (team?.players?.Count ?? 0).ToString("00"));
+            if (careerSave != null && careerSave.HasCareer)
+                StatRow("BOARD CONFIDENCE", careerSave.Career.boardConfidence + "%", "TRANSFER WINDOW", careerSave.TransferWindowOpen ? "OPEN" : "CLOSED");
             SectionTitle("NEXT FIXTURE", "YOUR ROAD TO THE TOP");
-            var fixture = calendar?.NextFixture;
+            var fixture = nextCareerFixture;
             var fixtureText = fixture != null && Database != null
                 ? (Database.FindClub(fixture.homeClubId)?.shortName ?? fixture.homeClubId) + "  VS  " + (Database.FindClub(fixture.awayClubId)?.shortName ?? fixture.awayClubId)
                 : "FC CITY  VS  NORTH LONDON";
             ActionCard(fixtureText, fixture != null ? "MATCHWEEK " + fixture.matchweek + "  /  " + fixture.competitionId : "FRIENDLY  /  OPENING MATCH", C(t => t.panel), () => StartMatch());
+            SectionTitle("LIVE LEAGUE TABLE", "UPDATED AFTER EVERY CAREER RESULT");
+            if (calendar != null && Database != null)
+            {
+                var standings = calendar.Standings.ToList();
+                for (int i = 0; i < Mathf.Min(10, standings.Count); i++)
+                {
+                    var row = standings[i];
+                    var club = Database.FindClub(row.clubId);
+                    if (club == null) continue;
+                    ActionCard($"{i + 1:00}  {club.shortName}", $"P {row.played}   W {row.wins}   D {row.draws}   L {row.losses}   GD {row.GoalDifference:+#;-#;0}   PTS {row.points}",
+                        careerSave != null && careerSave.HasCareer && row.clubId == careerSave.Career.clubId ? C(t => t.focus) : C(t => t.panel),
+                        () => SetStatus($"{club.displayName.ToUpperInvariant()}  /  {row.points} POINTS"));
+                }
+                if (careerSave != null && careerSave.HasCareer)
+                {
+                    int rank = standings.FindIndex(item => item.clubId == careerSave.Career.clubId) + 1;
+                    if (rank > 10) SectionTitle($"YOUR CLUB  /  POSITION {rank}", "KEEP EARNING POINTS TO MOVE UP THE TABLE");
+                }
+            }
             SectionTitle("SEASON OBJECTIVES", "KEEP YOUR MOMENTUM");
-            Tile("FINISH IN THE TOP TWO", "Consistency wins championships", "View table", () => SetStatus("LEAGUE TABLE: COMPLETE FIXTURES TO UPDATE STANDINGS"));
+            Tile("FINISH IN THE TOP TWO", "Consistency wins championships", "View table", () => SetStatus("THE TABLE ABOVE UPDATES AFTER YOUR MATCH AND SIMULATED LEAGUE RESULTS"));
             Tile("DEVELOP YOUR PLAYERS", "Training, form and potential", "Player growth", () => SetStatus("PLAYER PROGRESSION SYSTEM READY"));
             Tile("BUILD THE SQUAD", "Scout and negotiate transfers", "Transfer market", () => Open(Page.Store));
             ActionCard("CAREER CONTROL CENTER", "SAVE / LOAD  •  CONTRACTS  •  BOARD OBJECTIVES  •  SEASON ROLLOVER", C(t => t.panel), () =>
