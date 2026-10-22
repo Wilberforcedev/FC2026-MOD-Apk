@@ -92,3 +92,20 @@ EditMode tests live under `Assets/Tests/Editor/FootballWorldCatalogTests.cs`. Th
 `TransferNegotiationManager` supports opening a player negotiation, submitting fee/wage/term offers, receiving counter-offers, accepting or rejecting deals, and completing the transfer through the career budget and squad. `ScoutingNetworkManager` supports regional scout assignments, multi-week reports, confidence, estimated overall/potential, fee estimates, recommendations, network upgrades, and report completion events.
 
 `TransferSocialFeedScreen` is the mobile-first presentation for this system. It replaces the desktop-style transfer grid with a vertical dark social/news feed inspired by the supplied reference: Dynamic News Feed, Club Inbox, and Social Buzz tabs; cyan navigation; magenta transfer/scouting labels; unread badges; verified handles; engagement rows; stacked post cards; and direct **SCOUT PLAYER** / **OPEN NEGOTIATION** actions. The screen intentionally uses fictional in-game network accounts and original content.
+
+
+## AERO Soccer 2027 global football database
+
+The Assets/Data/FootballWorld catalogs now define 25 real-world league identities, 300 real-world club identities, 7,500 generated fictional player profiles (25 per club), and 26 competition entries. Club/player names and ratings are generated for gameplay and are not represented as authentic real-world rosters. The database is mixed: league and club identities are real; player identities and attributes are fictional. Club stadium names and budgets are generic game data, not official claims.
+
+Catalog files:
+- leagues.json — league names, countries, tiers and expected club counts.
+- clubs.json — club identities, league links, colors and game budgets.
+- players.json — fictional player profiles, attributes, positions, ages and market values.
+- competitions.json — league competitions and a cross-league tournament.
+
+### Validate catalog references
+
+Run python unity_app/Tools/validate_football_world.py from the repository root. The validator checks unique IDs, player-to-club links, club-to-league links, competition eligibility references, player rating ranges and each league's declared club count.
+
+The JSON catalogs are intended to be assigned as TextAsset references on FootballWorldCatalogLoader in the Unity scene. After importing or changing catalogs, verify the Inspector references and check the loader's LastLoadSucceeded / validation log. This repository update has been source/data-validated; it has not been compiled or play-tested in Unity, and no Android build validation is claimed.
