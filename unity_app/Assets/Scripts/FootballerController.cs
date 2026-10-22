@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 namespace FC2026
@@ -19,14 +20,32 @@ namespace FC2026
         private string sprintParameter;
         private string passTrigger;
         private string shootTrigger;
+        private string tackleTrigger;
+        private TeamData team;
+        private bool attacksPositiveZ = true;
+        private bool isUserControlled;
+        private bool inputEventsBound;
 
         public PlayerData Player { get; private set; }
-        public bool IsUserControlled { get; set; }
+        public TeamData Team => team;
+        public bool IsUserControlled
+        {
+            get => isUserControlled;
+            set
+            {
+                if (isUserControlled == value) return;
+                isUserControlled = value;
+                SynchronizeInputBindings();
+            }
+        }
 
-        public void Initialize(PlayerData player, MobileInputController mobileInput = null)
+        public void Initialize(PlayerData player, MobileInputController mobileInput = null, TeamData teamData = null, bool isHomeSide = true)
         {
             Player = player;
             input = mobileInput;
+            team = teamData;
+            attacksPositiveZ = isHomeSide;
+            SynchronizeInputBindings();
         }
 
         private void Awake()
@@ -40,7 +59,83 @@ namespace FC2026
                 else if (parameter.name == "IsSprinting" || parameter.name == "Sprint") sprintParameter = parameter.name;
                 else if (parameter.name == "Pass" || parameter.name == "PassTrigger") passTrigger = parameter.name;
                 else if (parameter.name == "Shoot" || parameter.name == "ShootTrigger") shootTrigger = parameter.name;
+                else if (parameter.name == "Tackle" || parameter.name == "TackleTrigger") tackleTrigger = parameter.name;
             }
+        }
+
+        private void OnDestroy() => UnbindInputEvents();
+
+        private void SynchronizeInputBindings()
+        {
+            if (isUserControlled && input != null && !inputEventsBound)
+            {
+                input.PassPressed += HandlePassPressed;
+                input.ShootPressed += HandleShootPressed;
+                input.TacklePressed += HandleTacklePressed;
+                input.SwitchPlayerPressed += HandleSwitchPlayerPressed;
+                inputEventsBound = true;
+            }
+            else if ((!isUserControlled || input == null) && inputEventsBound) UnbindInputEvents();
+        }
+
+        private void UnbindInputEvents()
+        {
+            if (input != null && inputEventsBound)
+            {
+                input.PassPressed -= HandlePassPressed;
+                input.ShootPressed -= HandleShootPressed;
+                input.TacklePressed -= HandleTacklePressed;
+                input.SwitchPlayerPressed -= HandleSwitchPlayerPressed;
+            }
+            inputEventsBound = false;
+        }
+
+        private void HandlePassPressed()
+        {
+            var ball = FindFirstObjectByType<BallController>();
+            if (ball == null || !CanControlBall(ball)) return;
+            var players = FindObjectsByType<FootballerController>(FindObjectsSortMode.None)
+                .Where(candidate => candidate != this && team != null && candidate.team == team).ToList();
+            var forwardPass = players.Where(candidate => Vector3.Dot(transform.forward,
+                    (candidate.transform.position - transform.position).normalized) > 0.1f)
+                .OrderBy(candidate => Vector3.Distance(transform.position, candidate.transform.position)).FirstOrDefault();
+            var target = forwardPass ?? players.OrderBy(candidate => Vector3.Distance(transform.position, candidate.transform.position)).FirstOrDefault();
+            if (target != null) Pass(ball, target.transform.position);
+        }
+
+        private void HandleShootPressed()
+        {
+            var ball = FindFirstObjectByType<BallController>();
+            if (ball == null || !CanControlBall(ball)) return;
+            var goalZ = attacksPositiveZ ? 51.5f : -51.5f;
+            var target = new Vector3(Random.Range(-1.8f, 1.8f), 1.2f, goalZ);
+            Shoot(ball, target);
+        }
+
+        private void HandleTacklePressed()
+        {
+            var ball = FindFirstObjectByType<BallController>();
+            if (ball == null) return;
+            var nearestOpponent = FindObjectsByType<FootballerController>(FindObjectsSortMode.None)
+                .Where(candidate => candidate != this && candidate.team != team)
+                .OrderBy(candidate => Vector3.Distance(transform.position, candidate.transform.position)).FirstOrDefault();
+            if (nearestOpponent == null || Vector3.Distance(transform.position, nearestOpponent.transform.position) > 2.1f) return;
+            if (animator != null && !string.IsNullOrEmpty(tackleTrigger)) animator.SetTrigger(tackleTrigger);
+            if (Vector3.Distance(ball.transform.position, nearestOpponent.transform.position) < 2.2f)
+                ball.Kick((ball.transform.position - transform.position).normalized, 5.5f, 0.03f, 0.1f);
+        }
+
+        private void HandleSwitchPlayerPressed()
+        {
+            if (team == null) return;
+            var ball = FindFirstObjectByType<BallController>();
+            var next = FindObjectsByType<FootballerController>(FindObjectsSortMode.None)
+                .Where(candidate => candidate != this && candidate.team == team)
+                .OrderBy(candidate => ball == null ? Vector3.Distance(transform.position, candidate.transform.position) :
+                    Vector3.Distance(ball.transform.position, candidate.transform.position)).FirstOrDefault();
+            if (next == null) return;
+            IsUserControlled = false;
+            next.IsUserControlled = true;
         }
 
         private void Update()
