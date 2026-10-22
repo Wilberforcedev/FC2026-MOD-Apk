@@ -8,6 +8,7 @@ namespace FC2026
         [SerializeField] private Material pitchMaterial;
         [SerializeField] private Material homeMaterial;
         [SerializeField] private Material awayMaterial;
+        [SerializeField] private GameObject footballerVisualPrefab;
         [SerializeField] private bool buildOnStart = true;
         private readonly List<GameObject> spawned = new();
 
@@ -20,6 +21,13 @@ namespace FC2026
         public void BuildArena()
         {
             ClearArena();
+            var game = GameBootstrap.Instance;
+            if (game == null || game.UserTeam == null || game.OpponentTeam == null)
+            {
+                Debug.LogWarning("[AERO Match] GameBootstrap or match teams are not ready.", this);
+                return;
+            }
+            footballerVisualPrefab ??= Resources.Load<GameObject>("AERO/FootballerVisual");
             var pitch = GameObject.CreatePrimitive(PrimitiveType.Cube);
             pitch.name = "Pitch";
             pitch.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
@@ -38,12 +46,13 @@ namespace FC2026
             var input = new GameObject("Mobile Input").AddComponent<MobileInputController>();
             spawned.Add(input.gameObject);
             CreateCamera(ball);
-            CreateTeamFormation(ball, GameBootstrap.Instance.UserTeam, true, homeMaterial);
-            CreateTeamFormation(ball, GameBootstrap.Instance.OpponentTeam, false, awayMaterial);
+            bool userIsHome = game.UserTeamIsHome;
+            CreateTeamFormation(ball, game.UserTeam, userIsHome, true, userIsHome ? homeMaterial : awayMaterial);
+            CreateTeamFormation(ball, game.OpponentTeam, !userIsHome, false, userIsHome ? awayMaterial : homeMaterial);
             if (GetComponent<AEROPitchPresentation>() == null) gameObject.AddComponent<AEROPitchPresentation>();
         }
 
-        private void CreateTeamFormation(BallController ball, TeamData team, bool home, Material kit)
+        private void CreateTeamFormation(BallController ball, TeamData team, bool home, bool userTeam, Material kit)
         {
             var slots = new[]
             {
@@ -54,15 +63,34 @@ namespace FC2026
             };
             for (var i = 0; i < Mathf.Min(11, team.players.Count); i++)
             {
-                var playerObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                GameObject playerObject;
+                if (footballerVisualPrefab != null)
+                {
+                    // Keep movement/collision on a clean root; put the rigged visual underneath it.
+                    playerObject = new GameObject($"{team.players[i].displayName} ({team.players[i].position})");
+                    var visual = Instantiate(footballerVisualPrefab, playerObject.transform);
+                    visual.transform.localPosition = Vector3.down * 0.9f;
+                    visual.transform.localRotation = Quaternion.identity;
+                    visual.transform.localScale = Vector3.one;
+                    foreach (var visualCollider in visual.GetComponentsInChildren<Collider>()) visualCollider.enabled = false;
+                }
+                else
+                {
+                    playerObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                    playerObject.transform.localScale = new Vector3(0.8f, 0.9f, 0.8f);
+                    playerObject.GetComponent<Renderer>().sharedMaterial = kit != null ? kit : CreateMaterial(home ? new Color(0.1f, 0.55f, 0.9f) : new Color(0.85f, 0.08f, 0.08f));
+                }
                 playerObject.name = $"{team.players[i].displayName} ({team.players[i].position})";
                 playerObject.transform.position = slots[i];
-                playerObject.transform.localScale = new Vector3(0.8f, 1.05f, 0.8f);
-                playerObject.GetComponent<Renderer>().sharedMaterial = kit != null ? kit : CreateMaterial(home ? new Color(0.1f, 0.55f, 0.9f) : new Color(0.85f, 0.08f, 0.08f));
-                playerObject.AddComponent<CharacterController>();
+                var characterMotor = playerObject.AddComponent<CharacterController>();
+                characterMotor.center = Vector3.zero;
+                characterMotor.height = 2f;
+                characterMotor.radius = 0.38f;
                 var controller = playerObject.AddComponent<FootballerController>();
-                controller.Initialize(team.players[i], home && i == 9 ? FindFirstObjectByType<MobileInputController>() : null);
-                if (!home || i != 9)
+                bool isControlledPlayer = userTeam && i == 9;
+                controller.Initialize(team.players[i], isControlledPlayer ? FindFirstObjectByType<MobileInputController>() : null);
+                controller.IsUserControlled = isControlledPlayer;
+                if (!isControlledPlayer)
                 {
                     var ai = playerObject.AddComponent<TacticalAI>();
                     ai.Initialize(ball, slots[i]);
