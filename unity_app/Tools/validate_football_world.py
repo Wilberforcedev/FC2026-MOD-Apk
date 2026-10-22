@@ -30,18 +30,35 @@ def main():
     require_unique(clubs, "club")
     require_unique(players, "player")
     require_unique(competitions, "competition")
+    expected_counts = {"leagues": 25, "clubs": 300, "players": 7500, "competitions": 26}
+    actual_counts = {"leagues": len(leagues), "clubs": len(clubs), "players": len(players), "competitions": len(competitions)}
+    for name, expected in expected_counts.items():
+        if actual_counts[name] != expected:
+            raise ValueError(f"{name}: expected {expected} records, found {actual_counts[name]}")
     league_ids = {row["id"] for row in leagues}
     club_ids = {row["id"] for row in clubs}
     errors = []
     for club in clubs:
         if club.get("leagueId") not in league_ids:
             errors.append(f"Club {club.get('id')} references unknown league {club.get('leagueId')}")
+        if not club.get("displayName"):
+            errors.append(f"Club {club.get('id')} has no displayName")
+        if not club.get("stadiumName"):
+            errors.append(f"Club {club.get('id')} has no stadiumName")
     for player in players:
         if player.get("clubId") not in club_ids:
             errors.append(f"Player {player.get('id')} references unknown club {player.get('clubId')}")
+        if not player.get("displayName"):
+            errors.append(f"Player {player.get('id')} has no displayName")
         overall = player.get("overall", 0)
         if not 1 <= overall <= 99:
             errors.append(f"Player {player.get('id')} has invalid overall {overall}")
+        for attribute in ("pace", "shooting", "passing", "dribbling", "defending", "physicality"):
+            rating = player.get(attribute, 0)
+            if not isinstance(rating, (int, float)) or not 1 <= rating <= 99:
+                errors.append(f"Player {player.get('id')} has invalid {attribute} {rating}")
+        if not player.get("position"):
+            errors.append(f"Player {player.get('id')} has no position")
     for competition in competitions:
         for league_id in competition.get("eligibleLeagueIds", []):
             if league_id not in league_ids:
@@ -58,7 +75,7 @@ def main():
         print(f"FAILED: {len(errors)} validation error(s)")
         print("\n".join(errors))
         return 1
-    print("PASS: unique IDs, league-club-player references, competition references, ratings, and league counts")
+    print("PASS: expected catalog counts, unique IDs, required names, league-club-player links, competition links and 1..99 ratings")
     return 0
 
 if __name__ == "__main__":
