@@ -436,8 +436,8 @@ namespace FC2026
             Size(board, 230);
             AddAccent(board.transform, C(t => t.focus));
             titleLabel = Label(board.transform, "00:00  •  0 - 0", 32, C(t => t.heading), TextAlignmentOptions.TopCenter, new Vector2(12, -22), new Vector2(-12, 48));
-            var home = Game?.UserTeam?.displayName ?? "FC CITY";
-            var away = Game?.OpponentTeam?.displayName ?? "NORTH LONDON";
+            var home = Game?.HomeMatchTeam?.displayName ?? "FC CITY";
+            var away = Game?.AwayMatchTeam?.displayName ?? "NORTH LONDON";
             AnchoredLabel(board.transform, home.ToUpperInvariant(), 14, C(t => t.body), TextAlignmentOptions.MidlineLeft,
                 new Vector2(0, 0), new Vector2(.48f, 1), new Vector2(18, 48), new Vector2(-4, -86));
             AnchoredLabel(board.transform, away.ToUpperInvariant(), 14, C(t => t.body), TextAlignmentOptions.MidlineRight,
@@ -450,6 +450,12 @@ namespace FC2026
             FooterNote("MATCH HUD IS PRESENTATION ONLY; EXISTING BALL, PLAYER, CAMERA AND MATCH SYSTEMS REMAIN SEPARATE.");
         }
 
+        public void OpenCareerMatch()
+        {
+            Open(Page.Match);
+            SetStatus("CAREER MATCHDAY  /  COMPLETE THE FIXTURE TO UPDATE YOUR SEASON");
+        }
+
         private void StartMatch(GameMode mode = GameMode.Kickoff)
         {
             if (Game == null) { SetStatus("GAME BOOTSTRAP NOT READY"); return; }
@@ -457,7 +463,7 @@ namespace FC2026
                 new GameObject("FC 2026 Runtime Match Arena").AddComponent<MatchArenaBootstrap>();
             if (mode == GameMode.ChampionsCup) Modes?.OpenChampionsCup();
             else Modes?.OpenKickoff();
-            Game.Match.StartMatch(new MatchConfig { homeTeam = Game.UserTeam, awayTeam = Game.OpponentTeam, mode = mode, halfLengthMinutes = 3f });
+            Game.Match.StartMatch(new MatchConfig { homeTeam = Game.HomeMatchTeam, awayTeam = Game.AwayMatchTeam, mode = mode, halfLengthMinutes = 3f });
             Open(Page.Match);
         }
 
