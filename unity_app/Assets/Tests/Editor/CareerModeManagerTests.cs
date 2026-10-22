@@ -60,7 +60,17 @@ namespace FC2026.Tests
         public void SigningsRespectTransferWindowWageBudgetAndContractLength()
         {
             Assert.That(manager.StartCareer("Test Manager", "club-1", "Test Club", "league-1", 2026, 5000, 1000), Is.True);
-            Assert.That(manager.UpdateTransferWindow(6, 20), Is.EqualTo(false));
+            manager.UpdateTransferWindow(6, 20);
+            Assert.That(manager.TransferWindowOpen, Is.False);
+            Assert.That(manager.TrySignPlayer("player-a", "Player A", 500, 500, 3), Is.False);
+
+            manager.UpdateTransferWindow(10, 20);
+            Assert.That(manager.TransferWindowOpen, Is.True);
+            Assert.That(manager.TrySignPlayer("player-b", "Player B", 500, 1001, 3), Is.False);
+            Assert.That(manager.TrySignPlayer("player-b", "Player B", 500, 900, 3), Is.True);
+            Assert.That(manager.Career.contracts, Has.Count.EqualTo(1));
+            Assert.That(manager.Career.contracts[0].remainingYears, Is.EqualTo(3));
+            Assert.That(manager.Career.currentWeeklyWages, Is.EqualTo(900));
         }
     }
 }
