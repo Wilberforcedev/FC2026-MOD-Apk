@@ -11,6 +11,9 @@ namespace FC2026
         public GameModeController Modes { get; private set; }
         public TeamData UserTeam { get; private set; }
         public TeamData OpponentTeam { get; private set; }
+        public bool UserTeamIsHome { get; private set; } = true;
+        public TeamData HomeMatchTeam => UserTeamIsHome ? UserTeam : OpponentTeam;
+        public TeamData AwayMatchTeam => UserTeamIsHome ? OpponentTeam : UserTeam;
 
         private void Awake()
         {
@@ -26,10 +29,19 @@ namespace FC2026
             Squad.Initialize(UserTeam);
         }
 
+        public void ConfigureCareerMatch(TeamData homeTeam, TeamData awayTeam, string managedClubId)
+        {
+            if (homeTeam == null || awayTeam == null) return;
+            UserTeamIsHome = homeTeam.id == managedClubId;
+            UserTeam = UserTeamIsHome ? homeTeam : awayTeam;
+            OpponentTeam = UserTeamIsHome ? awayTeam : homeTeam;
+            Squad.Initialize(UserTeam);
+        }
+
         public void StartKickoff()
         {
             Modes.OpenKickoff();
-            Match.StartMatch(new MatchConfig { homeTeam = UserTeam, awayTeam = OpponentTeam, mode = GameMode.Kickoff });
+            Match.StartMatch(new MatchConfig { homeTeam = HomeMatchTeam, awayTeam = AwayMatchTeam, mode = GameMode.Kickoff });
         }
 
         private static TeamData CreateCityTeam() => new()
