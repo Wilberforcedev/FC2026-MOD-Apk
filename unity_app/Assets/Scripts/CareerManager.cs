@@ -42,8 +42,12 @@ namespace FC2026
             userTeam = managedTeam;
             table = clubs.Select(team => new LeagueEntry { team = team }).ToList();
             fixtures.Clear();
-            var opponents = clubs.Where(team => team != managedTeam).Take(7).ToList();
-            foreach (var opponent in opponents) fixtures.Add(new FixtureData { home = managedTeam, away = opponent });
+            var opponents = clubs.Where(team => team != managedTeam).ToList();
+            foreach (var opponent in opponents)
+            {
+                fixtures.Add(new FixtureData { home = managedTeam, away = opponent });
+                fixtures.Add(new FixtureData { home = opponent, away = managedTeam });
+            }
             CareerChanged?.Invoke();
         }
 
@@ -60,6 +64,12 @@ namespace FC2026
             if (home != null) { home.played++; home.goalDifference += homeGoals - awayGoals; home.points += homeGoals > awayGoals ? 3 : homeGoals == awayGoals ? 1 : 0; }
             if (away != null) { away.played++; away.goalDifference += awayGoals - homeGoals; away.points += awayGoals > homeGoals ? 3 : homeGoals == awayGoals ? 1 : 0; }
             Matchweek++;
+            CareerChanged?.Invoke();
+        }
+
+        public void SetTransferBudget(int amount)
+        {
+            TransferBudget = Mathf.Max(0, amount);
             CareerChanged?.Invoke();
         }
 
