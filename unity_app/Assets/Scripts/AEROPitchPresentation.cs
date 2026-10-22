@@ -44,17 +44,20 @@ namespace FC2026
             netMaterial = Material(new Color(0.55f, 0.72f, 0.82f, 0.8f));
             BuildGrassStripes(pitch, halfX, halfZ);
 
-            Line("Touchline North", new Vector3(-halfX, topY, halfZ), new Vector3(halfX, topY, halfZ));
-            Line("Touchline South", new Vector3(-halfX, topY, -halfZ), new Vector3(halfX, topY, -halfZ));
-            Line("Goal Line West", new Vector3(-halfX, topY, -halfZ), new Vector3(-halfX, topY, halfZ));
-            Line("Goal Line East", new Vector3(halfX, topY, -halfZ), new Vector3(halfX, topY, halfZ));
+            // Football pitch length runs along Z; the two goals sit on the Z end lines.
+            Line("Touchline West", new Vector3(-halfX, topY, -halfZ), new Vector3(-halfX, topY, halfZ));
+            Line("Touchline East", new Vector3(halfX, topY, -halfZ), new Vector3(halfX, topY, halfZ));
+            Line("Goal Line South", new Vector3(-halfX, topY, -halfZ), new Vector3(halfX, topY, -halfZ));
+            Line("Goal Line North", new Vector3(-halfX, topY, halfZ), new Vector3(halfX, topY, halfZ));
             Line("Halfway Line", new Vector3(-halfX, topY, 0), new Vector3(halfX, topY, 0));
             Circle("Centre Circle", Vector3.up * (topY + 0.01f), 9.15f, 64);
             Circle("Centre Spot", new Vector3(0, topY + 0.015f, 0), 0.22f, 16);
-            Box("West Penalty Box", new Vector3(-halfX + 16.5f, topY, 0), new Vector3(0.035f, 0.025f, 40.3f));
-            Box("East Penalty Box", new Vector3(halfX - 16.5f, topY, 0), new Vector3(0.035f, 0.025f, 40.3f));
-            BuildGoal(-halfX, topY, -1);
-            BuildGoal(halfX, topY, 1);
+            BuildPenaltyBox(topY, halfZ, true);
+            BuildPenaltyBox(topY, halfZ, false);
+            Circle("North Penalty Spot", new Vector3(0, topY + 0.015f, halfZ - 11f), 0.22f, 16);
+            Circle("South Penalty Spot", new Vector3(0, topY + 0.015f, -halfZ + 11f), 0.22f, 16);
+            BuildGoal(-halfZ, topY, -1, false);
+            BuildGoal(halfZ, topY, 1, true);
             BuildStands(halfX, halfZ);
             var sun = new GameObject("AERO Matchday Lighting").AddComponent<Light>();
             sun.type = LightType.Directional;
@@ -64,34 +67,64 @@ namespace FC2026
             sun.transform.SetParent(transform, true);
         }
 
-        private void BuildGoal(float x, float y, int side)
+        private void BuildPenaltyBox(float y, float halfZ, bool north)
         {
-            var z = side * 0f;
-            var root = new GameObject(side < 0 ? "West Goal" : "East Goal");
-            root.transform.SetParent(transform, true);
-            var depthDirection = side < 0 ? -1f : 1f;
+            const float halfWidth = 20.15f;
+            float goalZ = north ? halfZ : -halfZ;
+            float innerZ = north ? halfZ - 16.5f : -halfZ + 16.5f;
+            Line(north ? "North Penalty Box Inner" : "South Penalty Box Inner",
+                new Vector3(-halfWidth, y, innerZ), new Vector3(halfWidth, y, innerZ));
+            Line(north ? "North Penalty Box Left" : "South Penalty Box Left",
+                new Vector3(-halfWidth, y, innerZ), new Vector3(-halfWidth, y, goalZ));
+            Line(north ? "North Penalty Box Right" : "South Penalty Box Right",
+                new Vector3(halfWidth, y, innerZ), new Vector3(halfWidth, y, goalZ));
+
+            const float goalBoxHalfWidth = 9.16f;
+            float goalBoxInnerZ = north ? halfZ - 5.5f : -halfZ + 5.5f;
+            Line(north ? "North Six Yard Box Inner" : "South Six Yard Box Inner",
+                new Vector3(-goalBoxHalfWidth, y, goalBoxInnerZ), new Vector3(goalBoxHalfWidth, y, goalBoxInnerZ));
+            Line(north ? "North Six Yard Box Left" : "South Six Yard Box Left",
+                new Vector3(-goalBoxHalfWidth, y, goalBoxInnerZ), new Vector3(-goalBoxHalfWidth, y, goalZ));
+            Line(north ? "North Six Yard Box Right" : "South Six Yard Box Right",
+                new Vector3(goalBoxHalfWidth, y, goalBoxInnerZ), new Vector3(goalBoxHalfWidth, y, goalZ));
+        }
+
+        private void BuildGoal(float z, float y, int direction, bool homeTeamScores)
+        {
             const float width = 7.32f, height = 2.44f, depth = 2.2f;
-            Post(root.transform, new Vector3(x, y + height * 0.5f, z - width * 0.5f), new Vector3(0.14f, height, 0.14f));
-            Post(root.transform, new Vector3(x, y + height * 0.5f, z + width * 0.5f), new Vector3(0.14f, height, 0.14f));
-            Post(root.transform, new Vector3(x, y + height, z), new Vector3(0.14f, 0.14f, width));
-            Post(root.transform, new Vector3(x + depthDirection * depth, y + height * 0.5f, z - width * 0.5f), new Vector3(0.08f, height, 0.08f));
-            Post(root.transform, new Vector3(x + depthDirection * depth, y + height * 0.5f, z + width * 0.5f), new Vector3(0.08f, height, 0.08f));
-            Post(root.transform, new Vector3(x + depthDirection * depth, y + height, z), new Vector3(0.08f, 0.08f, width));
-            // A lightweight net lattice gives the goal a visible depth cue without cloth simulation.
+            var root = new GameObject(direction < 0 ? "South Goal" : "North Goal");
+            root.transform.SetParent(transform, true);
+            float rearZ = z + direction * depth;
+            Post(root.transform, new Vector3(-width * 0.5f, y + height * 0.5f, z), new Vector3(0.14f, height, 0.14f));
+            Post(root.transform, new Vector3(width * 0.5f, y + height * 0.5f, z), new Vector3(0.14f, height, 0.14f));
+            Post(root.transform, new Vector3(0, y + height, z), new Vector3(width, 0.14f, 0.14f));
+            Post(root.transform, new Vector3(-width * 0.5f, y + height * 0.5f, rearZ), new Vector3(0.08f, height, 0.08f));
+            Post(root.transform, new Vector3(width * 0.5f, y + height * 0.5f, rearZ), new Vector3(0.08f, height, 0.08f));
+            Post(root.transform, new Vector3(0, y + height, rearZ), new Vector3(width, 0.08f, 0.08f));
+
+            // Lightweight lattice; actual cloth/net simulation remains a later asset pass.
             for (int i = 0; i <= 6; i++)
             {
-                float netZ = z - width * 0.5f + width * i / 6f;
-                Line("Goal Net Vertical", new Vector3(x + depthDirection * depth, y, netZ), new Vector3(x + depthDirection * depth, y + height, netZ), 0.025f, netMaterial);
+                float netX = -width * 0.5f + width * i / 6f;
+                Line("Goal Net Vertical", new Vector3(netX, y, rearZ), new Vector3(netX, y + height, rearZ), 0.025f, netMaterial);
             }
             for (int row = 1; row <= 3; row++)
             {
                 float netY = y + height * row / 4f;
-                Line("Goal Net Horizontal", new Vector3(x, netY, z - width * 0.5f), new Vector3(x + depthDirection * depth, netY, z - width * 0.5f), 0.025f, netMaterial);
-                Line("Goal Net Horizontal", new Vector3(x, netY, z + width * 0.5f), new Vector3(x + depthDirection * depth, netY, z + width * 0.5f), 0.025f, netMaterial);
-                Line("Goal Net Rear", new Vector3(x + depthDirection * depth, netY, z - width * 0.5f), new Vector3(x + depthDirection * depth, netY, z + width * 0.5f), 0.025f, netMaterial);
+                Line("Goal Net Rear", new Vector3(-width * 0.5f, netY, rearZ), new Vector3(width * 0.5f, netY, rearZ), 0.025f, netMaterial);
+                Line("Goal Net Side", new Vector3(-width * 0.5f, netY, z), new Vector3(-width * 0.5f, netY, rearZ), 0.025f, netMaterial);
+                Line("Goal Net Side", new Vector3(width * 0.5f, netY, z), new Vector3(width * 0.5f, netY, rearZ), 0.025f, netMaterial);
             }
-            Line("Goal Net Side", new Vector3(x, y, z - width * 0.5f), new Vector3(x + depthDirection * depth, y, z - width * 0.5f), 0.025f, netMaterial);
-            Line("Goal Net Side", new Vector3(x, y, z + width * 0.5f), new Vector3(x + depthDirection * depth, y, z + width * 0.5f), 0.025f, netMaterial);
+            Line("Goal Net Ground", new Vector3(-width * 0.5f, y, z), new Vector3(-width * 0.5f, y, rearZ), 0.025f, netMaterial);
+            Line("Goal Net Ground", new Vector3(width * 0.5f, y, z), new Vector3(width * 0.5f, y, rearZ), 0.025f, netMaterial);
+
+            var triggerObject = new GameObject("Goal Score Trigger");
+            triggerObject.transform.SetParent(root.transform, true);
+            triggerObject.transform.position = new Vector3(0, y + height * 0.5f, z + direction * 0.5f);
+            var trigger = triggerObject.AddComponent<BoxCollider>();
+            trigger.isTrigger = true;
+            trigger.size = new Vector3(8.2f, 3.2f, 1.2f);
+            triggerObject.AddComponent<AEROGoalTrigger>().HomeTeamScores = homeTeamScores;
         }
 
         private void BuildGrassStripes(GameObject pitch, float halfX, float halfZ)
