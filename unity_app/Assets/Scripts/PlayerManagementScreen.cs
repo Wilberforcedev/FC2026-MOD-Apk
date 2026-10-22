@@ -40,6 +40,13 @@ namespace FC2026
             LoadCustomPlayers();
         }
 
+        public void Connect(SquadManager manager)
+        {
+            squadManager = manager;
+            LoadCustomPlayers();
+            MergeSavedPlayersIntoCurrentTeam();
+        }
+
         public void Open()
         {
             visible = true;
@@ -216,14 +223,14 @@ namespace FC2026
             player.defending = defending = Mathf.Clamp(defending, 1, 99);
             player.physicality = physicality = Mathf.Clamp(physicality, 1, 99);
 
-            if (isEditing)
-            {
-                int customIndex = customPlayers.FindIndex(p => p != null && p.id == player.id);
-                if (customIndex >= 0) customPlayers[customIndex] = player;
-            }
+            int customIndex = customPlayers.FindIndex(p => p != null && p.id == player.id);
+            if (customIndex >= 0) customPlayers[customIndex] = player;
+            else customPlayers.Add(player);
 
-            PersistCustomPlayers();
-            validationMessage = (isEditing ? "Updated " : "Created ") + player.displayName + " successfully.";
+            bool persisted = PersistCustomPlayers();
+            validationMessage = persisted
+                ? (isEditing ? "Updated " : "Created ") + player.displayName + " successfully."
+                : player.displayName + " changed in memory, but saving failed. Check device storage permissions.";
             ResetForm(keepMessage: true);
             SendMessageUpwards("OnPlayersChanged", SendMessageOptions.DontRequireReceiver);
         }
@@ -237,6 +244,33 @@ namespace FC2026
             overall = 70; pace = 70; shooting = 70; passing = 70;
             dribbling = 70; defending = 50; physicality = 70;
             if (!keepMessage) validationMessage = string.Empty;
+        }
+
+        private void MergeSavedPlayersIntoCurrentTeam()
+        {
+            TeamData team = squadManager != null ? squadManager.CurrentTeam : null;
+            if (team == null || customPlayers.Count == 0) return;
+
+            foreach (PlayerData saved in customPlayers)
+            {
+                if (saved == null || string.IsNullOrWhiteSpace(saved.id)) continue;
+                PlayerData existing = team.players.FirstOrDefault(p => p != null && p.id == saved.id);
+                if (existing == null)
+                {
+                    team.players.Add(saved);
+                    continue;
+                }
+                existing.displayName = saved.displayName;
+                existing.position = saved.position;
+                existing.isGoalkeeper = saved.isGoalkeeper;
+                existing.overall = saved.overall;
+                existing.pace = saved.pace;
+                existing.shooting = saved.shooting;
+                existing.passing = saved.passing;
+                existing.dribbling = saved.dribbling;
+                existing.defending = saved.defending;
+                existing.physicality = saved.physicality;
+            }
         }
 
         private void LoadCustomPlayers()
@@ -255,18 +289,20 @@ namespace FC2026
             }
         }
 
-        private void PersistCustomPlayers()
+        private bool PersistCustomPlayers()
         {
             try
             {
                 string directory = Path.GetDirectoryName(SavePath);
                 if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
                 File.WriteAllText(SavePath, JsonUtility.ToJson(new PlayerDataList { players = customPlayers }, true));
+                return true;
             }
             catch (Exception ex)
             {
                 validationMessage = "Player updated in this session, but save failed: " + ex.Message;
                 Debug.LogError(validationMessage);
+                return false;
             }
         }
 
