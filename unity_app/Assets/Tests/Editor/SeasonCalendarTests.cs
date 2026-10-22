@@ -60,6 +60,50 @@ namespace FC2026.Tests
         }
 
         [Test]
+        public void CupResultDoesNotChangeLeaguePoints()
+        {
+            var manager = CreateManager();
+            manager.GenerateSeason("league-a", 3);
+            var cup = new SeasonFixture
+            {
+                fixtureId = "cup-final-a", competitionId = "domestic-cup", leagueId = "league-a", season = 3,
+                matchweek = 7, homeClubId = "club-a", awayClubId = "club-c", isLeagueFixture = false, cupRound = "Final"
+            };
+            manager.AppendFixtures(new[] { cup });
+
+            Assert.That(manager.RecordResult(cup.fixtureId, 2, 0), Is.True);
+            Assert.That(manager.StandingForClub("club-a").played, Is.Zero);
+            Assert.That(manager.StandingForClub("club-a").points, Is.Zero);
+        }
+
+        [Test]
+        public void SavedSnapshotRestoresFixtureResultsAndStandings()
+        {
+            var manager = CreateManager();
+            manager.GenerateSeason("league-a", 5);
+            var fixture = manager.Fixtures[0];
+            manager.RecordResult(fixture.fixtureId, 1, 0);
+            var copiedFixture = new SeasonFixture
+            {
+                fixtureId = fixture.fixtureId, competitionId = fixture.competitionId, leagueId = fixture.leagueId,
+                season = fixture.season, matchweek = fixture.matchweek, homeClubId = fixture.homeClubId,
+                awayClubId = fixture.awayClubId, isPlayed = fixture.isPlayed, homeGoals = fixture.homeGoals,
+                awayGoals = fixture.awayGoals, isLeagueFixture = fixture.isLeagueFixture
+            };
+            var copiedStandings = manager.Standings.Select(item => new ClubSeasonStanding
+            {
+                clubId = item.clubId, played = item.played, wins = item.wins, draws = item.draws,
+                losses = item.losses, goalsFor = item.goalsFor, goalsAgainst = item.goalsAgainst, points = item.points
+            }).ToList();
+            var restored = CreateManager();
+
+            Assert.That(restored.RestoreSnapshot("league-a", 5, new[] { copiedFixture }.Concat(manager.Fixtures.Skip(1)), copiedStandings), Is.True);
+            Assert.That(restored.Fixtures.Single(item => item.fixtureId == fixture.fixtureId).isPlayed, Is.True);
+            Assert.That(restored.StandingForClub(fixture.homeClubId).points, Is.EqualTo(3));
+            Assert.That(restored.Season, Is.EqualTo(5));
+        }
+
+        [Test]
         public void LeagueWithTooFewClubsIsRejected()
         {
             database = ScriptableObject.CreateInstance<FootballWorldDatabase>();
