@@ -54,6 +54,18 @@ namespace FC2026
             career = careerManager;
         }
 
+        public void RestoreState(IEnumerable<ScoutAssignment> savedAssignments, IEnumerable<ScoutReport> savedReports)
+        {
+            assignments = (savedAssignments ?? Enumerable.Empty<ScoutAssignment>()).Where(item => item != null && !string.IsNullOrWhiteSpace(item.playerId))
+                .Select(item => new ScoutAssignment { assignmentId = item.assignmentId, playerId = item.playerId, region = item.region,
+                    weeksRemaining = Mathf.Clamp(item.weeksRemaining, 0, 6), budgetCost = Mathf.Max(0, item.budgetCost) }).ToList();
+            reports = (savedReports ?? Enumerable.Empty<ScoutReport>()).Where(item => item != null && !string.IsNullOrWhiteSpace(item.playerId))
+                .Select(item => new ScoutReport { playerId = item.playerId, region = item.region, confidence = Mathf.Clamp(item.confidence, 0, 100),
+                    estimatedOverall = Mathf.Clamp(item.estimatedOverall, 1, 99), estimatedPotential = Mathf.Clamp(item.estimatedPotential, 1, 99),
+                    estimatedFee = Mathf.Max(0, item.estimatedFee), recommendation = item.recommendation, isComplete = item.isComplete }).ToList();
+            NetworkChanged?.Invoke();
+        }
+
         public bool AssignScout(PlayerData player, ScoutRegion region, int weeks = 2)
         {
             if (player == null || assignments.Any(item => item.playerId == player.id)) return false;
