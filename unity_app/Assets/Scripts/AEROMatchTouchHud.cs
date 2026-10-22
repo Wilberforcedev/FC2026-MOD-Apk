@@ -38,16 +38,17 @@ namespace FC2026
                 new Vector2(142, 158), new Vector2(190, 190), new Color(0.02f, 0.10f, 0.17f, 0.48f));
             var knob = CreateImage("Joystick Knob", joystick.transform, new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(72, 72), new Color(0.02f, 0.78f, 0.95f, 0.82f));
+            knob.GetComponent<Image>().raycastTarget = false;
             knob.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 0.5f);
             knob.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.5f);
             knob.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
             joystick.AddComponent<AEROJoystick>().Configure(input, knob.GetComponent<RectTransform>());
 
-            AddAction(canvasObject.transform, "SHOOT", new Vector2(0.5f, 0), new Vector2(-120, 308), new Color(0.03f, 0.65f, 0.88f, 0.92f), input.PressShoot);
-            AddAction(canvasObject.transform, "PASS", new Vector2(0.5f, 0), new Vector2(-250, 205), new Color(0.05f, 0.33f, 0.48f, 0.9f), input.PressPass);
-            AddAction(canvasObject.transform, "SPRINT", new Vector2(0.5f, 0), new Vector2(-120, 158), new Color(0.05f, 0.28f, 0.24f, 0.9f), null, true);
-            AddAction(canvasObject.transform, "TACKLE", new Vector2(0.5f, 0), new Vector2(-250, 86), new Color(0.35f, 0.13f, 0.2f, 0.9f), input.PressTackle);
-            AddAction(canvasObject.transform, "SWITCH", new Vector2(0.5f, 0), new Vector2(-376, 208), new Color(0.18f, 0.22f, 0.32f, 0.9f), input.PressSwitchPlayer);
+            AddAction(canvasObject.transform, "SHOOT", new Vector2(1f, 0), new Vector2(-128, 314), new Color(0.03f, 0.65f, 0.88f, 0.92f), input.PressShoot);
+            AddAction(canvasObject.transform, "PASS", new Vector2(1f, 0), new Vector2(-250, 213), new Color(0.05f, 0.33f, 0.48f, 0.9f), input.PressPass);
+            AddAction(canvasObject.transform, "SPRINT", new Vector2(1f, 0), new Vector2(-128, 190), new Color(0.05f, 0.28f, 0.24f, 0.9f), null, true);
+            AddAction(canvasObject.transform, "TACKLE", new Vector2(1f, 0), new Vector2(-250, 90), new Color(0.35f, 0.13f, 0.2f, 0.9f), input.PressTackle);
+            AddAction(canvasObject.transform, "SWITCH", new Vector2(1f, 0), new Vector2(-376, 213), new Color(0.18f, 0.22f, 0.32f, 0.9f), input.PressSwitchPlayer);
 
             var hint = new GameObject("Control Hint", typeof(RectTransform), typeof(TextMeshProUGUI));
             hint.transform.SetParent(canvasObject.transform, false);
