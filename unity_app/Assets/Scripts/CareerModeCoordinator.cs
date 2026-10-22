@@ -82,8 +82,8 @@ namespace FC2026
 
         private void Update()
         {
-            // Some scene components are loaded after the bootstrap object. Bind once they exist.
-            if (!bindingsReady) { ResolveManagers(); BindEvents(); }
+            // The database loader may finish after this persistent bootstrap; keep resolving until it is ready.
+            if (!bindingsReady || database == null) { ResolveManagers(); BindEvents(); }
         }
 
         private void ResolveManagers()
@@ -91,16 +91,16 @@ namespace FC2026
             database ??= FindFirstObjectByType<FootballWorldCatalogLoader>()?.Database;
             database ??= Resources.Load<FootballWorldDatabase>("FootballWorldDatabase");
             calendar ??= FindFirstObjectByType<SeasonCalendarManager>();
-            if (calendar == null && database != null) calendar = gameObject.AddComponent<SeasonCalendarManager>();
+            if (calendar == null) calendar = gameObject.AddComponent<SeasonCalendarManager>();
             matchEngine ??= FindFirstObjectByType<CareerMatchSimulationEngine>();
-            if (matchEngine == null && database != null) matchEngine = gameObject.AddComponent<CareerMatchSimulationEngine>();
+            if (matchEngine == null) matchEngine = gameObject.AddComponent<CareerMatchSimulationEngine>();
             legacyCareer ??= FindFirstObjectByType<CareerManager>();
             if (legacyCareer == null) legacyCareer = gameObject.AddComponent<CareerManager>();
             squad ??= FindFirstObjectByType<SquadManager>();
             progression ??= FindFirstObjectByType<PlayerProgressionManager>();
             if (progression == null) progression = gameObject.AddComponent<PlayerProgressionManager>();
             scouting ??= FindFirstObjectByType<ScoutingNetworkManager>();
-            if (scouting == null && database != null) scouting = gameObject.AddComponent<ScoutingNetworkManager>();
+            if (scouting == null) scouting = gameObject.AddComponent<ScoutingNetworkManager>();
             negotiations ??= FindFirstObjectByType<TransferNegotiationManager>();
             if (negotiations == null) negotiations = gameObject.AddComponent<TransferNegotiationManager>();
 
