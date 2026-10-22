@@ -81,9 +81,18 @@ namespace FC2026
                 }
                 else
                 {
-                    playerObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-                    playerObject.transform.localScale = new Vector3(0.8f, 0.9f, 0.8f);
-                    playerObject.GetComponent<Renderer>().sharedMaterial = kit != null ? kit : CreateMaterial(home ? new Color(0.1f, 0.55f, 0.9f) : new Color(0.85f, 0.08f, 0.08f));
+                    // Better-looking runtime fallback than a single capsule: separate limbs, jersey,
+                    // shorts, socks, boots, head and a simple animated running gait.
+                    playerObject = new GameObject($"{team.players[i].displayName} ({team.players[i].position})");
+                    var visualObject = new GameObject("Procedural Footballer Visual");
+                    visualObject.transform.SetParent(playerObject.transform, false);
+                    visualObject.transform.localPosition = Vector3.down * 0.9f;
+                    var proceduralVisual = visualObject.AddComponent<AEROProceduralFootballerVisual>();
+                    Color fallbackKit = team.primaryColor;
+                    if (fallbackKit == Color.clear || fallbackKit == Color.white)
+                        fallbackKit = home ? new Color(0.1f, 0.55f, 0.9f) : new Color(0.85f, 0.08f, 0.08f);
+                    proceduralVisual.Build(fallbackKit, team.secondaryColor,
+                        team.players[i].isGoalkeeper || team.players[i].position == PlayerPosition.GK, i + 1);
                 }
                 playerObject.name = $"{team.players[i].displayName} ({team.players[i].position})";
                 playerObject.transform.position = slots[i];
