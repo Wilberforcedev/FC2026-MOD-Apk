@@ -185,7 +185,7 @@ namespace FC2026
             Label(hero.transform, "MATCHDAY 01  •  FRIENDLY", 11, C(t => t.focus), TextAlignmentOptions.TopLeft, new Vector2(18, -18), new Vector2(-18, 28));
             Label(hero.transform, "OWN THE\nNIGHT.", 42, C(t => t.heading), TextAlignmentOptions.TopLeft, new Vector2(18, -52), new Vector2(-18, 116));
             Label(hero.transform, "FC CITY     VS     NORTH LONDON", 13, C(t => t.body), TextAlignmentOptions.MidlineLeft, new Vector2(20, 88), new Vector2(-20, 26));
-            ActionButton(hero.transform, "PLAY MATCH  →", C(t => t.focus), () => StartMatch(), new Vector2(18, 20), new Vector2(-18, 52));
+            ActionButton(hero.transform, "PLAY MATCH  →", C(t => t.focus), () => StartMatch(), new Vector2(18, 18), new Vector2(-18, 66));
             SectionTitle("YOUR FOOTBALL WORLD", "PICK UP WHERE YOU LEFT OFF");
             Tile("SQUAD HUB", "FORMATION  •  PLAYER RATINGS", "Manage XI", () => Open(Page.Squad));
             Tile("CAREER MODE", "LEAGUE TABLE  •  TRANSFERS", "Continue season", () => Open(Page.Career));
@@ -270,7 +270,7 @@ namespace FC2026
             var calendar = Calendar;
             var team = Squad?.CurrentTeam;
             StatRow("SEASON", calendar != null ? calendar.Season.ToString("00") : "01", "MATCHWEEK", calendar != null ? calendar.NextFixture?.matchweek.ToString("00") ?? "END" : "01");
-            StatRow("TRANSFER BUDGET", FormatMoney(career?.TransferBudget ?? team?.players?.Count * 0 + 15000000 ?? 15000000), "SQUAD SIZE", (team?.players?.Count ?? 0).ToString("00"));
+            StatRow("TRANSFER BUDGET", FormatMoney(career?.TransferBudget ?? 15000000), "SQUAD SIZE", (team?.players?.Count ?? 0).ToString("00"));
             SectionTitle("NEXT FIXTURE", "YOUR ROAD TO THE TOP");
             var fixture = calendar?.NextFixture;
             var fixtureText = fixture != null && Database != null
@@ -298,7 +298,7 @@ namespace FC2026
                 Modes?.OpenChampionsCup();
                 SetStatus("TOURNAMENT MODE SELECTED");
                 StartMatch(GameMode.ChampionsCup);
-            }, new Vector2(18, 48), new Vector2(-18, 52));
+            }, new Vector2(18, 18), new Vector2(-18, 66));
             Tile("CHAMPIONS CUP", "ELIMINATION FOOTBALL", "Start cup match", () => StartMatch(GameMode.ChampionsCup));
             Tile("PENALTY SHOOTOUT", "NERVES OF STEEL", "Start duel", () => { Modes?.OpenPenaltyDuel(); SetStatus("PENALTY DUEL SELECTED"); });
             Tile("PRACTICE ARENA", "SHARPEN YOUR FINISHING", "Training session", () => { Modes?.OpenPractice(); SetStatus("PRACTICE MODE SELECTED"); });
@@ -349,8 +349,10 @@ namespace FC2026
             titleLabel = Label(board.transform, "00:00  •  0 - 0", 32, C(t => t.heading), TextAlignmentOptions.TopCenter, new Vector2(12, -22), new Vector2(-12, 48));
             var home = Game?.UserTeam?.displayName ?? "FC CITY";
             var away = Game?.OpponentTeam?.displayName ?? "NORTH LONDON";
-            Label(board.transform, home.ToUpperInvariant(), 14, C(t => t.body), TextAlignmentOptions.MidlineLeft, new Vector2(18, -90), new Vector2(.48f, 36));
-            Label(board.transform, away.ToUpperInvariant(), 14, C(t => t.body), TextAlignmentOptions.MidlineRight, new Vector2(.52f, -90), new Vector2(-18, 36));
+            AnchoredLabel(board.transform, home.ToUpperInvariant(), 14, C(t => t.body), TextAlignmentOptions.MidlineLeft,
+                new Vector2(0, 0), new Vector2(.48f, 1), new Vector2(18, 48), new Vector2(-4, -86));
+            AnchoredLabel(board.transform, away.ToUpperInvariant(), 14, C(t => t.body), TextAlignmentOptions.MidlineRight,
+                new Vector2(.52f, 0), new Vector2(1, 1), new Vector2(4, 48), new Vector2(-18, -86));
             Label(board.transform, Match != null ? Match.State.ToString().ToUpperInvariant() : "PRE-MATCH", 10, C(t => t.focus), TextAlignmentOptions.BottomCenter, new Vector2(12, 16), new Vector2(-12, 24));
             ActionButton(content, Match?.State == MatchState.Paused ? "RESUME MATCH" : "PAUSE MATCH", C(t => t.panelSoft), () => Match?.TogglePause(), Vector2.zero, new Vector2(0, 52));
             ActionButton(content, "REGISTER HOME GOAL  +1", C(t => t.focus), () => Match?.RegisterGoal(true), Vector2.zero, new Vector2(0, 52));
@@ -426,10 +428,10 @@ namespace FC2026
         {
             var row = Panel(content, "Stats", C(t => t.panel), Vector2.zero, Vector2.one);
             Size(row, 88);
-            Label(row.transform, leftLabel, 9, C(t => t.muted), TextAlignmentOptions.TopLeft, new Vector2(14, -12), new Vector2(.48f, 18));
-            Label(row.transform, leftValue, 17, C(t => t.heading), TextAlignmentOptions.TopLeft, new Vector2(14, -32), new Vector2(.48f, 28));
-            Label(row.transform, rightLabel, 9, C(t => t.muted), TextAlignmentOptions.TopLeft, new Vector2(.52f, -12), new Vector2(-14, 18));
-            Label(row.transform, rightValue, 17, C(t => t.heading), TextAlignmentOptions.TopLeft, new Vector2(.52f, -32), new Vector2(-14, 28));
+            AnchoredLabel(row.transform, leftLabel, 9, C(t => t.muted), TextAlignmentOptions.TopLeft, Vector2.zero, new Vector2(.48f, 1), new Vector2(14, 8), new Vector2(-4, -10));
+            AnchoredLabel(row.transform, leftValue, 17, C(t => t.heading), TextAlignmentOptions.TopLeft, Vector2.zero, new Vector2(.48f, 1), new Vector2(14, 8), new Vector2(-4, -32));
+            AnchoredLabel(row.transform, rightLabel, 9, C(t => t.muted), TextAlignmentOptions.TopLeft, new Vector2(.52f, 0), Vector2.one, new Vector2(4, 8), new Vector2(-14, -10));
+            AnchoredLabel(row.transform, rightValue, 17, C(t => t.heading), TextAlignmentOptions.TopLeft, new Vector2(.52f, 0), Vector2.one, new Vector2(4, 8), new Vector2(-14, -32));
         }
 
         private void ActionButton(Transform parent, string label, Color accent, UnityEngine.Events.UnityAction action, Vector2 offsetMin, Vector2 offsetMax)
@@ -488,6 +490,14 @@ namespace FC2026
             rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
             rect.offsetMin = offsetMin ?? new Vector2(12, 8);
             rect.offsetMax = offsetMax ?? new Vector2(-12, -8);
+            return label;
+        }
+
+        private TMP_Text AnchoredLabel(Transform parent, string text, float size, Color color, TextAlignmentOptions alignment,
+            Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            var label = Label(parent, text, size, color, alignment);
+            SetAnchors(label.rectTransform, anchorMin, anchorMax, offsetMin, offsetMax);
             return label;
         }
 
