@@ -344,7 +344,20 @@ namespace FC2026
             Tile("FINISH IN THE TOP TWO", "Consistency wins championships", "View table", () => SetStatus("LEAGUE TABLE: COMPLETE FIXTURES TO UPDATE STANDINGS"));
             Tile("DEVELOP YOUR PLAYERS", "Training, form and potential", "Player growth", () => SetStatus("PLAYER PROGRESSION SYSTEM READY"));
             Tile("BUILD THE SQUAD", "Scout and negotiate transfers", "Transfer market", () => Open(Page.Store));
-            ActionButton(content, "PLAY NEXT FIXTURE", C(t => t.focus), StartMatch, Vector2.zero, new Vector2(0, 56));
+            ActionCard("CAREER CONTROL CENTER", "SAVE / LOAD  •  CONTRACTS  •  BOARD OBJECTIVES  •  SEASON ROLLOVER", C(t => t.panel), () =>
+            {
+                var coordinator = FindFirstObjectByType<CareerModeCoordinator>();
+                if (coordinator == null) { SetStatus("CAREER SYSTEM IS NOT READY"); return; }
+                coordinator.OpenCareerScreen();
+            });
+            ActionButton(content, "OPEN CAREER CONTROL CENTER", C(t => t.panelSoft), () => FindFirstObjectByType<CareerModeCoordinator>()?.OpenCareerScreen(), Vector2.zero, new Vector2(0, 54));
+            ActionButton(content, "PLAY NEXT FIXTURE", C(t => t.focus), () =>
+            {
+                var coordinator = FindFirstObjectByType<CareerModeCoordinator>();
+                if (coordinator != null && coordinator.HasActiveCareer)
+                    SetStatus(coordinator.StartNextCareerFixture() ? "CAREER FIXTURE STARTED" : "NO CAREER FIXTURE AVAILABLE");
+                else StartMatch();
+            }, Vector2.zero, new Vector2(0, 56));
         }
 
         private void BuildTournaments()
@@ -389,8 +402,21 @@ namespace FC2026
         private void BuyPlayer(StorePlayer item)
         {
             if (Squad?.CurrentTeam == null) { SetStatus("SQUAD NOT READY"); return; }
-            if (Career != null && !Career.SpendTransferBudget(item.fee)) { SetStatus("NOT ENOUGH TRANSFER FUNDS"); return; }
             if (Squad.CurrentTeam.players.Any(p => p.id == item.id)) { SetStatus("PLAYER ALREADY IN YOUR SQUAD"); return; }
+            var coordinator = FindFirstObjectByType<CareerModeCoordinator>();
+            if (coordinator != null && coordinator.HasActiveCareer)
+            {
+                int wage = Mathf.Max(500, item.overall * 700);
+                if (!coordinator.SignPlayer(item.id, item.fee, wage, 3))
+                {
+                    SetStatus(coordinator.SaveManager.TransferWindowOpen ? "TRANSFER OR WAGE BUDGET / CONTRACT CHECK FAILED" : "TRANSFER WINDOW IS CLOSED");
+                    return;
+                }
+                SetStatus(item.name.ToUpperInvariant() + " SIGNED  /  3-YEAR CONTRACT");
+                Open(Page.Store);
+                return;
+            }
+            if (Career != null && !Career.SpendTransferBudget(item.fee)) { SetStatus("NOT ENOUGH TRANSFER FUNDS"); return; }
             Enum.TryParse(item.position, true, out PlayerPosition position);
             Squad.CurrentTeam.players.Add(new PlayerData
             {
