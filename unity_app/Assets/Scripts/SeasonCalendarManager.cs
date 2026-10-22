@@ -38,7 +38,7 @@ namespace FC2026
     {
         [SerializeField] private FootballWorldDatabase database;
         [SerializeField] private int season = 1;
-        [SerializeField] private string leagueId = "continental-premier";
+        [SerializeField] private string leagueId = "england-premier-league";
         [SerializeField] private List<SeasonFixture> fixtures = new();
         [SerializeField] private List<ClubSeasonStanding> standings = new();
 
@@ -57,7 +57,7 @@ namespace FC2026
             if (clubs == null || clubs.Count < 2) return false;
             leagueId = targetLeagueId;
             season = targetSeason;
-            fixtures = GenerateDoubleRoundRobin(clubs, targetLeagueId, targetSeason);
+            fixtures = GenerateDoubleRoundRobin(clubs, targetLeagueId, targetSeason, database);
             standings = clubs.Select(club => new ClubSeasonStanding { clubId = club.id }).ToList();
             CalendarChanged?.Invoke();
             return true;
@@ -92,7 +92,7 @@ namespace FC2026
             fixtures.Clear(); standings.Clear(); CalendarChanged?.Invoke();
         }
 
-        private static List<SeasonFixture> GenerateDoubleRoundRobin(IReadOnlyList<WorldClubDefinition> sourceClubs, string targetLeagueId, int targetSeason)
+        private static List<SeasonFixture> GenerateDoubleRoundRobin(IReadOnlyList<WorldClubDefinition> sourceClubs, string targetLeagueId, int targetSeason, FootballWorldDatabase database)
         {
             var clubs = sourceClubs.ToList();
             if (clubs.Count % 2 != 0) clubs.Add(null);
@@ -112,7 +112,7 @@ namespace FC2026
                     firstLeg.Add(new SeasonFixture
                     {
                         fixtureId = $"s{targetSeason}-{targetLeagueId}-w{round + 1}-{pair + 1}-1",
-                        competitionId = $"{targetLeagueId}-league",
+                        competitionId = database.competitions.FirstOrDefault(item => item.eligibleLeagueIds != null && item.eligibleLeagueIds.Contains(targetLeagueId))?.id ?? targetLeagueId,
                         leagueId = targetLeagueId,
                         season = targetSeason,
                         matchweek = round + 1,
