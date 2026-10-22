@@ -117,12 +117,12 @@ namespace FC2026
             SetAnchors(walletLabel.rectTransform, new Vector2(.62f, 0), new Vector2(1, 1), new Vector2(0, 12), new Vector2(-20, -12));
 
             var bottom = Panel(shell.transform, "BottomNavigation", C(t => t.overlay), new Vector2(0, 0), new Vector2(1, 0));
-            SetRect(bottom, new Vector2(0, 0), new Vector2(0, 0), new Vector2(0, 122));
-            var nav = new HorizontalLayoutGroup { childAlignment = TextAnchor.MiddleCenter, spacing = 4, padding = new RectOffset(8, 8, 8, 8), childForceExpandWidth = true, childForceExpandHeight = true };
-            bottom.AddComponent<LayoutElement>().preferredHeight = 122;
-            bottom.AddComponent<HorizontalLayoutGroup>();
-            var oldLayout = bottom.GetComponent<HorizontalLayoutGroup>();
-            oldLayout.childAlignment = nav.childAlignment; oldLayout.spacing = nav.spacing; oldLayout.padding = nav.padding;
+            var bottomRect = bottom.GetComponent<RectTransform>();
+            bottomRect.anchorMin = new Vector2(0, 0); bottomRect.anchorMax = new Vector2(1, 0);
+            bottomRect.pivot = new Vector2(.5f, 0); bottomRect.offsetMin = Vector2.zero; bottomRect.offsetMax = new Vector2(0, 122);
+            var oldLayout = bottom.AddComponent<HorizontalLayoutGroup>();
+            oldLayout.childAlignment = TextAnchor.MiddleCenter; oldLayout.spacing = 4;
+            oldLayout.padding = new RectOffset(8, 8, 8, 8);
             oldLayout.childForceExpandWidth = true; oldLayout.childForceExpandHeight = true;
 
             var body = Panel(shell.transform, "PageViewport", new Color(0, 0, 0, 0), Vector2.zero, Vector2.one);
