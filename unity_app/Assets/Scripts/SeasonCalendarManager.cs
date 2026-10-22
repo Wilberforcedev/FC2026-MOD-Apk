@@ -113,6 +113,8 @@ namespace FC2026
 
         public IReadOnlyList<SeasonFixture> FixturesForMatchweek(int matchweek) => fixtures.Where(item => item.matchweek == matchweek).ToList();
         public SeasonFixture NextFixture => fixtures.FirstOrDefault(item => !item.isPlayed);
+        public SeasonFixture NextFixtureForClub(string clubId) => fixtures.FirstOrDefault(item => !item.isPlayed &&
+            (item.homeClubId == clubId || item.awayClubId == clubId));
         public ClubSeasonStanding StandingForClub(string clubId) => standings.FirstOrDefault(item => item.clubId == clubId);
 
         public bool RecordResult(string fixtureId, int homeGoals, int awayGoals)
