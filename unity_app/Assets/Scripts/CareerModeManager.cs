@@ -312,7 +312,8 @@ namespace FC2026
 
         public bool TrySellPlayer(string playerId, string playerName, int transferFee, int weeklyWageSaved)
         {
-            if (!HasCareer || string.IsNullOrWhiteSpace(playerId) || transferFee < 0 || weeklyWageSaved < 0) return false;
+            if (!HasCareer || !TransferWindowOpen || string.IsNullOrWhiteSpace(playerId) || transferFee < 0 || weeklyWageSaved < 0 ||
+                career.transfers.Any(record => record.playerId == playerId && record.direction == "OUT" && record.season == career.season)) return false;
             career.transferBudget = Mathf.Max(0, career.transferBudget + transferFee);
             career.currentWeeklyWages = Mathf.Max(0, career.currentWeeklyWages - weeklyWageSaved);
             career.transfers.Add(new CareerTransferRecord
