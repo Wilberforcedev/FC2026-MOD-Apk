@@ -1,119 +1,155 @@
-# AERO Soccer 2027 — Unity App
+# AERO Soccer 2027 — Unity 6
 
+The current Unity implementation of **AERO Soccer 2027** is an Android-first football-game prototype. It combines a Football World catalog, career/squad foundation, runtime 3D match arena, and mobile controls.
 
-This folder is the Unity 6 implementation of the original mobile soccer game.
+> **Prototype status:** recent career and presentation work is committed on a feature branch and still needs Editor compilation, EditMode execution, and device playtesting. This is not yet a release-ready game or an FC 26/Dream League Soccer visual equivalent. Screens below are documentation concept samples—not real Unity captures.
 
-## Current implementation
+## Intended mobile screens
 
-The project includes a runtime-generated 3D pitch, match ball, sample footballers, mobile input, ball physics, tactical positioning, broadcast/follow cameras, squad chemistry, and a career foundation with fixtures, league points, matchweeks, and transfer budget.
+<table>
+  <tr>
+    <td align="center"><img src="../docs/screenshots/aero-home.svg" width="220" alt="AERO home concept"><br><strong>Home hub</strong></td>
+    <td align="center"><img src="../docs/screenshots/aero-career.svg" width="220" alt="Career hub concept"><br><strong>Career hub</strong></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="../docs/screenshots/aero-squad.svg" width="220" alt="Squad and Player Lab concept"><br><strong>Squad / Player Lab</strong></td>
+    <td align="center"><img src="../docs/screenshots/aero-matchday.svg" width="220" alt="Matchday concept"><br><strong>Matchday</strong></td>
+  </tr>
+</table>
 
-The project now includes internet multiplayer through **Unity Gaming Services Authentication, Lobby, and Relay**, layered on top of Netcode for GameObjects. Players can anonymously authenticate, create a public lobby, receive a short Relay invite code, join that lobby from another device, and connect through Relay without exposing a host IP address.
+## Requirements and setup
 
-## Unity Gaming Services setup
+- Unity **6000.0.1f1** (the editor version recorded in `ProjectSettings/ProjectVersion.txt`).
+- Android Build Support installed through Unity Hub, including Android SDK & NDK Tools and OpenJDK.
+- Python 3.11 or a compatible Python 3 release to run the standard-library catalog validator.
 
-1. Open the project in Unity 6 and sign in with the Unity account that owns the project.
-2. Create or select a project in the Unity Dashboard at https://cloud.unity.com/.
-3. Copy the project's GUID into **Edit → Project Settings → Services**.
-4. Enable **Authentication**, **Lobby**, and **Relay** in the Unity Dashboard.
-5. Configure the Relay regions and usage limits for the project.
-6. Open the scene with a `NetworkManager` object, a `UnityTransport` component, and the networked player prefab registered in the Player Prefab field.
-7. Add `UnityServicesOnlineSession` and `NetworkSessionPanel` to the scene.
-8. Build the same Android or iOS app on two devices. One player selects **CREATE ONLINE LOBBY** and shares the displayed code; the second selects **JOIN ONLINE LOBBY** and enters that code.
+### Open the project
 
-The code uses anonymous sign-in for the prototype. Production accounts should link authentication to Apple, Google, or another durable identity provider before adding purchases, rankings, or cloud saves.
+1. Open this folder (`unity_app/`) in Unity Hub.
+2. Allow Unity to resolve `Packages/manifest.json` and finish importing assets.
+3. The `FootballWorldResourcesSync` editor utility copies canonical JSON files from `Assets/Data/FootballWorld/` to `Assets/Resources/FootballWorld/` when the Editor domain initializes. Confirm the Console reports the sync and successful catalog loading.
+4. Open the intended boot scene, make sure it is listed in **File → Build Profiles → Scene List**, and enter Play Mode.
+5. Confirm the catalog reports no errors. If no league or clubs are available, check the Resources sync and JSON validator before starting a career.
 
-## Multiplayer architecture
+The catalog source of truth is `Assets/Data/FootballWorld/`. The runtime loader expects TextAssets at `Resources/FootballWorld/{players,clubs,leagues,competitions}.json`; do not edit generated Resources copies by hand.
 
-`UnityServicesOnlineSession` initializes Unity Services, signs in anonymously, creates and joins Lobby records, creates and joins Relay allocations, writes the Relay join code into lobby data, sends lobby heartbeats, refreshes lobby state, updates ready state, and leaves cleanly. `NetworkSessionManager` remains available for local/LAN testing. `NetworkMatchState` keeps the score, match clock, and goal events server-authoritative. `NetworkPlayerIdentity` synchronizes display name, team side, and ready state. `NetworkSessionPanel` exposes a temporary mobile-friendly create/join interface.
+## Career mode architecture
 
-Unity documents the classic Lobby + Relay workflow at https://docs.unity.com/en-us/mps-sdk/tutorials/relay-and-ngo. Unity also marks the standalone `com.unity.services.relay` package as deprecated for Unity 6; after this prototype is proven, migrate the session orchestration to the current Multiplayer Services SDK sessions API while preserving the lobby-code UX.
+### Persistent save and state coordination
 
-## Match and career systems
+- `CareerModeManager`: versioned career document, save/load, migration, rolling backup, objectives, budget, contract, match-history and transfer records.
+- `CareerRuntimeSnapshot`: saved calendar fixtures, league standings, player ratings in the active squad, starting eleven order, formation, player-progression records, scouting assignments/reports and active league club IDs.
+- `CareerModeCoordinator`: joins the save profile to the calendar, live match manager, squad, transfer negotiations, scouting and player-progression systems.
+- `CareerModeControlScreen`: runtime manager screen for new/resumed career, next fixture, training, advancing a week, objectives, contracts, sales and scouting.
+- `SeasonCalendarManager`: double round-robin fixtures, league table calculations, fixture result recording and snapshot restoration.
+- `CareerMatchSimulationEngine`: simulates unplayed AI fixtures in the current matchweek while the managed club's fixture is played in the 3D arena.
 
-The runtime prototype also includes a generated pitch, ball passing and shooting, footballer movement, formation anchors, pressing and marking response, broadcast/follow cameras, squad swaps and chemistry, and a career manager with fixtures, table points, matchweeks, and transfer budget.
+The save is stored under Unity's `Application.persistentDataPath` as `aero-career-save.json`, with a `.bak` recovery copy. The save manager also saves on application pause/quit. Test these behaviours on an actual Android device; lifecycle callbacks and storage characteristics still require device verification.
 
-## Next production milestones
+### Current season rules and known limits
 
-1. Replace primitives with optimized player, pitch, stadium, ball, and kit assets.
-2. Add Animator Controllers, locomotion blend trees, passing/shooting animations, tackles, goalkeeper saves, and celebrations.
-3. Add real pitch markings, goals, net physics, match HUD, pause menu, replay camera, and goal presentation.
-4. Expand tactical AI into defensive lines, offside, set pieces, fouls, cards, substitutions, and difficulty presets.
-5. Migrate the prototype Lobby + Relay flow to the current Multiplayer Services SDK session API.
-6. Add interpolation, client prediction, server reconciliation, reconnect flow, host migration, anti-cheat, and match results validation.
-7. Add durable player authentication, cloud saves, transfers, player development, stadium upgrades, and Android builds.
-8. Add ranked play only after online friend matches are stable at 30 FPS on target devices.
+Career code includes transfer-window checks, fee and weekly-wage budgets, 1–7 year contract records, contract aging/expiry, board-confidence movement at season end, league-position objectives, simplified cup-bracket progression and next-season fixture generation.
 
-## Shared UI direction
+There are two data limitations to be aware of:
 
-All screens follow one FC 2026 presentation system inspired by the supplied kit-selection reference: dark stadium backdrops, soft spotlighting, bold white uppercase headings, cyan focus brackets, muted blue-gray secondary text, collectible card silhouettes, and a consistent controller/touch interaction rail. The shared `FC2026UITheme` ScriptableObject stores the palette, card tiers, spacing, panel radius, focus treatment, and interaction colors so screens do not drift visually. See `UI_STYLE_GUIDE.md` before creating any new screen or component.
+1. **Promotion/relegation requires multi-tier data.** The current bundled catalog contains 25 top-tier league identities, one per country, with 12 clubs each. The transition logic activates only when a suitable upper/lower tier exists in the same country. Add valid lower-division league and club records before expecting true promotion/relegation seasons.
+2. **Cup support is simplified.** The bundled competition list contains league competitions and a cross-league cup definition. The code can build and advance simplified cup brackets, but domestic cup datasets, aggregate two-leg ties, extra time, penalty shoot-outs and full competition-specific qualification rules still need implementation.
 
-## Android-first cinematic mobile hub
+The current player catalog has 7,500 generated fictional player profiles. Club identities are real-world entities, but player names and ratings are not verified current squads; several stadium names are generic placeholders. Do not market these data as official current rosters.
 
-`FC2026MobileHub` is the runtime entry UI for the Unity 6 project. It attaches itself after a scene loads and creates a portrait-first Canvas using a 900 × 1600 reference resolution and Scale With Screen Size. The home hub, squad manager, kit room, career dashboard, tournament entry, transfer store, and matchday scoreboard share the FC2026UITheme palette and touch-first card/button treatment.
+## Player Lab and squad state
 
-The hub uses a lightweight procedural stadium backdrop rather than large background textures. Selecting Play Match creates the existing `MatchArenaBootstrap` when a scene does not already contain one, then opens the match presentation layer. Squad swaps use `SquadManager`; career funds use `CareerManager` when present; player listings use `FootballWorldDatabase` when available and fall back to demo entries when it is not.
+`PlayerManagementScreen` is linked from Squad Management. It supports creating and editing player names, positions, overall ratings and six attributes. Custom-player persistence is club-scoped in `Application.persistentDataPath/custom-players.json`; career snapshots additionally store squad ratings, formation and starting-eleven order.
 
-The kit room currently previews and stores the selected club accent color in runtime team data. Hook that selection to production kit materials when those assets are introduced. The generated UI is intentionally code-driven so the project can launch without a pre-authored menu scene; validate portrait and landscape aspect ratios in Unity Game view and on a physical Android device before release.
+Transfer-market purchases and negotiated signings route through career budget/window/contract checks. Player sales also require an open window and retain at least eleven squad members. Scouting costs are charged against the same career transfer budget shown in the career profile.
 
-## Transfer market
+## Runtime 3D match prototype
 
-`TransferMarketScreen` is the first full screen built on `FC2026UITheme`. It presents searchable collectible player cards, bronze/silver/gold/elite tier colors, position and club context, player attributes, transfer fees, focused-player details, budget checks, squad insertion after purchase, and themed success/failure states. Add it to a scene with `FC2026UITheme`, `CareerManager`, and `SquadManager` references to use the runtime screen.
+### Match arena and presentation
 
-## Football World Database V1
+- `MatchArenaBootstrap` creates a pitch, ball, camera, teams and touch input at runtime.
+- `AEROPitchPresentation` adds pitch markings, penalty areas, goal frames/net lattice, four stand sections, floodlights and directional lighting.
+- `AEROGoalTrigger` registers physical ball crossings against the home/away match score.
+- `BallController` uses Rigidbody dynamics, a tuned PhysicMaterial, rolling resistance, kick speed limits and spin.
+- `MatchManager` manages match clock, score, half-time pause, resume and full-time events.
 
-The original fictional V1 world is now stored under `Assets/Data/FootballWorld`: 8 clubs, 2 leagues, 3 competitions, and 96 players. `FootballWorldDatabase` is the ScriptableObject runtime index; `FootballWorldCatalogLoader` loads JSON at runtime; and the editor menu **FC 2026 → Import Football World V1** creates or refreshes `FootballWorldDatabase.asset`. The transfer market can consume this database directly instead of its demo listings. See `FOOTBALL_WORLD_DATABASE.md` for the schema and licensing boundary.
+### Player rendering and animation
 
+`AEROProceduralFootballerVisual` creates a basic articulated fallback body using torso, shorts, arms, legs, head, socks/boots and a procedural gait animation. `MatchArenaBootstrap` can load an optional rigged visual prefab from `Assets/Resources/AERO/FootballerVisual.prefab`, if supplied; `FootballerController` reads common Animator parameters from its child rig.
 
-## Football World browser
+The fallback is **not a full skinned humanoid rig**. Authored animation clips, motion capture, keeper dives, tackles, celebrations, crowd simulations, high-fidelity kits/materials and detailed stadium assets remain unfinished.
 
-`FootballWorldBrowserScreen` displays the ScriptableObject database through the shared `FC2026UITheme`. It provides player and club modes, catalog counts, themed cards, rating and value details, club stadium/budget details, focus states, and lightweight search filters. Add it to a scene with `FootballWorldDatabase`, `FC2026UITheme`, and a Canvas reference; it can also discover the database from `FootballWorldCatalogLoader`.
+### Android controls and quality profile
 
-## Automated catalog tests
+`AEROMatchTouchHud` builds a runtime screen-overlay HUD with a joystick and buttons for shoot, pass, sprint, tackle and switching the controlled player. `AEROAndroidQualityBootstrap` selects provisional 30/60 FPS, LOD, shadow, anti-aliasing and skin-weight settings based on reported device resources.
 
-EditMode tests live under `Assets/Tests/Editor/FootballWorldCatalogTests.cs`. They cover wrapped JSON parsing, malformed and missing catalogs, duplicate IDs, broken cross-catalog references, successful loader replacement, and protection of an existing database after an invalid load. Run them from **Window → General → Test Runner → EditMode** or with Unity batch mode in CI.
+These are conservative defaults, not benchmark results. Measure real frame time, draw calls, memory, shader compilation, heat and battery use on a representative low-, mid- and high-tier Android device before treating them as final.
 
-## Career Mode season calendar
+## World database and validation
 
-`SeasonCalendarManager` generates a deterministic double round-robin season from the Football World Database. It creates home and away fixtures, assigns matchweeks, exposes the next fixture and week queries, records results, updates wins/draws/losses/goals/points, and provides standings ordered by points, goal difference, and goals scored. EditMode coverage is in `Assets/Tests/Editor/SeasonCalendarTests.cs`.
+Canonical JSON data resides in `Assets/Data/FootballWorld/`:
 
-## Career live match
+| File | Contains |
+| --- | --- |
+| `leagues.json` | 25 league identities |
+| `clubs.json` | 300 club identities |
+| `players.json` | 7,500 generated sample players |
+| `competitions.json` | 26 competition definitions |
 
-`CareerMatchSimulationEngine` runs a deterministic 90-minute offline simulation from the next season fixture. It calculates team strength from database players, emits kickoff, shot, goal, card, halftime, and full-time events, supports pause/speed/skip controls, and records the final result back into `SeasonCalendarManager`. `CareerMatchLiveScreen` presents the themed scoreboard, clock, commentary feed, match details, and controls using `FC2026UITheme`.
+Runtime classes:
+- `FootballWorldCatalogParser` — parses the JSON TextAssets.
+- `FootballWorldCatalogLoader` — loads TextAssets from Resources and validates the database.
+- `FootballWorldDatabase` — indexed lookup and cross-reference validation.
+- `FootballWorldTeamFactory` — maps club/player catalog rows to `TeamData` and `PlayerData`.
+- `FootballWorldRuntimeBootstrap` — ensures a loader is available before scenes start.
 
-## Player progression
+Run the Python validator from the repository root:
 
-`PlayerProgressionManager` stores per-player form, morale, potential, training XP, sessions, starts, and wins. Training supports balanced, pace, shooting, passing, dribbling, defending, and physicality focuses with intensity levels. Attribute growth is capped by potential; match results affect form and morale; weekly advancement normalizes both values.
+```bash
+python unity_app/Tools/validate_football_world.py
+```
 
-## Career Dashboard and League Table
+It checks expected record counts, unique IDs, required display names, club-to-league and player-to-club references, competition league references, ratings and declared club counts.
 
-`CareerDashboardScreen` uses `FC2026UITheme` to present live standings from `SeasonCalendarManager`, positions, played matches, goal difference, points, next fixture, matchweek, transfer budget, club objectives, and player-development status. Objectives currently include finishing top two, winning three matches, and achieving a positive goal difference. Automated coverage is in `Assets/Tests/Editor/PlayerProgressionTests.cs`.
+## Unity EditMode tests and CI
 
-## Transfer negotiation and scouting network
+Open **Window → General → Test Runner → EditMode** and run the tests beneath `Assets/Tests/Editor/`. Tests cover:
 
-`TransferNegotiationManager` supports opening a player negotiation, submitting fee/wage/term offers, receiving counter-offers, accepting or rejecting deals, and completing the transfer through the career budget and squad. `ScoutingNetworkManager` supports regional scout assignments, multi-week reports, confidence, estimated overall/potential, fee estimates, recommendations, network upgrades, and report completion events.
+- world catalog load and reference integrity;
+- double round-robin fixture generation and matchweek uniqueness;
+- league points/goal difference and cup isolation from league standings;
+- snapshot restore, career save/reload, wage budget, contract term and transfer-window rules.
 
-`TransferSocialFeedScreen` is the mobile-first presentation for this system. It replaces the desktop-style transfer grid with a vertical dark social/news feed inspired by the supplied reference: Dynamic News Feed, Club Inbox, and Social Buzz tabs; cyan navigation; magenta transfer/scouting labels; unread badges; verified handles; engagement rows; stacked post cards; and direct **SCOUT PLAYER** / **OPEN NEGOTIATION** actions. The screen intentionally uses fictional in-game network accounts and original content.
+The workflow at [AERO Career Validation](https://github.com/Wilberforcedev/FC2026-MOD-Apk/actions/workflows/aero-career-validation.yml) always runs Python/data-source checks. Unity EditMode tests and an Android APK build only execute when a Unity license is available through the repository's `UNITY_LICENSE` Actions secret. A skipped Unity job is **not** a passing Unity test.
 
+### Build APK locally
 
-## AERO Soccer 2027 global football database
+1. Select **File → Build Profiles → Android**.
+2. Switch to Android and check the boot scene in the Scene List.
+3. Configure package identifier, orientation, minimum Android API and architecture for the supported device range.
+4. Choose **Development Build** for early profiling.
+5. Build an APK, install it with ADB or on a test device, and check startup/catalog logs, save/load across force-close, match scoring, UI scaling and frame pacing.
 
-The Assets/Data/FootballWorld catalogs now define 25 real-world league identities, 300 real-world club identities, 7,500 generated fictional player profiles (25 per club), and 26 competition entries. Club/player names and ratings are generated for gameplay and are not represented as authentic real-world rosters. The database is mixed: league and club identities are real; player identities and attributes are fictional. Club stadium names and budgets are generic game data, not official claims.
+Signing, keystore storage, store metadata and release builds are separate release tasks.
 
-Catalog files:
-- leagues.json — league names, countries, tiers and expected club counts.
-- clubs.json — club identities, league links, colors and game budgets.
-- players.json — fictional player profiles, attributes, positions, ages and market values.
-- competitions.json — league competitions and a cross-league tournament.
+## Unity Gaming Services multiplayer
 
-### Validate catalog references
+The project also contains an experimental Unity Gaming Services Authentication + Lobby + Relay path with Netcode for GameObjects. It requires a Unity Dashboard project, enabled Authentication/Lobby/Relay services, scene NetworkManager/UnityTransport setup and a registered network player prefab. Anonymous auth is appropriate for a prototype only; production accounts should link to a durable identity provider before storing purchases or rankings. Multiplayer service orchestration has not been validated as part of the career-mode work.
 
-Run python unity_app/Tools/validate_football_world.py from the repository root. The validator checks unique IDs, player-to-club links, club-to-league links, competition eligibility references, player rating ranges and each league's declared club count.
+## Useful project paths
 
-The JSON catalogs are intended to be assigned as TextAsset references on FootballWorldCatalogLoader in the Unity scene. After importing or changing catalogs, verify the Inspector references and check the loader's LastLoadSucceeded / validation log. This repository update has been source/data-validated; it has not been compiled or play-tested in Unity, and no Android build validation is claimed.
+| Path | Role |
+| --- | --- |
+| `Assets/Data/FootballWorld/` | Canonical catalog JSON |
+| `Assets/Resources/FootballWorld/` | Editor-synced runtime JSON TextAssets |
+| `Assets/Scripts/CareerModeManager.cs` | Career document/persistence |
+| `Assets/Scripts/CareerModeCoordinator.cs` | System integration |
+| `Assets/Scripts/SeasonCalendarManager.cs` | Fixtures and standings |
+| `Assets/Scripts/CareerModeControlScreen.cs` | Manager-career UI |
+| `Assets/Scripts/PlayerManagementScreen.cs` | Create/edit Player Lab |
+| `Assets/Scripts/MatchArenaBootstrap.cs` | Runtime match scene |
+| `Assets/Scripts/AEROProceduralFootballerVisual.cs` | Procedural footballer fallback |
+| `Assets/Scripts/AEROMatchTouchHud.cs` | Android match controls |
+| `Assets/Tests/Editor/` | EditMode tests |
+| `Tools/validate_football_world.py` | Catalog validator |
 
-
-## Persistent career profile foundation
-
-`CareerModeManager` adds a versioned local career save profile at `Application.persistentDataPath/aero-career-save.json`. The profile tracks the manager and selected club, season and matchweek, league record, board confidence, reputation, transfer and wage budgets, objectives/rewards, transfer history, match history, and player development records. It exposes methods for starting/loading/saving a career, recording a match, applying transfer transactions, tracking training, updating league position, and advancing to the next season.
-
-This is a domain/persistence foundation and is not yet a complete FC26-equivalent career mode. The next integration steps are to connect it to the existing `CareerDashboardScreen`, `CareerManager`, `SeasonCalendarManager`, `TransferNegotiationManager`, `ScoutingNetworkManager`, and `PlayerProgressionManager`; ensure one authoritative save model; and test full season rollover, transfer windows, contracts/wages, board expectations, player aging/retirement, youth academy, injuries, and cup competitions. Existing career systems and this new persistence profile must be reconciled before shipping to avoid duplicate/conflicting state. Unity compilation, EditMode tests, Android build, and device persistence checks have not yet been run for this branch.
