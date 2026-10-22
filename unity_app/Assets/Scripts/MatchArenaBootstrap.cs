@@ -32,6 +32,7 @@ namespace FC2026
             pitch.name = "Pitch";
             pitch.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             pitch.transform.localScale = new Vector3(68f, 0.18f, 105f);
+            pitch.transform.SetParent(transform, true);
             pitch.GetComponent<Renderer>().sharedMaterial = pitchMaterial != null ? pitchMaterial : CreateMaterial(new Color(0.04f, 0.32f, 0.12f));
             spawned.Add(pitch);
 
@@ -39,11 +40,14 @@ namespace FC2026
             ballObject.name = "Match Ball";
             ballObject.transform.position = new Vector3(0f, 0.55f, 0f);
             ballObject.transform.localScale = Vector3.one * 0.45f;
+            ballObject.transform.SetParent(transform, true);
             ballObject.AddComponent<Rigidbody>();
             var ball = ballObject.AddComponent<BallController>();
             spawned.Add(ballObject);
 
-            var input = new GameObject("Mobile Input").AddComponent<MobileInputController>();
+            var inputObject = new GameObject("Mobile Input");
+            inputObject.transform.SetParent(transform, true);
+            var input = inputObject.AddComponent<MobileInputController>();
             spawned.Add(input.gameObject);
             CreateCamera(ball);
             bool userIsHome = game.UserTeamIsHome;
@@ -82,6 +86,7 @@ namespace FC2026
                 }
                 playerObject.name = $"{team.players[i].displayName} ({team.players[i].position})";
                 playerObject.transform.position = slots[i];
+                playerObject.transform.SetParent(transform, true);
                 var characterMotor = playerObject.AddComponent<CharacterController>();
                 characterMotor.center = Vector3.zero;
                 characterMotor.height = 2f;
@@ -103,6 +108,7 @@ namespace FC2026
         {
             var cameraObject = new GameObject("Match Camera");
             cameraObject.transform.position = new Vector3(0f, 22f, -25f);
+            cameraObject.transform.SetParent(transform, true);
             var camera = cameraObject.AddComponent<Camera>();
             camera.fieldOfView = 54f;
             var controller = cameraObject.AddComponent<MatchCameraController>();
@@ -122,5 +128,7 @@ namespace FC2026
             foreach (var item in spawned) if (item != null) Destroy(item);
             spawned.Clear();
         }
+
+        private void OnDestroy() => ClearArena();
     }
 }
