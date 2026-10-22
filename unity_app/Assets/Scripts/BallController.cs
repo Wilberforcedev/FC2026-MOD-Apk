@@ -59,6 +59,16 @@ namespace FC2026
             Kick(direction, power, 0.18f, 1.2f);
         }
 
+        public void StopAndPlace(Vector3 worldPosition)
+        {
+            if (body == null) body = GetComponent<Rigidbody>();
+            body.linearVelocity = Vector3.zero;
+            body.angularVelocity = Vector3.zero;
+            body.Sleep();
+            transform.position = worldPosition;
+            body.WakeUp();
+        }
+
         private void FixedUpdate()
         {
             if (body == null || Mathf.Abs(body.linearVelocity.y) > 0.15f) return;
