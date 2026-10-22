@@ -1,32 +1,262 @@
 {
   "competitions": [
     {
-      "id": "continental-premier-league",
-      "displayName": "Continental Premier",
+      "id": "england-premier-league-championship",
+      "displayName": "England Premier League Championship",
       "competitionType": "League",
       "eligibleLeagueIds": [
-        "continental-premier"
+        "england-premier-league"
       ],
-      "isFictional": true
+      "isFictional": false
     },
     {
-      "id": "aurelia-cup",
-      "displayName": "Aurelia Cup",
-      "competitionType": "Cup",
+      "id": "spain-la-liga-championship",
+      "displayName": "Spain La Liga Championship",
+      "competitionType": "League",
       "eligibleLeagueIds": [
-        "continental-premier",
-        "national-championship"
+        "spain-la-liga"
       ],
-      "isFictional": true
+      "isFictional": false
     },
     {
-      "id": "champions-cup",
-      "displayName": "Champions Cup",
+      "id": "italy-serie-a-championship",
+      "displayName": "Italy Serie A Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "italy-serie-a"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "germany-bundesliga-championship",
+      "displayName": "Germany Bundesliga Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "germany-bundesliga"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "france-ligue-1-championship",
+      "displayName": "France Ligue 1 Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "france-ligue-1"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "portugal-primeira-championship",
+      "displayName": "Portugal Primeira Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "portugal-primeira"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "netherlands-eredivisie-championship",
+      "displayName": "Netherlands Eredivisie Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "netherlands-eredivisie"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "belgium-pro-league-championship",
+      "displayName": "Belgium Pro League Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "belgium-pro-league"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "scotland-premiership-championship",
+      "displayName": "Scotland Premiership Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "scotland-premiership"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "turkey-super-lig-championship",
+      "displayName": "Turkey Super Lig Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "turkey-super-lig"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "saudi-pro-league-championship",
+      "displayName": "Saudi Pro League Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "saudi-pro-league"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "usa-mls-championship",
+      "displayName": "Usa Mls Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "usa-mls"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "mexico-liga-mx-championship",
+      "displayName": "Mexico Liga Mx Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "mexico-liga-mx"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "brazil-serie-a-championship",
+      "displayName": "Brazil Serie A Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "brazil-serie-a"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "argentina-primera-championship",
+      "displayName": "Argentina Primera Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "argentina-primera"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "japan-j1-championship",
+      "displayName": "Japan J1 Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "japan-j1"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "korea-k-league-1-championship",
+      "displayName": "Korea K League 1 Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "korea-k-league-1"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "australia-a-league-championship",
+      "displayName": "Australia A League Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "australia-a-league"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "south-africa-psl-championship",
+      "displayName": "South Africa Psl Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "south-africa-psl"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "egypt-premier-league-championship",
+      "displayName": "Egypt Premier League Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "egypt-premier-league"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "morocco-botola-championship",
+      "displayName": "Morocco Botola Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "morocco-botola"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "nigeria-premier-league-championship",
+      "displayName": "Nigeria Premier League Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "nigeria-premier-league"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "ghana-premier-league-championship",
+      "displayName": "Ghana Premier League Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "ghana-premier-league"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "uganda-premier-league-championship",
+      "displayName": "Uganda Premier League Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "uganda-premier-league"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "india-super-league-championship",
+      "displayName": "India Super League Championship",
+      "competitionType": "League",
+      "eligibleLeagueIds": [
+        "india-super-league"
+      ],
+      "isFictional": false
+    },
+    {
+      "id": "continental-club-cup",
+      "displayName": "Continental Club Cup",
       "competitionType": "Tournament",
       "eligibleLeagueIds": [
-        "continental-premier"
+        "england-premier-league",
+        "spain-la-liga",
+        "italy-serie-a",
+        "germany-bundesliga",
+        "france-ligue-1",
+        "portugal-primeira",
+        "netherlands-eredivisie",
+        "belgium-pro-league",
+        "scotland-premiership",
+        "turkey-super-lig",
+        "saudi-pro-league",
+        "usa-mls",
+        "mexico-liga-mx",
+        "brazil-serie-a",
+        "argentina-primera",
+        "japan-j1",
+        "korea-k-league-1",
+        "australia-a-league",
+        "south-africa-psl",
+        "egypt-premier-league",
+        "morocco-botola",
+        "nigeria-premier-league",
+        "ghana-premier-league",
+        "uganda-premier-league",
+        "india-super-league"
       ],
-      "isFictional": true
+      "isFictional": false
     }
   ]
 }

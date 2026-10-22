@@ -1,22 +1,229 @@
 {
   "leagues": [
     {
-      "id": "continental-premier",
-      "displayName": "Continental Premier",
-      "country": "Aurelia",
+      "id": "england-premier-league",
+      "displayName": "Premier League",
+      "country": "England",
       "tier": 1,
-      "clubCount": 4,
-      "promotionEnabled": false,
-      "isFictional": true
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
     },
     {
-      "id": "national-championship",
-      "displayName": "National Championship",
-      "country": "Aurelia",
-      "tier": 2,
-      "clubCount": 4,
+      "id": "spain-la-liga",
+      "displayName": "La Liga",
+      "country": "Spain",
+      "tier": 1,
+      "clubCount": 12,
       "promotionEnabled": true,
-      "isFictional": true
+      "isFictional": false
+    },
+    {
+      "id": "italy-serie-a",
+      "displayName": "Serie A",
+      "country": "Italy",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "germany-bundesliga",
+      "displayName": "Bundesliga",
+      "country": "Germany",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "france-ligue-1",
+      "displayName": "Ligue 1",
+      "country": "France",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "portugal-primeira",
+      "displayName": "Primeira Liga",
+      "country": "Portugal",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "netherlands-eredivisie",
+      "displayName": "Eredivisie",
+      "country": "Netherlands",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "belgium-pro-league",
+      "displayName": "Belgian Pro League",
+      "country": "Belgium",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "scotland-premiership",
+      "displayName": "Scottish Premiership",
+      "country": "Scotland",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "turkey-super-lig",
+      "displayName": "Süper Lig",
+      "country": "Türkiye",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "saudi-pro-league",
+      "displayName": "Saudi Pro League",
+      "country": "Saudi Arabia",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "usa-mls",
+      "displayName": "Major League Soccer",
+      "country": "United States / Canada",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "mexico-liga-mx",
+      "displayName": "Liga MX",
+      "country": "Mexico",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "brazil-serie-a",
+      "displayName": "Campeonato Brasileiro Série A",
+      "country": "Brazil",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "argentina-primera",
+      "displayName": "Argentine Primera División",
+      "country": "Argentina",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "japan-j1",
+      "displayName": "J1 League",
+      "country": "Japan",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "korea-k-league-1",
+      "displayName": "K League 1",
+      "country": "South Korea",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "australia-a-league",
+      "displayName": "A-League Men",
+      "country": "Australia",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "south-africa-psl",
+      "displayName": "South African Premiership",
+      "country": "South Africa",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "egypt-premier-league",
+      "displayName": "Egyptian Premier League",
+      "country": "Egypt",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "morocco-botola",
+      "displayName": "Botola Pro",
+      "country": "Morocco",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "nigeria-premier-league",
+      "displayName": "Nigeria Premier Football League",
+      "country": "Nigeria",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "ghana-premier-league",
+      "displayName": "Ghana Premier League",
+      "country": "Ghana",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "uganda-premier-league",
+      "displayName": "Uganda Premier League",
+      "country": "Uganda",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
+    },
+    {
+      "id": "india-super-league",
+      "displayName": "Indian Super League",
+      "country": "India",
+      "tier": 1,
+      "clubCount": 12,
+      "promotionEnabled": true,
+      "isFictional": false
     }
   ]
 }
