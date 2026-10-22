@@ -29,6 +29,13 @@ namespace FC2026
         public event Action<PlayerData, PlayerProgressionRecord, TrainingFocus> PlayerProgressed;
         public event Action ProgressionChanged;
 
+        public void RestoreRecords(IEnumerable<PlayerProgressionRecord> savedRecords)
+        {
+            records = (savedRecords ?? Enumerable.Empty<PlayerProgressionRecord>()).Where(item => item != null && !string.IsNullOrWhiteSpace(item.playerId))
+                .GroupBy(item => item.playerId).Select(group => group.Last()).ToList();
+            ProgressionChanged?.Invoke();
+        }
+
         public PlayerProgressionRecord GetOrCreate(PlayerData player, int potential = 88)
         {
             if (player == null) return null;
