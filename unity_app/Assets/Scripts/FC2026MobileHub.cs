@@ -27,6 +27,7 @@ namespace FC2026
         private TMP_Text statusLabel;
         private Page page = Page.Home;
         private int selectedSquadSlot = -1;
+        private PlayerManagementScreen playerManagementScreen;
         private int selectedKit;
         private readonly Color[] kitColors =
         {
@@ -65,6 +66,9 @@ namespace FC2026
             if (theme == null) theme = ScriptableObject.CreateInstance<FC2026UITheme>();
             CreateStadiumBackdrop();
             BuildShell();
+            playerManagementScreen = GetComponent<PlayerManagementScreen>();
+            if (playerManagementScreen == null) playerManagementScreen = gameObject.AddComponent<PlayerManagementScreen>();
+            playerManagementScreen.Connect(Squad);
             Open(Page.Home);
             if (Match != null)
             {
@@ -280,6 +284,7 @@ namespace FC2026
                     selectedSquadSlot == i ? C(t => t.focusSoft) : C(t => t.panel), () => SelectSquadSlot(slot));
                 if (selectedSquadSlot == i) AddAccent(card.transform, C(t => t.focus));
             }
+            ActionButton(content, "PLAYER LAB  •  CREATE / EDIT PLAYERS", C(t => t.focus), OpenPlayerManagement, Vector2.zero, new Vector2(0, 56));
             ActionButton(content, "AUTO SELECT BEST XI", C(t => t.panelSoft), () =>
             {
                 if (Squad?.CurrentTeam == null) return;
@@ -294,6 +299,21 @@ namespace FC2026
                 }
                 selectedSquadSlot = -1; Open(Page.Squad);
             }, Vector2.zero, new Vector2(0, 52));
+        }
+
+        private void OpenPlayerManagement()
+        {
+            if (playerManagementScreen == null)
+                playerManagementScreen = GetComponent<PlayerManagementScreen>() ?? gameObject.AddComponent<PlayerManagementScreen>();
+            playerManagementScreen.Connect(Squad);
+            playerManagementScreen.Open();
+        }
+
+        public void OnPlayersChanged()
+        {
+            Squad?.NotifyRosterChanged();
+            FindFirstObjectByType<CareerModeCoordinator>()?.SaveNow();
+            if (page == Page.Squad) Open(Page.Squad);
         }
 
         private void SelectSquadSlot(int slot)
