@@ -22,6 +22,26 @@ namespace FC2026
         }
 
         /// <summary>Notify roster mutations without discarding the user's current starting eleven.</summary>
+        public void RestoreStartingEleven(IEnumerable<string> savedPlayerIds)
+        {
+            if (CurrentTeam == null) return;
+            var ids = new HashSet<string>((savedPlayerIds ?? Enumerable.Empty<string>()).Where(id => !string.IsNullOrWhiteSpace(id)));
+            var ordered = new List<PlayerData>();
+            foreach (var id in savedPlayerIds ?? Enumerable.Empty<string>())
+            {
+                var player = CurrentTeam.players.FirstOrDefault(item => item != null && item.id == id);
+                if (player != null && ordered.All(item => item.id != player.id)) ordered.Add(player);
+                if (ordered.Count >= 11) break;
+            }
+            foreach (var player in CurrentTeam.players.Where(item => item != null && !ids.Contains(item.id)))
+            {
+                if (ordered.Count >= 11) break;
+                ordered.Add(player);
+            }
+            startingEleven = ordered;
+            SquadChanged?.Invoke();
+        }
+
         public void NotifyRosterChanged()
         {
             if (CurrentTeam == null) { startingEleven.Clear(); SquadChanged?.Invoke(); return; }
