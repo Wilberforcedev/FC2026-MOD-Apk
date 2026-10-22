@@ -11,6 +11,7 @@ namespace FC2026
     public sealed class AEROProceduralFootballerVisual : MonoBehaviour
     {
         [SerializeField, Range(0.7f, 1.2f)] private float bodyScale = 1f;
+        private static readonly Dictionary<int, Material> SharedMaterials = new();
         private readonly List<Renderer> renderers = new();
         private Transform leftLeg;
         private Transform rightLeg;
@@ -35,51 +36,31 @@ namespace FC2026
 
             Part(PrimitiveType.Capsule, "Upper Body / Jersey", transform, new Vector3(0, 1.23f, 0),
                 new Vector3(0.43f, 0.36f, 0.255f), kit);
-            Part(PrimitiveType.Cube, "Jersey Shoulder Stripe", transform, new Vector3(0, 1.42f, -0.001f),
-                new Vector3(0.41f, 0.055f, 0.265f), trim);
             Part(PrimitiveType.Cube, "Shorts", transform, new Vector3(0, 0.76f, 0),
                 new Vector3(0.39f, 0.22f, 0.26f), shorts);
-            Part(PrimitiveType.Capsule, "Neck", transform, new Vector3(0, 1.58f, 0),
-                new Vector3(0.115f, 0.12f, 0.12f), skin);
             head = Part(PrimitiveType.Sphere, "Head", transform, new Vector3(0, 1.77f, 0.005f),
                 new Vector3(0.265f, 0.29f, 0.255f), skin).transform;
             Part(PrimitiveType.Sphere, "Hair", transform, new Vector3(0, 1.89f, -0.005f),
                 new Vector3(0.27f, 0.16f, 0.26f), new Color(0.055f, 0.035f, 0.025f));
-            Part(PrimitiveType.Sphere, "Left Eye", transform, new Vector3(-0.065f, 1.79f, 0.125f),
-                new Vector3(0.022f, 0.022f, 0.018f), Color.black);
-            Part(PrimitiveType.Sphere, "Right Eye", transform, new Vector3(0.065f, 1.79f, 0.125f),
-                new Vector3(0.022f, 0.022f, 0.018f), Color.black);
 
             leftArm = NewPivot("Left Arm Pivot", new Vector3(-0.255f, 1.38f, 0));
             Part(PrimitiveType.Capsule, "Left Arm", leftArm, new Vector3(0, -0.19f, 0),
                 new Vector3(0.13f, 0.23f, 0.13f), skin);
-            Part(PrimitiveType.Capsule, "Left Sleeve", leftArm, new Vector3(0, -0.06f, 0),
-                new Vector3(0.15f, 0.105f, 0.15f), trim);
             rightArm = NewPivot("Right Arm Pivot", new Vector3(0.255f, 1.38f, 0));
             Part(PrimitiveType.Capsule, "Right Arm", rightArm, new Vector3(0, -0.19f, 0),
                 new Vector3(0.13f, 0.23f, 0.13f), skin);
-            Part(PrimitiveType.Capsule, "Right Sleeve", rightArm, new Vector3(0, -0.06f, 0),
-                new Vector3(0.15f, 0.105f, 0.15f), trim);
 
             leftLeg = NewPivot("Left Leg Pivot", new Vector3(-0.115f, 0.69f, 0));
             Part(PrimitiveType.Capsule, "Left Leg", leftLeg, new Vector3(0, -0.275f, 0),
                 new Vector3(0.145f, 0.31f, 0.15f), skin);
-            Part(PrimitiveType.Capsule, "Left Sock", leftLeg, new Vector3(0, -0.39f, 0),
-                new Vector3(0.132f, 0.14f, 0.137f), socks);
             Part(PrimitiveType.Cube, "Left Boot", leftLeg, new Vector3(0, -0.565f, 0.065f),
                 new Vector3(0.16f, 0.095f, 0.28f), boots);
 
             rightLeg = NewPivot("Right Leg Pivot", new Vector3(0.115f, 0.69f, 0));
             Part(PrimitiveType.Capsule, "Right Leg", rightLeg, new Vector3(0, -0.275f, 0),
                 new Vector3(0.145f, 0.31f, 0.15f), skin);
-            Part(PrimitiveType.Capsule, "Right Sock", rightLeg, new Vector3(0, -0.39f, 0),
-                new Vector3(0.132f, 0.14f, 0.137f), socks);
             Part(PrimitiveType.Cube, "Right Boot", rightLeg, new Vector3(0, -0.565f, 0.065f),
                 new Vector3(0.16f, 0.095f, 0.28f), boots);
-
-            // Jersey number plate: simple contrasting fabric block; no licensed player likeness is used.
-            Part(PrimitiveType.Cube, "Front Jersey Badge", transform, new Vector3(0.11f, 1.27f, 0.239f),
-                new Vector3(0.075f, 0.095f, 0.016f), trim);
 
             foreach (var renderer in renderers)
             {
@@ -109,17 +90,21 @@ namespace FC2026
             var collider = part.GetComponent<Collider>();
             if (collider != null) Destroy(collider);
             var renderer = part.GetComponent<Renderer>();
-            renderer.sharedMaterial = CreateMaterial(color);
+            renderer.sharedMaterial = GetSharedMaterial(color);
             renderers.Add(renderer);
             return part;
         }
 
-        private static Material CreateMaterial(Color color)
+        private static Material GetSharedMaterial(Color color)
         {
+            Color32 c = color;
+            int key = c.r | (c.g << 8) | (c.b << 16) | (c.a << 24);
+            if (SharedMaterials.TryGetValue(key, out var cached) && cached != null) return cached;
             var shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Standard");
-            var material = new Material(shader) { color = color };
+            var material = new Material(shader) { color = color, enableInstancing = true };
             if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.22f);
+            SharedMaterials[key] = material;
             return material;
         }
 
