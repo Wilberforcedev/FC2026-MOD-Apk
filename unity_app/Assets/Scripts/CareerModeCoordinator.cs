@@ -107,7 +107,7 @@ namespace FC2026
             if (calendar != null && database != null) calendar.Configure(database);
             if (matchEngine != null && calendar != null && database != null) matchEngine.Configure(database, calendar);
             if (scouting != null) scouting.Configure(database, legacyCareer);
-            if (negotiations != null) negotiations.Configure(legacyCareer, squad);
+            if (negotiations != null) negotiations.Configure(legacyCareer, squad, this);
         }
 
         private void BindEvents()
