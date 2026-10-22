@@ -46,6 +46,14 @@ The runtime prototype also includes a generated pitch, ball passing and shooting
 
 All screens follow one FC 2026 presentation system inspired by the supplied kit-selection reference: dark stadium backdrops, soft spotlighting, bold white uppercase headings, cyan focus brackets, muted blue-gray secondary text, collectible card silhouettes, and a consistent controller/touch interaction rail. The shared `FC2026UITheme` ScriptableObject stores the palette, card tiers, spacing, panel radius, focus treatment, and interaction colors so screens do not drift visually. See `UI_STYLE_GUIDE.md` before creating any new screen or component.
 
+## Android-first cinematic mobile hub
+
+`FC2026MobileHub` is the runtime entry UI for the Unity 6 project. It attaches itself after a scene loads and creates a portrait-first Canvas using a 900 × 1600 reference resolution and Scale With Screen Size. The home hub, squad manager, kit room, career dashboard, tournament entry, transfer store, and matchday scoreboard share the FC2026UITheme palette and touch-first card/button treatment.
+
+The hub uses a lightweight procedural stadium backdrop rather than large background textures. Selecting Play Match creates the existing `MatchArenaBootstrap` when a scene does not already contain one, then opens the match presentation layer. Squad swaps use `SquadManager`; career funds use `CareerManager` when present; player listings use `FootballWorldDatabase` when available and fall back to demo entries when it is not.
+
+The kit room currently previews and stores the selected club accent color in runtime team data. Hook that selection to production kit materials when those assets are introduced. The generated UI is intentionally code-driven so the project can launch without a pre-authored menu scene; validate portrait and landscape aspect ratios in Unity Game view and on a physical Android device before release.
+
 ## Transfer market
 
 `TransferMarketScreen` is the first full screen built on `FC2026UITheme`. It presents searchable collectible player cards, bronze/silver/gold/elite tier colors, position and club context, player attributes, transfer fees, focused-player details, budget checks, squad insertion after purchase, and themed success/failure states. Add it to a scene with `FC2026UITheme`, `CareerManager`, and `SquadManager` references to use the runtime screen.
