@@ -18,6 +18,10 @@ namespace FC2026
         public bool isPlayed;
         public int homeGoals;
         public int awayGoals;
+        public bool isLeagueFixture = true;
+        public string cupRound;
+        public string cupTieId;
+        public string winnerClubId;
     }
 
     [Serializable]
@@ -38,7 +42,7 @@ namespace FC2026
     {
         [SerializeField] private FootballWorldDatabase database;
         [SerializeField] private int season = 1;
-        [SerializeField] private string leagueId = "continental-premier";
+        [SerializeField] private string leagueId = "england-premier-league";
         [SerializeField] private List<SeasonFixture> fixtures = new();
         [SerializeField] private List<ClubSeasonStanding> standings = new();
 
@@ -47,6 +51,8 @@ namespace FC2026
         public IReadOnlyList<SeasonFixture> Fixtures => fixtures;
         public IReadOnlyList<ClubSeasonStanding> Standings => standings.OrderByDescending(item => item.points).ThenByDescending(item => item.GoalDifference).ThenByDescending(item => item.goalsFor).ToList();
         public event Action CalendarChanged;
+        public int TotalMatchweeks => fixtures.Count == 0 ? 0 : fixtures.Max(item => item.matchweek);
+        public FootballWorldDatabase Database => database;
 
         public void Configure(FootballWorldDatabase worldDatabase) => database = worldDatabase;
 
@@ -55,12 +61,54 @@ namespace FC2026
             if (database == null) database = FindFirstObjectByType<FootballWorldCatalogLoader>()?.Database;
             var clubs = database?.ClubsForLeague(targetLeagueId).ToList();
             if (clubs == null || clubs.Count < 2) return false;
+            return GenerateSeasonFromClubList(targetLeagueId, targetSeason, clubs);
+        }
+
+        public bool GenerateSeasonFromClubIds(string targetLeagueId, int targetSeason, IEnumerable<string> clubIds)
+        {
+            if (database == null) database = FindFirstObjectByType<FootballWorldCatalogLoader>()?.Database;
+            if (database == null || clubIds == null) return false;
+            var clubs = clubIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct()
+                .Select(id => database.FindClub(id)).Where(club => club != null).ToList();
+            return clubs.Count >= 2 && GenerateSeasonFromClubList(targetLeagueId, targetSeason, clubs);
+        }
+
+        private bool GenerateSeasonFromClubList(string targetLeagueId, int targetSeason, List<WorldClubDefinition> clubs)
+        {
             leagueId = targetLeagueId;
             season = targetSeason;
             fixtures = GenerateDoubleRoundRobin(clubs, targetLeagueId, targetSeason);
             standings = clubs.Select(club => new ClubSeasonStanding { clubId = club.id }).ToList();
             CalendarChanged?.Invoke();
             return true;
+        }
+
+        public bool RestoreSnapshot(string targetLeagueId, int targetSeason, IEnumerable<SeasonFixture> savedFixtures, IEnumerable<ClubSeasonStanding> savedStandings)
+        {
+            if (string.IsNullOrWhiteSpace(targetLeagueId) || savedFixtures == null || savedStandings == null) return false;
+            var nextFixtures = savedFixtures.Where(item => item != null && !string.IsNullOrWhiteSpace(item.fixtureId) &&
+                !string.IsNullOrWhiteSpace(item.homeClubId) && !string.IsNullOrWhiteSpace(item.awayClubId))
+                .Select(item => new SeasonFixture { fixtureId = item.fixtureId, competitionId = item.competitionId, leagueId = item.leagueId,
+                    season = item.season, matchweek = item.matchweek, homeClubId = item.homeClubId, awayClubId = item.awayClubId,
+                    isPlayed = item.isPlayed, homeGoals = item.homeGoals, awayGoals = item.awayGoals, isLeagueFixture = item.isLeagueFixture,
+                    cupRound = item.cupRound, cupTieId = item.cupTieId, winnerClubId = item.winnerClubId }).ToList();
+            var nextStandings = savedStandings.Where(item => item != null && !string.IsNullOrWhiteSpace(item.clubId))
+                .Select(item => new ClubSeasonStanding { clubId = item.clubId, played = item.played, wins = item.wins, draws = item.draws,
+                    losses = item.losses, goalsFor = item.goalsFor, goalsAgainst = item.goalsAgainst, points = item.points }).ToList();
+            if (nextFixtures.Count == 0 || nextStandings.Count < 2) return false;
+            leagueId = targetLeagueId; season = Mathf.Max(1, targetSeason); fixtures = nextFixtures; standings = nextStandings;
+            CalendarChanged?.Invoke();
+            return true;
+        }
+
+        public void AppendFixtures(IEnumerable<SeasonFixture> additionalFixtures)
+        {
+            if (additionalFixtures == null) return;
+            var ids = new HashSet<string>(fixtures.Select(item => item.fixtureId));
+            foreach (var item in additionalFixtures.Where(item => item != null && !string.IsNullOrWhiteSpace(item.fixtureId)))
+                if (ids.Add(item.fixtureId)) fixtures.Add(item);
+            fixtures = fixtures.OrderBy(item => item.matchweek).ThenBy(item => item.isLeagueFixture ? 0 : 1).ThenBy(item => item.fixtureId).ToList();
+            CalendarChanged?.Invoke();
         }
 
         public IReadOnlyList<SeasonFixture> FixturesForMatchweek(int matchweek) => fixtures.Where(item => item.matchweek == matchweek).ToList();
@@ -71,12 +119,18 @@ namespace FC2026
         {
             var fixture = fixtures.FirstOrDefault(item => item.fixtureId == fixtureId);
             if (fixture == null || fixture.isPlayed || homeGoals < 0 || awayGoals < 0) return false;
+            if (fixture.isLeagueFixture)
+            {
+                var home = StandingForClub(fixture.homeClubId);
+                var away = StandingForClub(fixture.awayClubId);
+                if (home == null || away == null) return false;
+            }
             fixture.isPlayed = true;
             fixture.homeGoals = homeGoals;
             fixture.awayGoals = awayGoals;
+            if (!fixture.isLeagueFixture) { CalendarChanged?.Invoke(); return true; }
             var home = StandingForClub(fixture.homeClubId);
             var away = StandingForClub(fixture.awayClubId);
-            if (home == null || away == null) return false;
             home.played++; away.played++;
             home.goalsFor += homeGoals; home.goalsAgainst += awayGoals;
             away.goalsFor += awayGoals; away.goalsAgainst += homeGoals;
