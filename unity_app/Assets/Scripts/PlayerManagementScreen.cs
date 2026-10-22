@@ -33,6 +33,7 @@ namespace FC2026
         private bool stylesReady;
 
         private string SavePath => Path.Combine(Application.persistentDataPath, "custom-players.json");
+        private string CurrentClubId => squadManager?.CurrentTeam?.id ?? string.Empty;
 
         private void Awake()
         {
@@ -278,10 +279,20 @@ namespace FC2026
             try
             {
                 if (!File.Exists(SavePath)) return;
-                PlayerDataList wrapper = JsonUtility.FromJson<PlayerDataList>(File.ReadAllText(SavePath));
-                if (wrapper?.players == null) return;
+                PlayerDataStore store = JsonUtility.FromJson<PlayerDataStore>(File.ReadAllText(SavePath));
                 customPlayers.Clear();
-                customPlayers.AddRange(wrapper.players.Where(p => p != null));
+                if (store?.teams != null && store.teams.Count > 0)
+                {
+                    var teamSave = store.teams.FirstOrDefault(team => team != null && team.clubId == CurrentClubId);
+                    if (teamSave?.players != null) customPlayers.AddRange(teamSave.players.Where(player => player != null));
+                    return;
+                }
+                // One-time compatibility with the earlier global custom-players file format.
+                if (store?.players != null && !string.IsNullOrWhiteSpace(CurrentClubId))
+                {
+                    customPlayers.AddRange(store.players.Where(player => player != null));
+                    PersistCustomPlayers();
+                }
             }
             catch (Exception ex)
             {
@@ -295,7 +306,20 @@ namespace FC2026
             {
                 string directory = Path.GetDirectoryName(SavePath);
                 if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-                File.WriteAllText(SavePath, JsonUtility.ToJson(new PlayerDataList { players = customPlayers }, true));
+                if (string.IsNullOrWhiteSpace(CurrentClubId)) throw new InvalidOperationException("Current club is not initialized.");
+
+                var store = new PlayerDataStore { teams = new List<PlayerTeamSave>() };
+                if (File.Exists(SavePath))
+                {
+                    var existing = JsonUtility.FromJson<PlayerDataStore>(File.ReadAllText(SavePath));
+                    if (existing?.teams != null) store.teams.AddRange(existing.teams.Where(team => team != null));
+                    if (store.teams.Count == 0 && existing?.players != null && existing.players.Count > 0)
+                        store.teams.Add(new PlayerTeamSave { clubId = CurrentClubId, players = existing.players.Where(player => player != null).ToList() });
+                }
+                var teamSave = store.teams.FirstOrDefault(team => team.clubId == CurrentClubId);
+                if (teamSave == null) { teamSave = new PlayerTeamSave { clubId = CurrentClubId }; store.teams.Add(teamSave); }
+                teamSave.players = customPlayers.Where(player => player != null).ToList();
+                File.WriteAllText(SavePath, JsonUtility.ToJson(store, true));
                 return true;
             }
             catch (Exception ex)
@@ -307,8 +331,17 @@ namespace FC2026
         }
 
         [Serializable]
-        private sealed class PlayerDataList
+        private sealed class PlayerDataStore
         {
+            public List<PlayerTeamSave> teams = new();
+            // Retained to migrate the original single-list JSON shape.
+            public List<PlayerData> players;
+        }
+
+        [Serializable]
+        private sealed class PlayerTeamSave
+        {
+            public string clubId;
             public List<PlayerData> players = new();
         }
 
