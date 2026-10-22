@@ -95,12 +95,17 @@ namespace FC2026.Tests
                 clubId = item.clubId, played = item.played, wins = item.wins, draws = item.draws,
                 losses = item.losses, goalsFor = item.goalsFor, goalsAgainst = item.goalsAgainst, points = item.points
             }).ToList();
-            var restored = CreateManager();
-
-            Assert.That(restored.RestoreSnapshot("league-a", 5, new[] { copiedFixture }.Concat(manager.Fixtures.Skip(1)), copiedStandings), Is.True);
-            Assert.That(restored.Fixtures.Single(item => item.fixtureId == fixture.fixtureId).isPlayed, Is.True);
-            Assert.That(restored.StandingForClub(fixture.homeClubId).points, Is.EqualTo(3));
-            Assert.That(restored.Season, Is.EqualTo(5));
+            var restoredObject = new GameObject("Restored Season Calendar Test");
+            try
+            {
+                var restored = restoredObject.AddComponent<SeasonCalendarManager>();
+                restored.Configure(database);
+                Assert.That(restored.RestoreSnapshot("league-a", 5, new[] { copiedFixture }.Concat(manager.Fixtures.Skip(1)), copiedStandings), Is.True);
+                Assert.That(restored.Fixtures.Single(item => item.fixtureId == fixture.fixtureId).isPlayed, Is.True);
+                Assert.That(restored.StandingForClub(fixture.homeClubId).points, Is.EqualTo(3));
+                Assert.That(restored.Season, Is.EqualTo(5));
+            }
+            finally { Object.DestroyImmediate(restoredObject); }
         }
 
         [Test]
