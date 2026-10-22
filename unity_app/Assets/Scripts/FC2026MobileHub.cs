@@ -165,6 +165,7 @@ namespace FC2026
         private void Open(Page next)
         {
             page = next;
+            if (backdropRoot != null) backdropRoot.SetActive(page != Page.Match);
             if (backdropCamera != null) backdropCamera.enabled = page != Page.Match;
             foreach (Transform child in content) Destroy(child.gameObject);
             scroll.verticalNormalizedPosition = 1;
@@ -426,6 +427,8 @@ namespace FC2026
         private void StartMatch(GameMode mode = GameMode.Kickoff)
         {
             if (Game == null) { SetStatus("GAME BOOTSTRAP NOT READY"); return; }
+            if (FindFirstObjectByType<MatchArenaBootstrap>() == null)
+                new GameObject("FC 2026 Runtime Match Arena").AddComponent<MatchArenaBootstrap>();
             if (mode == GameMode.ChampionsCup) Modes?.OpenChampionsCup();
             else Modes?.OpenKickoff();
             Game.Match.StartMatch(new MatchConfig { homeTeam = Game.UserTeam, awayTeam = Game.OpponentTeam, mode = mode, halfLengthMinutes = 3f });
