@@ -33,6 +33,7 @@ namespace FC2026
     public sealed class ScoutingNetworkManager : MonoBehaviour
     {
         [SerializeField] private CareerManager career;
+        [SerializeField] private CareerModeCoordinator careerCoordinator;
         [SerializeField] private FootballWorldDatabase database;
         [SerializeField] private int weeklyScoutingBudget = 250000;
         [SerializeField] private int networkLevel = 1;
@@ -48,10 +49,11 @@ namespace FC2026
 
         private void Awake() => database ??= FindFirstObjectByType<FootballWorldCatalogLoader>()?.Database;
 
-        public void Configure(FootballWorldDatabase worldDatabase, CareerManager careerManager)
+        public void Configure(FootballWorldDatabase worldDatabase, CareerManager careerManager, CareerModeCoordinator coordinator = null)
         {
             database = worldDatabase;
             career = careerManager;
+            careerCoordinator = coordinator;
         }
 
         public void RestoreState(IEnumerable<ScoutAssignment> savedAssignments, IEnumerable<ScoutReport> savedReports)
@@ -70,9 +72,16 @@ namespace FC2026
         {
             if (player == null || assignments.Any(item => item.playerId == player.id)) return false;
             var cost = Mathf.Max(50000, weeklyScoutingBudget / Mathf.Max(1, networkLevel) * Mathf.Clamp(weeks, 1, 6));
-            if (career != null && !career.CanAfford(cost)) return false;
+            bool persistentCareer = careerCoordinator != null && careerCoordinator.HasActiveCareer;
+            if (persistentCareer)
+            {
+                if (careerCoordinator.SaveManager.Career.transferBudget < cost) return false;
+                if (!careerCoordinator.SaveManager.TrySpendBudget(cost)) return false;
+            }
+            else if (career != null && !career.CanAfford(cost)) return false;
+
             assignments.Add(new ScoutAssignment { assignmentId = $"scout-{player.id}-{DateTime.UtcNow.Ticks}", playerId = player.id, region = region, weeksRemaining = Mathf.Clamp(weeks, 1, 6), budgetCost = cost });
-            if (career != null) career.SpendTransferBudget(cost);
+            if (!persistentCareer && career != null) career.SpendTransferBudget(cost);
             NetworkChanged?.Invoke();
             return true;
         }
