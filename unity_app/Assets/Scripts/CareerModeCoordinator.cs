@@ -257,8 +257,30 @@ namespace FC2026
         {
             if (saveManager == null || !saveManager.HasCareer) return;
             ResolveManagers();
+            EnsureSquadContracts();
             saveManager.CaptureRuntimeSnapshot(calendar, progression, scouting, squad);
             legacyCareer?.SetTransferBudget(saveManager.Career.transferBudget);
+        }
+
+        private void EnsureSquadContracts()
+        {
+            if (!HasActiveCareer || squad?.CurrentTeam == null) return;
+            var knownContracts = new HashSet<string>(saveManager.Career.contracts
+                .Where(contract => contract != null && !string.IsNullOrWhiteSpace(contract.playerId)).Select(contract => contract.playerId));
+            foreach (var player in squad.CurrentTeam.players.Where(player => player != null && !string.IsNullOrWhiteSpace(player.id)))
+            {
+                if (!knownContracts.Add(player.id)) continue;
+                int expectedWage = Mathf.Max(500, player.overall * 400);
+                int available = Mathf.Max(0, saveManager.Career.weeklyWageBudget - saveManager.Career.currentWeeklyWages);
+                int assignedWage = Mathf.Min(expectedWage, available);
+                int term = player.overall >= 80 ? 3 : 2;
+                saveManager.Career.contracts.Add(new CareerContractRecord
+                {
+                    playerId = player.id, playerName = player.displayName, weeklyWage = assignedWage,
+                    remainingYears = term, signedSeason = saveManager.Career.season, expirySeason = saveManager.Career.season + term
+                });
+                saveManager.Career.currentWeeklyWages += assignedWage;
+            }
         }
 
         public bool StartNextCareerFixture()
@@ -323,7 +345,7 @@ namespace FC2026
 
         public bool SellPlayer(string playerId, int fee, int weeklyWageSaved)
         {
-            if (!HasActiveCareer || squad?.CurrentTeam == null) return false;
+            if (!HasActiveCareer || squad?.CurrentTeam == null || !saveManager.TransferWindowOpen || squad.CurrentTeam.players.Count <= 11) return false;
             var player = squad.CurrentTeam.players.FirstOrDefault(item => item != null && item.id == playerId);
             if (player == null || !saveManager.TrySellPlayer(player.id, player.displayName, fee, weeklyWageSaved)) return false;
             squad.CurrentTeam.players.Remove(player);
@@ -385,6 +407,14 @@ namespace FC2026
             {
                 nextIds[nextIds.Count - 1] = saveManager.Career.clubId;
                 saveManager.Career.leagueId = nextLeague;
+            }
+            var expiringPlayerIds = new HashSet<string>(saveManager.Career.contracts
+                .Where(contract => contract != null && contract.remainingYears <= 1)
+                .Select(contract => contract.playerId).Where(id => !string.IsNullOrWhiteSpace(id)));
+            if (squad?.CurrentTeam != null && expiringPlayerIds.Count > 0)
+            {
+                squad.CurrentTeam.players.RemoveAll(player => player != null && expiringPlayerIds.Contains(player.id));
+                squad.NotifyRosterChanged();
             }
             saveManager.BeginNextSeason();
             saveManager.Career.runtime.activeLeagueClubIds = nextIds;
