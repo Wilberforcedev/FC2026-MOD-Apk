@@ -89,6 +89,8 @@ namespace FC2026
         public List<ScoutAssignment> scoutAssignments = new List<ScoutAssignment>();
         public List<ScoutReport> scoutReports = new List<ScoutReport>();
         public List<CareerPlayerSnapshot> squadPlayers = new List<CareerPlayerSnapshot>();
+        public List<string> startingElevenPlayerIds = new List<string>();
+        public string formation = "4-3-3";
         public List<string> activeLeagueClubIds = new List<string>();
     }
 
@@ -393,6 +395,8 @@ namespace FC2026
             }
             if (squad?.CurrentTeam != null)
             {
+                career.runtime.formation = squad.CurrentTeam.formation;
+                career.runtime.startingElevenPlayerIds = squad.StartingEleven.Where(item => item != null).Select(item => item.id).ToList();
                 career.runtime.squadPlayers = squad.CurrentTeam.players.Where(item => item != null).Select(item => new CareerPlayerSnapshot
                 {
                     id = item.id, displayName = item.displayName, position = item.position, overall = item.overall,
@@ -422,7 +426,9 @@ namespace FC2026
                         passing = Mathf.Clamp(saved.passing, 1, 99), dribbling = Mathf.Clamp(saved.dribbling, 1, 99), defending = Mathf.Clamp(saved.defending, 1, 99),
                         physicality = Mathf.Clamp(saved.physicality, 1, 99), isGoalkeeper = saved.isGoalkeeper });
                 }
+                squad.CurrentTeam.formation = string.IsNullOrWhiteSpace(career.runtime.formation) ? "4-3-3" : career.runtime.formation;
                 squad.Initialize(squad.CurrentTeam);
+                squad.RestoreStartingEleven(career.runtime.startingElevenPlayerIds);
             }
             NotifyChanged();
         }
@@ -541,6 +547,7 @@ namespace FC2026
             if (save.runtime.scoutAssignments == null) save.runtime.scoutAssignments = new List<ScoutAssignment>();
             if (save.runtime.scoutReports == null) save.runtime.scoutReports = new List<ScoutReport>();
             if (save.runtime.squadPlayers == null) save.runtime.squadPlayers = new List<CareerPlayerSnapshot>();
+            if (save.runtime.startingElevenPlayerIds == null) save.runtime.startingElevenPlayerIds = new List<string>();
             if (save.runtime.activeLeagueClubIds == null) save.runtime.activeLeagueClubIds = new List<string>();
             if (save.objectives == null) save.objectives = new List<CareerObjective>();
             if (save.playerProgress == null) save.playerProgress = new List<CareerPlayerProgress>();
