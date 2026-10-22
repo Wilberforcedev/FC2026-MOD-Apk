@@ -296,7 +296,7 @@ namespace FC2026
 
         public bool EndSeason()
         {
-            if (!HasActiveCareer || calendar == null || database == null || calendar.Fixtures.Any(item => item.isLeagueFixture && !item.isPlayed))
+            if (!HasActiveCareer || calendar == null || database == null || calendar.Fixtures.Any(item => !item.isPlayed))
                 return false;
             var standings = calendar.Standings;
             int position = standings.ToList().FindIndex(item => item.clubId == saveManager.Career.clubId) + 1;
@@ -410,14 +410,16 @@ namespace FC2026
                     .OrderBy(club => StableHash(club.id + calendar.Season + competition.id)).Take(16).ToList();
                 if (eligible.Count < 4) continue;
                 var fixtures = new List<SeasonFixture>();
+                string openingRound = eligible.Count >= 16 ? "Round of 16" : eligible.Count >= 8 ? "Quarter-final" : "Semi-final";
+                string roundKey = openingRound.ToLowerInvariant().Replace("-", "").Replace(" ", "");
                 int cupWeek = Math.Min(Math.Max(1, calendar.TotalMatchweeks - 2), 6);
                 for (int i = 0; i < eligible.Count / 2; i++)
                 {
                     var home = eligible[i * 2]; var away = eligible[i * 2 + 1];
-                    fixtures.Add(new SeasonFixture { fixtureId = $"cup-{competition.id}-s{calendar.Season}-r16-{i + 1}",
+                    fixtures.Add(new SeasonFixture { fixtureId = $"cup-{competition.id}-s{calendar.Season}-{roundKey}-{i + 1}",
                         competitionId = competition.id, leagueId = calendar.LeagueId, season = calendar.Season,
                         matchweek = cupWeek, homeClubId = home.id, awayClubId = away.id, isLeagueFixture = false,
-                        cupRound = eligible.Count >= 16 ? "Round of 16" : "Opening Round", cupTieId = $"{competition.id}-s{calendar.Season}-r16-{i + 1}" });
+                        cupRound = openingRound, cupTieId = $"{competition.id}-s{calendar.Season}-{roundKey}-{i + 1}" });
                 }
                 calendar.AppendFixtures(fixtures);
                 createdCupRounds.Add(key);
