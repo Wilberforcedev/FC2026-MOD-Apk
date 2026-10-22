@@ -17,7 +17,20 @@ namespace FC2026
         public void Initialize(TeamData team)
         {
             CurrentTeam = team;
-            startingEleven = team.players.Take(11).ToList();
+            startingEleven = team != null ? team.players.Where(player => player != null).Take(11).ToList() : new List<PlayerData>();
+            SquadChanged?.Invoke();
+        }
+
+        /// <summary>Notify roster mutations without discarding the user's current starting eleven.</summary>
+        public void NotifyRosterChanged()
+        {
+            if (CurrentTeam == null) { startingEleven.Clear(); SquadChanged?.Invoke(); return; }
+            startingEleven = startingEleven.Where(player => player != null && CurrentTeam.players.Any(item => item != null && item.id == player.id)).ToList();
+            foreach (var player in CurrentTeam.players.Where(player => player != null))
+            {
+                if (startingEleven.Count >= 11) break;
+                if (startingEleven.All(item => item.id != player.id)) startingEleven.Add(player);
+            }
             SquadChanged?.Invoke();
         }
 
