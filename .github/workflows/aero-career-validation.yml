@@ -1,0 +1,130 @@
+name: AERO Soccer 2027 validation
+
+on:
+  push:
+    branches:
+      - main
+      - feat/aero-career-complete-and-readme-samples
+    paths:
+      - "unity_app/**"
+      - "docs/screenshots/**"
+      - ".github/workflows/aero-career-validation.yml"
+  pull_request:
+    paths:
+      - "unity_app/**"
+      - "docs/screenshots/**"
+      - ".github/workflows/aero-career-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  catalog-and-source-validation:
+    name: Catalog and source validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate Football World catalog
+        run: python unity_app/Tools/validate_football_world.py
+      - name: Check career integration entry points
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path("unity_app/Assets/Scripts")
+          checks = {
+              "CareerModeManager.cs": [
+                  "schemaVersion = 2", "TrySpendBudget(", "CaptureRuntimeSnapshot(", "RestoreRuntimeSnapshot(",
+                  "TrySignPlayer(", "TrySellPlayer(", "UpdateTransferWindow("
+              ],
+              "CareerModeCoordinator.cs": [
+                  "StartNewCareer(", "StartNextCareerFixture(", "OnLiveMatchStateChanged(",
+                  "SimulateRemainingFixtures(", "EndSeason(", "ScheduleCupOpeningRounds(",
+                  "EnsureSquadContracts("
+              ],
+              "SeasonCalendarManager.cs": [
+                  "GenerateSeasonFromClubIds(", "RestoreSnapshot(", "NextFixtureForClub(", "RecordResult("
+              ],
+              "AEROProceduralFootballerVisual.cs": ["Build(", "LateUpdate("],
+              "AEROMatchTouchHud.cs": ["SHOOT", "PASS", "SPRINT", "TACKLE", "SWITCH"],
+              "AEROAndroidQualityBootstrap.cs": ["Application.targetFrameRate", "QualitySettings.lodBias"]
+          }
+          errors = []
+          for filename, required in checks.items():
+              path = root / filename
+              if not path.exists():
+                  errors.append(f"Missing source file: {path}")
+                  continue
+              source = path.read_text(encoding="utf-8")
+              for marker in required:
+                  if marker not in source:
+                      errors.append(f"{path}: missing required marker {marker!r}")
+          for path in [
+              Path("docs/screenshots/aero-home.svg"),
+              Path("docs/screenshots/aero-career.svg"),
+              Path("docs/screenshots/aero-squad.svg"),
+              Path("docs/screenshots/aero-matchday.svg"),
+          ]:
+              if not path.exists():
+                  errors.append(f"Missing README screen sample: {path}")
+              elif "UI CONCEPT SAMPLE" not in path.read_text(encoding="utf-8"):
+                  errors.append(f"Screen sample must be explicitly labelled as a concept: {path}")
+          if errors:
+              print("\n".join(errors))
+              raise SystemExit(1)
+          print("PASS: career integration markers and four correctly labelled README concept samples are present.")
+          PY
+
+  unity-editmode-and-android:
+    name: Unity EditMode tests and Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+      UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Skip Unity tests when the repository has no Unity license secret
+        if: ${{ env.UNITY_LICENSE == '' }}
+        run: echo "SKIPPED Unity EditMode tests and APK build because UNITY_LICENSE is not configured in repository Actions secrets."
+      - name: Run EditMode tests
+        if: ${{ env.UNITY_LICENSE != '' }}
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: unity_app
+          unityVersion: 6000.0.1f1
+          testMode: EditMode
+          artifactsPath: artifacts/editmode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Android APK
+        if: ${{ env.UNITY_LICENSE != '' }}
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: unity_app
+          unityVersion: 6000.0.1f1
+          targetPlatform: Android
+          buildName: AERO-Soccer-2027
+          buildsPath: build
+      - name: Upload Android APK
+        if: ${{ env.UNITY_LICENSE != '' && success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: AERO-Soccer-2027-Android-APK
+          path: build/**/*.apk
+          if-no-files-found: error
