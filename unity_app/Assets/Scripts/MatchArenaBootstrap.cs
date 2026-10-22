@@ -40,6 +40,7 @@ namespace FC2026
             CreateCamera(ball);
             CreateTeamFormation(ball, GameBootstrap.Instance.UserTeam, true, homeMaterial);
             CreateTeamFormation(ball, GameBootstrap.Instance.OpponentTeam, false, awayMaterial);
+            if (GetComponent<AEROPitchPresentation>() == null) gameObject.AddComponent<AEROPitchPresentation>();
         }
 
         private void CreateTeamFormation(BallController ball, TeamData team, bool home, Material kit)
