@@ -184,20 +184,28 @@ namespace FC2026
         {
             try
             {
-                if (!File.Exists(SavePath)) return false;
-                CareerModeSave loaded = JsonUtility.FromJson<CareerModeSave>(File.ReadAllText(SavePath));
-                if (loaded == null || loaded.schemaVersion < 1 || loaded.schemaVersion > 2 || string.IsNullOrWhiteSpace(loaded.clubId)) return false;
+                string sourcePath = File.Exists(SavePath) ? SavePath : SavePath + ".bak";
+                if (!File.Exists(sourcePath)) return false;
+                CareerModeSave loaded = JsonUtility.FromJson<CareerModeSave>(File.ReadAllText(sourcePath));
+                if (loaded == null || loaded.schemaVersion < 1 || loaded.schemaVersion > 2 || string.IsNullOrWhiteSpace(loaded.clubId))
+                {
+                    string backupPath = sourcePath == SavePath ? SavePath + ".bak" : null;
+                    if (string.IsNullOrEmpty(backupPath) || !File.Exists(backupPath)) return false;
+                    loaded = JsonUtility.FromJson<CareerModeSave>(File.ReadAllText(backupPath));
+                    if (loaded == null || loaded.schemaVersion < 1 || loaded.schemaVersion > 2 || string.IsNullOrWhiteSpace(loaded.clubId)) return false;
+                    sourcePath = backupPath;
+                }
                 bool migrated = loaded.schemaVersion < 2;
                 loaded.schemaVersion = 2;
                 EnsureCollections(loaded);
                 career = loaded;
-                if (migrated) Save();
+                if (migrated || sourcePath != SavePath) Save();
                 NotifyChanged();
                 return true;
             }
             catch (Exception ex)
             {
-                Debug.LogError("[AERO Career] Could not load career save: " + ex.Message, this);
+                Debug.LogError("[AERO Career] Could not load career save or backup: " + ex.Message, this);
                 return false;
             }
         }
@@ -269,6 +277,15 @@ namespace FC2026
             return true;
         }
 
+        public bool TrySpendBudget(int amount)
+        {
+            if (!HasCareer || amount < 0 || amount > career.transferBudget) return false;
+            career.transferBudget -= amount;
+            Save();
+            NotifyChanged();
+            return true;
+        }
+
         public bool TrySignPlayer(string playerId, string playerName, int transferFee, int weeklyWage, int contractYears = 3)
         {
             if (!HasCareer || !TransferWindowOpen || string.IsNullOrWhiteSpace(playerId) || string.IsNullOrWhiteSpace(playerName) ||
@@ -331,12 +348,13 @@ namespace FC2026
             return progress == null ? 0 : Mathf.Min(3, progress.developmentPoints / 10);
         }
 
-        public void SetLeaguePosition(int position)
+        public void SetLeaguePosition(int position, int leagueSize = 20)
         {
             if (!HasCareer) return;
-            career.leaguePosition = Mathf.Max(1, position);
-            UpdateObjectiveProgress("top-four", career.leaguePosition <= 4 ? 1 : 0);
-            UpdateObjectiveProgress("avoid-relegation", career.leaguePosition <= 17 ? 1 : 0);
+            leagueSize = Mathf.Max(2, leagueSize);
+            career.leaguePosition = Mathf.Clamp(position, 1, leagueSize);
+            UpdateObjectiveProgress("top-four", career.leaguePosition <= Mathf.Min(4, leagueSize) ? 1 : 0);
+            UpdateObjectiveProgress("avoid-relegation", career.leaguePosition <= leagueSize - Math.Min(3, leagueSize - 1) ? 1 : 0);
             Save();
             NotifyChanged();
         }
@@ -417,9 +435,27 @@ namespace FC2026
             career.leaguePosition = Mathf.Clamp(finalPosition, 1, Mathf.Max(1, leagueSize));
             UpdateObjectiveProgress("top-four", career.leaguePosition <= 4 ? 1 : 0);
             UpdateObjectiveProgress("avoid-relegation", career.leaguePosition <= leagueSize - 3 ? 1 : 0);
-            if (career.leaguePosition <= 3 && upperTierAvailable > 0) { career.promotionCount++; career.lastSeasonOutcome = "PROMOTED"; }
-            else if (career.leaguePosition > Mathf.Max(1, leagueSize - 3) && lowerTierAvailable > 0) { career.relegationCount++; career.lastSeasonOutcome = "RELEGATED"; }
-            else career.lastSeasonOutcome = "FINISHED " + career.leaguePosition + " / " + leagueSize;
+            if (career.leaguePosition <= 3 && upperTierAvailable > 0)
+            {
+                career.promotionCount++;
+                career.lastSeasonOutcome = "PROMOTED";
+                career.boardConfidence = Mathf.Min(100, career.boardConfidence + 12);
+                career.managerReputation = Mathf.Min(100, career.managerReputation + 5);
+            }
+            else if (career.leaguePosition > Mathf.Max(1, leagueSize - 3) && lowerTierAvailable > 0)
+            {
+                career.relegationCount++;
+                career.lastSeasonOutcome = "RELEGATED";
+                career.boardConfidence = Mathf.Max(0, career.boardConfidence - 20);
+                career.managerReputation = Mathf.Max(0, career.managerReputation - 8);
+            }
+            else
+            {
+                career.lastSeasonOutcome = "FINISHED " + career.leaguePosition + " / " + leagueSize;
+                if (career.leaguePosition <= Mathf.Min(4, leagueSize)) career.boardConfidence = Mathf.Min(100, career.boardConfidence + 6);
+                else if (career.leaguePosition > leagueSize - Math.Min(3, leagueSize - 1)) career.boardConfidence = Mathf.Max(0, career.boardConfidence - 10);
+                else career.boardConfidence = Mathf.Clamp(career.boardConfidence + (career.leaguePosition <= leagueSize / 2 ? 2 : -3), 0, 100);
+            }
             if (career.boardConfidence <= 10) career.managerSacked = true;
             Save();
             NotifyChanged();
