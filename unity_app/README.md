@@ -1,4 +1,5 @@
-# FC 2026 — Unity 6
+# AERO Soccer 2027 — Unity App
+
 
 This folder is the Unity 6 implementation of the original mobile soccer game.
 
@@ -109,3 +110,10 @@ Catalog files:
 Run python unity_app/Tools/validate_football_world.py from the repository root. The validator checks unique IDs, player-to-club links, club-to-league links, competition eligibility references, player rating ranges and each league's declared club count.
 
 The JSON catalogs are intended to be assigned as TextAsset references on FootballWorldCatalogLoader in the Unity scene. After importing or changing catalogs, verify the Inspector references and check the loader's LastLoadSucceeded / validation log. This repository update has been source/data-validated; it has not been compiled or play-tested in Unity, and no Android build validation is claimed.
+
+
+## Persistent career profile foundation
+
+`CareerModeManager` adds a versioned local career save profile at `Application.persistentDataPath/aero-career-save.json`. The profile tracks the manager and selected club, season and matchweek, league record, board confidence, reputation, transfer and wage budgets, objectives/rewards, transfer history, match history, and player development records. It exposes methods for starting/loading/saving a career, recording a match, applying transfer transactions, tracking training, updating league position, and advancing to the next season.
+
+This is a domain/persistence foundation and is not yet a complete FC26-equivalent career mode. The next integration steps are to connect it to the existing `CareerDashboardScreen`, `CareerManager`, `SeasonCalendarManager`, `TransferNegotiationManager`, `ScoutingNetworkManager`, and `PlayerProgressionManager`; ensure one authoritative save model; and test full season rollover, transfer windows, contracts/wages, board expectations, player aging/retirement, youth academy, injuries, and cup competitions. Existing career systems and this new persistence profile must be reconciled before shipping to avoid duplicate/conflicting state. Unity compilation, EditMode tests, Android build, and device persistence checks have not yet been run for this branch.
