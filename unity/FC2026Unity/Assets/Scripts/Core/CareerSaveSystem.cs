@@ -17,6 +17,8 @@ namespace FC2026.Core
         public int season = 1;
         public int matchweek = 1;
         public string managedClubId = string.Empty;
+        public string formationId = "4-3-3";
+        public string tacticalStyle = "Balanced";
         public int transferBudget = 15000000;
         public int played;
         public int wins;
@@ -31,7 +33,7 @@ namespace FC2026.Core
     /// </summary>
     public static class CareerSaveSystem
     {
-        public const int CurrentSchemaVersion = 2;
+        public const int CurrentSchemaVersion = 3;
         private const string SaveKey = "fc2026.career.save.v1";
 
         public static bool Save(CareerSaveData data)
@@ -40,6 +42,8 @@ namespace FC2026.Core
                 return false;
 
             CareerLeagueSystem.EnsureStandings(data);
+            data.formationId = CareerFormationSystem.NormalizeFormation(data.formationId);
+            data.tacticalStyle = CareerFormationSystem.NormalizeTacticalStyle(data.tacticalStyle);
             if (!IsValid(data))
                 return false;
 
@@ -71,17 +75,21 @@ namespace FC2026.Core
                 if (data == null)
                     return null;
 
-                // Migrate existing v1 saves without discarding the player's career record.
-                if (data.schemaVersion == 1)
+                // Migrate existing saves without discarding the player's career record.
+                if (data.schemaVersion == 1 || data.schemaVersion == 2)
                 {
                     data.schemaVersion = CurrentSchemaVersion;
                     CareerLeagueSystem.EnsureStandings(data);
+                    data.formationId = CareerFormationSystem.NormalizeFormation(data.formationId);
+                    data.tacticalStyle = CareerFormationSystem.NormalizeTacticalStyle(data.tacticalStyle);
                     if (!Save(data))
                         Debug.LogWarning("FC 2026: career save migration could not be persisted.");
                 }
                 else
                 {
                     CareerLeagueSystem.EnsureStandings(data);
+                    data.formationId = CareerFormationSystem.NormalizeFormation(data.formationId);
+                    data.tacticalStyle = CareerFormationSystem.NormalizeTacticalStyle(data.tacticalStyle);
                 }
 
                 return IsValid(data) ? data : null;
@@ -125,6 +133,8 @@ namespace FC2026.Core
                 && data.losses >= 0
                 && data.wins + data.draws + data.losses <= data.played
                 && data.managedClubId != null
+                && CareerFormationSystem.IsValidFormation(data.formationId)
+                && CareerFormationSystem.IsValidTacticalStyle(data.tacticalStyle)
                 && data.standings != null
                 && data.standings.Length == CareerLeagueSystem.ClubIds.Length
                 && data.standings.All(StandingIsValid);
