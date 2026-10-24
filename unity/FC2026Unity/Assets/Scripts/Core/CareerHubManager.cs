@@ -25,6 +25,7 @@ namespace FC2026.Core
         private GUIStyle bodyStyle;
         private GUIStyle buttonStyle;
         private string notice = "Choose a club to begin your career.";
+        private bool showLeagueTable;
 
         private void Awake()
         {
@@ -67,6 +68,12 @@ namespace FC2026.Core
             var panel = new Rect((Screen.width - panelWidth) / 2f,
                 (Screen.height - panelHeight) / 2f, panelWidth, panelHeight);
             GUI.Box(panel, string.Empty);
+
+            if (showLeagueTable)
+            {
+                DrawLeagueTable(panel);
+                return;
+            }
 
             var x = panel.x + 24f;
             var width = panel.width - 48f;
@@ -140,8 +147,10 @@ namespace FC2026.Core
             }
 
             y += actionHeight + 8f;
+            var actionGap = 8f;
+            var actionWidth = (width - actionGap) / 2f;
             GUI.enabled = save != null;
-            if (GUI.Button(new Rect(x, y, width, actionHeight),
+            if (GUI.Button(new Rect(x, y, actionWidth, actionHeight),
                 "PLAY NEXT MATCH", buttonStyle))
             {
                 enabled = false;
@@ -149,10 +158,72 @@ namespace FC2026.Core
                 if (manager == null)
                     gameObject.AddComponent<MatchManager3D>();
             }
+            if (GUI.Button(new Rect(x + actionWidth + actionGap, y, actionWidth, actionHeight),
+                "LEAGUE TABLE", buttonStyle))
+                showLeagueTable = true;
             GUI.enabled = true;
 
             y += actionHeight + 6f;
             GUI.Label(new Rect(x, y, width, 42f), notice, bodyStyle);
+        }
+
+
+        private void DrawLeagueTable(Rect panel)
+        {
+            var x = panel.x + 22f;
+            var width = panel.width - 44f;
+            var title = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = Mathf.Clamp(Screen.height / 17, 24, 44),
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = Color.white }
+            };
+            var cell = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = Mathf.Clamp(Screen.height / 52, 12, 20),
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = new Color(0.9f, 0.95f, 1f) }
+            };
+            GUI.Label(new Rect(x, panel.y + 18f, width, 58f),
+                $"SEASON {save.season}  •  LEAGUE TABLE", title);
+
+            var rowY = panel.y + 92f;
+            var rowHeight = Mathf.Clamp(panel.height * 0.09f, 34f, 54f);
+            var columns = new[] { 0.06f, 0.34f, 0.43f, 0.50f, 0.57f, 0.64f, 0.77f, 0.91f };
+            var headers = new[] { "#", "CLUB", "P", "W", "D", "L", "GD", "PTS" };
+            for (var i = 0; i < headers.Length; i++)
+            {
+                var left = x + width * columns[i];
+                var right = i == headers.Length - 1 ? x + width : x + width * columns[i + 1];
+                GUI.Label(new Rect(left, rowY, right - left, rowHeight), headers[i], cell);
+            }
+
+            rowY += rowHeight;
+            var ranked = CareerLeagueSystem.GetRankedStandings(save);
+            for (var i = 0; i < ranked.Length; i++)
+            {
+                var standing = ranked[i];
+                var values = new[]
+                {
+                    (i + 1).ToString(), CareerLeagueSystem.GetClubName(standing.clubId),
+                    standing.played.ToString(), standing.wins.ToString(),
+                    standing.draws.ToString(), standing.losses.ToString(),
+                    standing.GoalDifference.ToString("+0;-0;0"), standing.Points.ToString()
+                };
+                for (var column = 0; column < values.Length; column++)
+                {
+                    var left = x + width * columns[column];
+                    var right = column == values.Length - 1 ? x + width : x + width * columns[column + 1];
+                    GUI.Label(new Rect(left, rowY, right - left, rowHeight), values[column], cell);
+                }
+                rowY += rowHeight;
+            }
+
+            var buttonHeight = Mathf.Clamp(panel.height * 0.1f, 48f, 68f);
+            if (GUI.Button(new Rect(x, panel.y + panel.height - buttonHeight - 20f,
+                width, buttonHeight), "BACK TO CAREER", buttonStyle))
+                showLeagueTable = false;
         }
 
         public void RefreshCareer()
