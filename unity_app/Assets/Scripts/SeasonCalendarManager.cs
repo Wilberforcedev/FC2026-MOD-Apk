@@ -71,15 +71,12 @@ namespace FC2026
         {
             var fixture = fixtures.FirstOrDefault(item => item.fixtureId == fixtureId);
             if (fixture == null || fixture.isPlayed || homeGoals < 0 || awayGoals < 0) return false;
-            // Validate every dependency before mutating the fixture or standings.
-            // This keeps the calendar consistent if a club is missing from the table.
-            var home = StandingForClub(fixture.homeClubId);
-            var away = StandingForClub(fixture.awayClubId);
-            if (home == null || away == null) return false;
-
             fixture.isPlayed = true;
             fixture.homeGoals = homeGoals;
             fixture.awayGoals = awayGoals;
+            var home = StandingForClub(fixture.homeClubId);
+            var away = StandingForClub(fixture.awayClubId);
+            if (home == null || away == null) return false;
             home.played++; away.played++;
             home.goalsFor += homeGoals; home.goalsAgainst += awayGoals;
             away.goalsFor += awayGoals; away.goalsAgainst += homeGoals;
