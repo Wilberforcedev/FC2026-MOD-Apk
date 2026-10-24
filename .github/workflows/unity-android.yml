@@ -1,0 +1,53 @@
+name: Build Unity 3D Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "unity/FC2026Unity/**"
+      - ".github/workflows/unity-android.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "unity/FC2026Unity/**"
+      - ".github/workflows/unity-android.yml"
+
+jobs:
+  build-unity-android:
+    name: Build Unity 6.3 Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Unity license is configured
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          if [ -z "$UNITY_LICENSE" ]; then
+            echo "::error::Add the UNITY_LICENSE repository secret before running the Unity Android build. See UNITY_3D.md."
+            exit 1
+          fi
+
+      - name: Build Android APK with Unity
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: unity/FC2026Unity
+          unityVersion: 6000.3.24f1
+          targetPlatform: Android
+          buildMethod: FC2026.EditorTools.AndroidBuilder.BuildAndroid
+
+      - name: Upload Unity APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FC2026-Unity-3D-Android-APK
+          path: unity/FC2026Unity/Builds/Android/FC2026-3D-debug.apk
+          if-no-files-found: error
+          retention-days: 14
