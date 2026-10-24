@@ -38,13 +38,7 @@ namespace FC2026.Core
         private GUIStyle commentaryStyle;
         private GUIStyle fullTimeStyle;
 
-        private readonly Vector3[] homeFormation =
-        {
-            new(0, 0, -48),
-            new(-23, 0, -36), new(-8, 0, -39), new(8, 0, -39), new(23, 0, -36),
-            new(-15, 0, -18), new(0, 0, -21), new(15, 0, -18),
-            new(-21, 0, 4), new(0, 0, 11), new(21, 0, 4),
-        };
+        private Vector3[] homeFormation;
 
         private void Awake()
         {
@@ -56,6 +50,10 @@ namespace FC2026.Core
             Screen.autorotateToPortraitUpsideDown = false;
             Screen.autorotateToLandscapeLeft = true;
             Screen.autorotateToLandscapeRight = true;
+
+            var career = CareerSaveSystem.Load();
+            homeFormation = CareerFormationSystem.GetPositions(career != null ? career.formationId : null,
+                career != null ? career.tacticalStyle : null);
 
             BuildWorld();
             CreateJoystickTexture();
