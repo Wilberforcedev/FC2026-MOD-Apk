@@ -190,12 +190,12 @@ namespace FC2026.Core
 
             var rowY = panel.y + 92f;
             var rowHeight = Mathf.Clamp(panel.height * 0.09f, 34f, 54f);
-            var columns = new[] { 0.06f, 0.34f, 0.43f, 0.50f, 0.57f, 0.64f, 0.77f, 0.91f };
+            var columns = new[] { 0f, 0.08f, 0.42f, 0.52f, 0.62f, 0.72f, 0.82f, 0.91f, 1f };
             var headers = new[] { "#", "CLUB", "P", "W", "D", "L", "GD", "PTS" };
             for (var i = 0; i < headers.Length; i++)
             {
                 var left = x + width * columns[i];
-                var right = i == headers.Length - 1 ? x + width : x + width * columns[i + 1];
+                var right = x + width * columns[i + 1];
                 GUI.Label(new Rect(left, rowY, right - left, rowHeight), headers[i], cell);
             }
 
@@ -214,7 +214,7 @@ namespace FC2026.Core
                 for (var column = 0; column < values.Length; column++)
                 {
                     var left = x + width * columns[column];
-                    var right = column == values.Length - 1 ? x + width : x + width * columns[column + 1];
+                    var right = x + width * columns[column + 1];
                     GUI.Label(new Rect(left, rowY, right - left, rowHeight), values[column], cell);
                 }
                 rowY += rowHeight;
