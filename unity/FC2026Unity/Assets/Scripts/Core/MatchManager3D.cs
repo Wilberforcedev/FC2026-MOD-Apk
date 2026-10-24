@@ -675,7 +675,7 @@ namespace FC2026.Core
             var boardRect = new Rect((Screen.width - boardWidth) * 0.5f, 12f, boardWidth, 62f);
             GUI.Box(boardRect, string.Empty);
             GUI.Label(new Rect(boardRect.x, boardRect.y + 2f, boardRect.width, 36f), $"HOME   {homeScore}  —  {awayScore}   AWAY", scoreStyle);
-            GUI.Label(new Rect(boardRect.x, boardRect.y + 36f, boardRect.width, 20f), "FC 2026  •  FRIENDLY", labelSmallStyle);
+            GUI.Label(new Rect(boardRect.x, boardRect.y + 36f, boardRect.width, 20f), "FC 2026  •  CAREER MATCH", labelSmallStyle);
 
             if (Application.isMobilePlatform)
                 DrawMobileControls();
