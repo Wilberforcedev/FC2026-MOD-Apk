@@ -36,6 +36,10 @@ namespace FC2026.Core
 
         public static bool Save(CareerSaveData data)
         {
+            if (data == null)
+                return false;
+
+            CareerLeagueSystem.EnsureStandings(data);
             if (!IsValid(data))
                 return false;
 
