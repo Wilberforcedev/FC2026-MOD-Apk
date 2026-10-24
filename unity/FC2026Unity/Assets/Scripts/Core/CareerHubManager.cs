@@ -26,6 +26,7 @@ namespace FC2026.Core
         private GUIStyle buttonStyle;
         private string notice = "Choose a club to begin your career.";
         private bool showLeagueTable;
+        private bool showSquadManagement;
 
         private void Awake()
         {
@@ -72,6 +73,11 @@ namespace FC2026.Core
             if (showLeagueTable)
             {
                 DrawLeagueTable(panel);
+                return;
+            }
+            if (showSquadManagement)
+            {
+                DrawSquadManagement(panel);
                 return;
             }
 
@@ -159,14 +165,73 @@ namespace FC2026.Core
                     gameObject.AddComponent<MatchManager3D>();
             }
             if (GUI.Button(new Rect(x + actionWidth + actionGap, y, actionWidth, actionHeight),
-                "LEAGUE TABLE", buttonStyle))
-                showLeagueTable = true;
+                "SQUAD & TACTICS", buttonStyle))
+                showSquadManagement = true;
             GUI.enabled = true;
 
             y += actionHeight + 6f;
             GUI.Label(new Rect(x, y, width, 42f), notice, bodyStyle);
         }
 
+
+
+        private void DrawSquadManagement(Rect panel)
+        {
+            var x = panel.x + 24f;
+            var width = panel.width - 48f;
+            var heading = new GUIStyle(titleStyle)
+            {
+                fontSize = Mathf.Clamp(Screen.height / 19, 24, 42)
+            };
+            GUI.Label(new Rect(x, panel.y + 20f, width, 58f), "SQUAD & TACTICS", heading);
+            GUI.Label(new Rect(x, panel.y + 86f, width, 42f),
+                "Choose your formation", bodyStyle);
+
+            var gap = 8f;
+            var buttonWidth = (width - gap * 2f) / 3f;
+            var buttonHeight = Mathf.Clamp(panel.height * 0.12f, 56f, 78f);
+            var formationY = panel.y + 134f;
+            for (var i = 0; i < CareerFormationSystem.FormationIds.Length; i++)
+            {
+                var id = CareerFormationSystem.FormationIds[i];
+                var selected = save.formationId == id;
+                var label = (selected ? "✓ " : string.Empty) + id;
+                if (GUI.Button(new Rect(x + i * (buttonWidth + gap), formationY,
+                    buttonWidth, buttonHeight), label, buttonStyle))
+                {
+                    save.formationId = id;
+                    CareerSaveSystem.Save(save);
+                    notice = "Formation saved: " + id;
+                }
+            }
+
+            GUI.Label(new Rect(x, formationY + buttonHeight + 22f, width, 42f),
+                "Choose your team mentality", bodyStyle);
+            var tacticsY = formationY + buttonHeight + 68f;
+            for (var i = 0; i < CareerFormationSystem.TacticalStyles.Length; i++)
+            {
+                var style = CareerFormationSystem.TacticalStyles[i];
+                var selected = save.tacticalStyle == style;
+                var label = (selected ? "✓ " : string.Empty) + style;
+                if (GUI.Button(new Rect(x + i * (buttonWidth + gap), tacticsY,
+                    buttonWidth, buttonHeight), label, buttonStyle))
+                {
+                    save.tacticalStyle = style;
+                    CareerSaveSystem.Save(save);
+                    notice = "Team mentality saved: " + style;
+                }
+            }
+
+            GUI.Label(new Rect(x, tacticsY + buttonHeight + 14f, width, 54f),
+                "Changes are saved to your career and used in your next match.", bodyStyle);
+            var footerY = panel.y + panel.height - buttonHeight - 18f;
+            if (GUI.Button(new Rect(x, footerY, buttonWidth, buttonHeight),
+                "BACK", buttonStyle))
+                showSquadManagement = false;
+            if (GUI.Button(new Rect(x + buttonWidth + gap, footerY,
+                buttonWidth * 2f + gap, buttonHeight), "VIEW LEAGUE TABLE", buttonStyle))
+                showLeagueTable = true;
+        }
 
         private void DrawLeagueTable(Rect panel)
         {
