@@ -155,6 +155,17 @@ namespace FC2026.Core
             GUI.Label(new Rect(x, y, width, 42f), notice, bodyStyle);
         }
 
+        public void RefreshCareer()
+        {
+            save = CareerSaveSystem.Load();
+            if (save != null)
+            {
+                selectedClub = FindClubIndex(save.managedClubId);
+                notice = "Match result saved. Career updated.";
+            }
+            else notice = "Match ended. Start a career to save progress.";
+        }
+
         private bool MatchIsRunning()
         {
             return GetComponent<MatchManager3D>() != null && !enabled;
