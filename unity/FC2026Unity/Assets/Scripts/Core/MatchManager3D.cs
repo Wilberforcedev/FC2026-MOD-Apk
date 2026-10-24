@@ -741,6 +741,10 @@ namespace FC2026.Core
             var save = CareerSaveSystem.Load();
             if (save != null)
             {
+                var opponentClubId = CareerLeagueSystem.GetOpponentClubId(save.managedClubId, save.matchweek);
+                if (!CareerLeagueSystem.ApplyResult(save, save.managedClubId, opponentClubId, homeScore, awayScore))
+                    Debug.LogWarning("FC 2026: could not update the league table for this match.");
+
                 save.played++;
                 if (homeScore > awayScore) save.wins++;
                 else if (homeScore < awayScore) save.losses++;
@@ -751,6 +755,7 @@ namespace FC2026.Core
                     save.matchweek = 1;
                     save.season++;
                     save.transferBudget += 2500000;
+                    CareerLeagueSystem.ResetStandings(save);
                 }
                 if (!CareerSaveSystem.Save(save))
                     Debug.LogWarning("FC 2026: match finished, but career result could not be saved.");
