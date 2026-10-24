@@ -91,7 +91,6 @@ namespace FC2026.Core
             if (homeGoals > awayGoals)
             {
                 home.wins++;
-                home.wins = Math.Max(0, home.wins);
                 away.losses++;
             }
             else if (homeGoals < awayGoals)
