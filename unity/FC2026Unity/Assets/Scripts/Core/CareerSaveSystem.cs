@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEngine;
 
 namespace FC2026.Core
@@ -12,6 +13,7 @@ namespace FC2026.Core
     public sealed class CareerSaveData
     {
         public int schemaVersion = CareerSaveSystem.CurrentSchemaVersion;
+        public CareerClubStanding[] standings = Array.Empty<CareerClubStanding>();
         public int season = 1;
         public int matchweek = 1;
         public string managedClubId = string.Empty;
@@ -29,7 +31,7 @@ namespace FC2026.Core
     /// </summary>
     public static class CareerSaveSystem
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
         private const string SaveKey = "fc2026.career.save.v1";
 
         public static bool Save(CareerSaveData data)
@@ -62,6 +64,22 @@ namespace FC2026.Core
                     return null;
 
                 var data = JsonUtility.FromJson<CareerSaveData>(json);
+                if (data == null)
+                    return null;
+
+                // Migrate existing v1 saves without discarding the player's career record.
+                if (data.schemaVersion == 1)
+                {
+                    data.schemaVersion = CurrentSchemaVersion;
+                    CareerLeagueSystem.EnsureStandings(data);
+                    if (!Save(data))
+                        Debug.LogWarning("FC 2026: career save migration could not be persisted.");
+                }
+                else
+                {
+                    CareerLeagueSystem.EnsureStandings(data);
+                }
+
                 return IsValid(data) ? data : null;
             }
             catch (Exception exception)
@@ -77,6 +95,19 @@ namespace FC2026.Core
             PlayerPrefs.Save();
         }
 
+        private static bool StandingIsValid(CareerClubStanding standing)
+        {
+            return standing != null
+                && standing.clubId != null
+                && standing.played >= 0
+                && standing.wins >= 0
+                && standing.draws >= 0
+                && standing.losses >= 0
+                && standing.goalsFor >= 0
+                && standing.goalsAgainst >= 0
+                && standing.wins + standing.draws + standing.losses == standing.played;
+        }
+
         private static bool IsValid(CareerSaveData data)
         {
             return data != null
@@ -89,7 +120,10 @@ namespace FC2026.Core
                 && data.draws >= 0
                 && data.losses >= 0
                 && data.wins + data.draws + data.losses <= data.played
-                && data.managedClubId != null;
+                && data.managedClubId != null
+                && data.standings != null
+                && data.standings.Length == CareerLeagueSystem.ClubIds.Length
+                && data.standings.All(StandingIsValid);
         }
     }
 }
