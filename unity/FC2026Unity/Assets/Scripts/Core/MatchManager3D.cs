@@ -758,13 +758,16 @@ namespace FC2026.Core
             // The hub and match manager share this root. Preserve it and remove only generated children.
             for (var i = transform.childCount - 1; i >= 0; i--)
                 Destroy(transform.GetChild(i).gameObject);
-            enabled = false;
             var hub = GetComponent<CareerHubManager>();
             if (hub != null)
             {
                 hub.RefreshCareer();
                 hub.enabled = true;
             }
+
+            // Remove this match component so the career hub can create a fresh manager
+            // next time. Merely disabling it leaves a stale component that blocks rematches.
+            Destroy(this);
         }
 
         private void DrawMobileControls()
