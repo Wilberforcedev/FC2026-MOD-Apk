@@ -114,6 +114,17 @@ Example on Windows from the repository root:
   -logFile "$PWD\unity-build.log"
 ```
 
+## Automated Unity Android build
+
+The separate workflow `.github/workflows/unity-android.yml` builds the **Unity 3D project**, not the legacy React/Capacitor APK. It runs on Unity project changes or can be started manually from GitHub Actions. A successful run uploads `FC2026-Unity-3D-Android-APK` for 14 days.
+
+Before running it, add a Unity license to the repository's **Settings → Secrets and variables → Actions**:
+
+- `UNITY_LICENSE` — the contents of your Unity license file.
+- `UNITY_EMAIL` and `UNITY_PASSWORD` — only if your Unity licensing setup requires them.
+
+Do not commit license files or credentials to the repository. The workflow checks that `UNITY_LICENSE` exists, then builds with Unity 6000.3.24f1 and the project's Android builder. A CI build confirms that the project can compile/package; a real Android phone or emulator test is still needed to verify touch controls, frame rate, graphics, and save persistence.
+
 ## Migration direction
 
 The Unity version will progressively take over these systems from the existing project:
