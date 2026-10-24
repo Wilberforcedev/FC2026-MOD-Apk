@@ -5,7 +5,7 @@ namespace FC2026.Core
     /// <summary>
     /// Lightweight offline career hub for the procedural Unity 3D prototype.
     /// It lets players choose a club, create/resume a save, and launch a match.
-    /// Match-result and fixture progression will be connected in a later step.
+    /// Match completion updates the saved season record and returns the player to this hub.
     /// </summary>
     public sealed class CareerHubManager : MonoBehaviour
     {
