@@ -29,6 +29,14 @@ namespace FC2026.Core
         private GUIStyle buttonStyle;
         private GUIStyle labelSmallStyle;
         private Texture2D joystickDisc;
+        private const float MatchDurationSeconds = 180f;
+        private float matchElapsed;
+        private float nextCommentaryAt = 8f;
+        private string commentary = "The referee gets us underway!";
+        private bool matchFinished;
+        private bool resultSaved;
+        private GUIStyle commentaryStyle;
+        private GUIStyle fullTimeStyle;
 
         private readonly Vector3[] homeFormation =
         {
@@ -55,6 +63,20 @@ namespace FC2026.Core
 
         private void Update()
         {
+            if (matchFinished) return;
+            matchElapsed += Time.deltaTime;
+            if (matchElapsed >= MatchDurationSeconds)
+            {
+                matchFinished = true;
+                commentary = "Full time! The referee brings the match to an end.";
+                goalBannerUntil = 0f;
+                return;
+            }
+            if (matchElapsed >= nextCommentaryAt)
+            {
+                UpdateCommentary();
+                nextCommentaryAt = matchElapsed + Random.Range(12f, 21f);
+            }
             if (userPlayer == null || !userPlayer.IsUserControlled)
             {
                 var controllers = FindObjectsByType<FootballPlayerController>(FindObjectsSortMode.None);
@@ -572,6 +594,8 @@ namespace FC2026.Core
             else homeScore++;
 
             goalBanner = homeGoal ? "GOAL — AWAY" : "GOAL — HOME";
+            commentary = homeGoal ? "GOAL for the away side! What a finish!" : "GOAL for the home side! The crowd erupts!";
+            nextCommentaryAt = matchElapsed + 14f;
             goalBannerUntil = Time.time + 2.2f;
             StartCoroutine(ResetAfterGoal());
         }
@@ -661,6 +685,86 @@ namespace FC2026.Core
 
             if (Time.time < goalBannerUntil)
                 GUI.Label(new Rect(0, Screen.height * 0.33f, Screen.width, 100f), goalBanner, goalStyle);
+
+            commentaryStyle ??= new GUIStyle(GUI.skin.box)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = Mathf.Clamp(Screen.height / 48, 14, 24),
+                wordWrap = true,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = Color.white }
+            };
+            GUI.Box(new Rect(Screen.width * 0.12f, 82f, Screen.width * 0.76f, 42f), commentary, commentaryStyle);
+            var remaining = Mathf.Max(0f, MatchDurationSeconds - matchElapsed);
+            GUI.Label(new Rect(Screen.width * 0.42f, 128f, Screen.width * 0.16f, 28f),
+                $"{Mathf.FloorToInt(remaining / 60f):00}:{Mathf.FloorToInt(remaining % 60f):00}", labelSmallStyle);
+
+            if (matchFinished)
+            {
+                fullTimeStyle ??= new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = Mathf.Clamp(Screen.height / 16, 28, 54),
+                    fontStyle = FontStyle.Bold,
+                    normal = { textColor = Color.white }
+                };
+                var panel = new Rect(Screen.width * 0.18f, Screen.height * 0.28f, Screen.width * 0.64f, Screen.height * 0.42f);
+                GUI.Box(panel, string.Empty);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 22f, panel.width - 24f, 62f), "FULL TIME", fullTimeStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 92f, panel.width - 24f, 58f),
+                    $"HOME  {homeScore}  —  {awayScore}  AWAY", scoreStyle);
+                if (GUI.Button(new Rect(panel.x + panel.width * 0.15f, panel.y + panel.height - 82f,
+                    panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", buttonStyle))
+                    CompleteCareerMatch();
+            }
+        }
+
+        private void UpdateCommentary()
+        {
+            string[] lines =
+            {
+                "Good pressure from the defence; there is no room to turn.",
+                "The midfield battle is heating up as both teams look for a gap.",
+                "A chance is building here — the runners are moving into space.",
+                "The crowd is urging the players forward.",
+                "A strong challenge wins the ball back in midfield.",
+                "The passing needs to be quicker if they are to break through.",
+                "Both teams are working hard to keep their shape."
+            };
+            commentary = lines[Random.Range(0, lines.Length)];
+        }
+
+        private void CompleteCareerMatch()
+        {
+            if (resultSaved) return;
+            resultSaved = true;
+            var save = CareerSaveSystem.Load();
+            if (save != null)
+            {
+                save.played++;
+                if (homeScore > awayScore) save.wins++;
+                else if (homeScore < awayScore) save.losses++;
+                else save.draws++;
+                save.matchweek++;
+                if (save.matchweek > 38)
+                {
+                    save.matchweek = 1;
+                    save.season++;
+                    save.transferBudget += 2500000;
+                }
+                if (!CareerSaveSystem.Save(save))
+                    Debug.LogWarning("FC 2026: match finished, but career result could not be saved.");
+            }
+            // The hub and match manager share this root. Preserve it and remove only generated children.
+            for (var i = transform.childCount - 1; i >= 0; i--)
+                Destroy(transform.GetChild(i).gameObject);
+            enabled = false;
+            var hub = GetComponent<CareerHubManager>();
+            if (hub != null)
+            {
+                hub.RefreshCareer();
+                hub.enabled = true;
+            }
         }
 
         private void DrawMobileControls()
