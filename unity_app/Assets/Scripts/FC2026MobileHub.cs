@@ -260,15 +260,24 @@ namespace FC2026
 
         private void BuildSquad()
         {
-            Header("SQUAD MANAGEMENT", "4-3-3  /  SELECT TWO PLAYERS TO SWAP");
             var team = Squad?.CurrentTeam;
+            var formation = string.IsNullOrWhiteSpace(team?.formation) ? "4-3-3" : team.formation;
+            Header("SQUAD MANAGEMENT", formation + "  /  SELECT TWO PLAYERS TO SWAP");
             var players = Squad?.StartingEleven?.ToList() ?? new List<PlayerData>();
             var pitch = Panel(content, "FormationPitch", new Color(.035f, .19f, .105f, 1), Vector2.zero, Vector2.one);
             Size(pitch, 200);
-            Label(pitch.transform, "4  —  3  —  3", 15, Color.white, TextAlignmentOptions.TopLeft, new Vector2(16, -12), new Vector2(-16, 24));
+            Label(pitch.transform, formation.Replace("-", "  —  "), 15, Color.white, TextAlignmentOptions.TopLeft, new Vector2(16, -12), new Vector2(-16, 24));
             Label(pitch.transform, "XI  •  " + (team?.displayName ?? "YOUR CLUB"), 11, new Color(.72f, .9f, .78f), TextAlignmentOptions.BottomLeft, new Vector2(16, 12), new Vector2(-16, 22));
             var chemistry = Label(pitch.transform, "CHEMISTRY  " + (Squad?.TeamChemistry ?? 0), 12, C(t => t.focus), TextAlignmentOptions.BottomRight);
             SetAnchors(chemistry.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(12, 12), new Vector2(-16, 32));
+            SectionTitle("TACTICAL FORMATION", "CHOOSE YOUR TEAM SHAPE");
+            var formations = new[] { "4-3-3", "4-2-3-1", "4-4-2", "3-5-2" };
+            foreach (var preset in formations)
+            {
+                var selected = preset == formation;
+                ActionButton(content, (selected ? "✓  " : "    ") + preset, selected ? C(t => t.focus) : C(t => t.panelSoft),
+                    () => SetFormation(preset), Vector2.zero, new Vector2(0, 46));
+            }
             SectionTitle("STARTING XI", selectedSquadSlot < 0 ? "TAP A PLAYER, THEN TAP ANOTHER" : "SLOT " + (selectedSquadSlot + 1) + " SELECTED — CHOOSE A SWAP");
             for (int i = 0; i < players.Count; i++)
             {
@@ -293,6 +302,14 @@ namespace FC2026
                 }
                 selectedSquadSlot = -1; Open(Page.Squad);
             }, Vector2.zero, new Vector2(0, 52));
+        }
+
+        private void SetFormation(string formation)
+        {
+            if (Squad?.CurrentTeam == null) { SetStatus("SQUAD NOT AVAILABLE"); return; }
+            Squad.CurrentTeam.formation = formation;
+            SetStatus("FORMATION UPDATED  /  " + formation);
+            Open(Page.Squad);
         }
 
         private void SelectSquadSlot(int slot)
