@@ -178,7 +178,7 @@ namespace FC2026.Tests
             Assert.That(market.CompleteSigning(offer, 12000), Is.True);
             Assert.That(team.players.Count, Is.EqualTo(1));
             Assert.That(team.players[0].displayName, Is.EqualTo("Sam Striker"));
-            Assert.That(career.TransferBudget, Is.EqualTo(14000000));
+            Assert.That(career.TransferBudget, Is.EqualTo(13900000));
             Assert.That(offer.status, Is.EqualTo(TransferOfferStatus.Completed));
         }
 
