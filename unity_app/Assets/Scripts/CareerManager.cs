@@ -138,13 +138,13 @@ namespace FC2026
         public void CreditTransferBudget(int amount)
         {
             if (amount <= 0) return;
-            TransferBudget = Mathf.Min(int.MaxValue, TransferBudget + amount);
+            TransferBudget = (int)Math.Min(int.MaxValue, (long)TransferBudget + amount);
             CareerChanged?.Invoke();
         }
 
         public bool AddPlayerToSquad(PlayerData player, int weeklyWage)
         {
-            if (userTeam?.players == null || player == null || userTeam.players.Any(x => x.id == player.id)) return false;
+            if (userTeam?.players == null || player == null || userTeam.players.Any(x => x != null && x.id == player.id)) return false;
             userTeam.players.Add(player);
             contracts.Add(new PlayerContract { player = player, weeklyWage = Mathf.Max(500, weeklyWage), weeksRemaining = 104, morale = 75 });
             CareerChanged?.Invoke();
