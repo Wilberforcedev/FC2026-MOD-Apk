@@ -239,6 +239,30 @@ namespace FC2026.Tests
         }
 
         [Test]
+        public void TransferMarketBlocksNegotiationsOutsideConfiguredWindows()
+        {
+            managerObject = new GameObject("Transfer Window Test");
+            worldDatabase = ScriptableObject.CreateInstance<FootballWorldDatabase>();
+            worldDatabase.players.Add(new WorldPlayerDefinition
+            {
+                id = "window-target", displayName = "Window Target", clubId = "away",
+                position = "CM", overall = 75, age = 25, marketValue = 500000
+            });
+            var career = managerObject.AddComponent<CareerManager>();
+            var team = new TeamData { id = "home", players = new System.Collections.Generic.List<PlayerData>() };
+            career.Initialize(team, new[] { team });
+            var window = managerObject.AddComponent<TransferWindowManager>();
+            window.SetWindowPeriods(5, 7, 15, 17);
+            var market = managerObject.AddComponent<TransferMarketManager>();
+            market.Configure(worldDatabase, career, "home", window);
+
+            Assert.That(window.IsWindowOpenFor(6), Is.True);
+            Assert.That(window.IsWindowOpenFor(12), Is.False);
+            Assert.That(market.IsTransferWindowOpen, Is.False);
+            Assert.That(market.MakeOffer("window-target", 500000), Is.Null);
+        }
+
+        [Test]
         public void SellingSquadPlayerCreditsTransferBudget()
         {
             managerObject = new GameObject("Transfer Market Test");
