@@ -6,11 +6,13 @@ namespace FC2026.Tests
     public sealed class PlayerProgressionTests
     {
         private GameObject managerObject;
+        private FootballWorldDatabase worldDatabase;
 
         [TearDown]
         public void TearDown()
         {
             if (managerObject != null) Object.DestroyImmediate(managerObject);
+            if (worldDatabase != null) Object.DestroyImmediate(worldDatabase);
         }
 
         [Test]
@@ -150,6 +152,74 @@ namespace FC2026.Tests
             Assert.That(contract.transferRequested, Is.True);
             Assert.That(career.WeeklyPayroll, Is.EqualTo(0));
             Assert.That(career.ExpiredContracts, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TransferOfferCounterCanBeAcceptedAndPlayerSigned()
+        {
+            managerObject = new GameObject("Transfer Market Test");
+            worldDatabase = ScriptableObject.CreateInstance<FootballWorldDatabase>();
+            var career = managerObject.AddComponent<CareerManager>();
+            var team = new TeamData { id = "home", players = new System.Collections.Generic.List<PlayerData>() };
+            career.Initialize(team, new[] { team });
+            worldDatabase.players.Add(new WorldPlayerDefinition
+            {
+                id = "target-1", displayName = "Sam Striker", clubId = "away",
+                position = "ST", overall = 80, pace = 82, shooting = 84,
+                passing = 65, dribbling = 78, defending = 30, physicality = 76,
+                age = 24, marketValue = 1000000
+            });
+            var market = managerObject.AddComponent<TransferMarketManager>();
+            market.Configure(worldDatabase, career, "home");
+
+            var offer = market.MakeOffer("target-1", 800000);
+            Assert.That(offer.status, Is.EqualTo(TransferOfferStatus.Countered));
+            Assert.That(market.AcceptCounterOffer(offer), Is.True);
+            Assert.That(market.CompleteSigning(offer, 12000), Is.True);
+            Assert.That(team.players.Count, Is.EqualTo(1));
+            Assert.That(team.players[0].displayName, Is.EqualTo("Sam Striker"));
+            Assert.That(career.TransferBudget, Is.EqualTo(14000000));
+            Assert.That(offer.status, Is.EqualTo(TransferOfferStatus.Completed));
+        }
+
+        [Test]
+        public void TransferMarketRejectsUnaffordableSigning()
+        {
+            managerObject = new GameObject("Transfer Market Test");
+            worldDatabase = ScriptableObject.CreateInstance<FootballWorldDatabase>();
+            var career = managerObject.AddComponent<CareerManager>();
+            var team = new TeamData { id = "home", players = new System.Collections.Generic.List<PlayerData>() };
+            career.Initialize(team, new[] { team });
+            worldDatabase.players.Add(new WorldPlayerDefinition
+            {
+                id = "target-2", displayName = "Expensive Midfielder", clubId = "away",
+                position = "CM", overall = 85, age = 25, marketValue = 20000000
+            });
+            var market = managerObject.AddComponent<TransferMarketManager>();
+            market.Configure(worldDatabase, career, "home");
+            var offer = market.MakeOffer("target-2", 20000000);
+
+            Assert.That(market.CompleteSigning(offer, 15000), Is.False);
+            Assert.That(team.players, Is.Empty);
+            Assert.That(career.TransferBudget, Is.EqualTo(15000000));
+        }
+
+        [Test]
+        public void SellingSquadPlayerCreditsTransferBudget()
+        {
+            managerObject = new GameObject("Transfer Market Test");
+            worldDatabase = ScriptableObject.CreateInstance<FootballWorldDatabase>();
+            var career = managerObject.AddComponent<CareerManager>();
+            var player = new PlayerData { id = "sale-1", displayName = "Reserve Player", overall = 70 };
+            var team = new TeamData { id = "home", players = new System.Collections.Generic.List<PlayerData> { player } };
+            career.Initialize(team, new[] { team });
+            var market = managerObject.AddComponent<TransferMarketManager>();
+            market.Configure(worldDatabase, career, "home");
+
+            Assert.That(market.SellPlayer(player, 450000), Is.True);
+            Assert.That(team.players, Is.Empty);
+            Assert.That(career.ContractFor(player), Is.Null);
+            Assert.That(career.TransferBudget, Is.EqualTo(15450000));
         }
     }
 }
