@@ -19,6 +19,8 @@ namespace FC2026
         private TMP_Text form;
         private Button pauseButton;
         private Button startButton;
+        private GameObject resultPanel;
+        private TMP_Text resultText;
 
         private void Start()
         {
@@ -56,6 +58,17 @@ namespace FC2026
             var details = Panel(shell.transform, "MatchDetails", Theme(t => t.panel), new Vector2(.7f, 0), new Vector2(1, 1)); Anchor(details.GetComponent<RectTransform>(), new Vector2(.7f, 0), new Vector2(1, 1), new Vector2(8, 92), new Vector2(-theme.pagePadding, -214));
             form = Label(details.transform, "MATCH DETAILS\n\nStart the next fixture to see the teams, stadium, rating balance, and live event feed.", 15, Theme(t => t.body), TextAlignmentOptions.TopLeft); Anchor(form.rectTransform, Vector2.zero, Vector2.one, new Vector2(22, 22), new Vector2(-22, -22));
 
+            resultPanel = Panel(shell.transform, "FullTimeResultPanel", Theme(t => t.panel), new Vector2(.18f, .24f), new Vector2(.82f, .76f));
+            resultPanel.SetActive(false);
+            var resultAccent = Panel(resultPanel.transform, "ResultAccent", Theme(t => t.focus), new Vector2(0, 0), new Vector2(0, 1));
+            resultAccent.GetComponent<RectTransform>().sizeDelta = new Vector2(5, 0);
+            var resultHeading = Label(resultPanel.transform, "FULL-TIME REPORT", 22, Theme(t => t.focus), TextAlignmentOptions.TopLeft);
+            Anchor(resultHeading.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(26, -28), new Vector2(-26, -64));
+            resultText = Label(resultPanel.transform, "MATCH RESULT", 17, Theme(t => t.body), TextAlignmentOptions.TopLeft);
+            Anchor(resultText.rectTransform, Vector2.zero, Vector2.one, new Vector2(26, 66), new Vector2(-26, -92));
+            var closeReport = Button(resultPanel.transform, "CONTINUE", Theme(t => t.focus), () => resultPanel.SetActive(false));
+            Anchor(closeReport.GetComponent<RectTransform>(), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-166, 18), new Vector2(-18, 60));
+
             var controls = Panel(shell.transform, "Controls", Theme(t => t.panel), new Vector2(0, 0), new Vector2(1, 0)); Anchor(controls.GetComponent<RectTransform>(), new Vector2(0, 0), new Vector2(1, 0), new Vector2(theme.pagePadding, 20), new Vector2(-theme.pagePadding, 78));
             startButton = Button(controls.transform, "START NEXT FIXTURE", Theme(t => t.focus), StartNextFixture); Anchor(startButton.GetComponent<RectTransform>(), new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(0, 0), new Vector2(210, 42));
             pauseButton = Button(controls.transform, "PAUSE", Theme(t => t.warning), TogglePause); Anchor(pauseButton.GetComponent<RectTransform>(), new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(224, 0), new Vector2(120, 42));
@@ -63,10 +76,37 @@ namespace FC2026
             var skip = Button(controls.transform, "SKIP TO FULL TIME", Theme(t => t.panelSoft), () => engine?.SkipToFullTime()); Anchor(skip.GetComponent<RectTransform>(), new Vector2(1, .5f), new Vector2(1, .5f), new Vector2(-190, 0), new Vector2(-10, 42));
         }
 
-        private void StartNextFixture() { if (engine != null && engine.StartNextMatch()) { commentary.text = string.Empty; Refresh(); } }
+        private void StartNextFixture()
+        {
+            if (resultPanel != null) resultPanel.SetActive(false);
+            if (engine != null && engine.StartNextMatch()) { commentary.text = string.Empty; Refresh(); }
+        }
         private void TogglePause() => engine?.TogglePause();
         private void AddCommentary(CareerMatchEvent matchEvent) { if (commentary != null) commentary.text = $"{matchEvent.message}\n" + commentary.text; Refresh(); }
-        private void HandleComplete(SeasonFixture completed) { status.text = "FULL-TIME  /  RESULT RECORDED IN CAREER MODE"; Refresh(); }
+        private void HandleComplete(SeasonFixture completed)
+        {
+            status.text = "FULL-TIME  /  RESULT RECORDED IN CAREER MODE";
+            BuildFullTimeReport();
+            Refresh();
+        }
+
+        private void BuildFullTimeReport()
+        {
+            if (engine == null || resultText == null) return;
+            var home = engine.HomeClub;
+            var away = engine.AwayClub;
+            var events = engine.Events;
+            var goals = events.Where(item => item.type == CareerMatchEventType.Goal).ToList();
+            var shots = events.Count(item => item.type == CareerMatchEventType.Shot);
+            var cards = events.Count(item => item.type == CareerMatchEventType.YellowCard);
+            var scorers = goals.Count == 0 ? "No goals scored" :
+                string.Join("\\n", goals.Select(item => $"{item.minute}'  {item.playerName}  ({(item.homeTeam ? home?.shortName : away?.shortName)})"));
+            var verdict = engine.HomeScore == engine.AwayScore ? "DRAW" :
+                engine.HomeScore > engine.AwayScore ? $"{home?.shortName} WIN" : $"{away?.shortName} WIN";
+            resultText.text = $"{home?.displayName}  {engine.HomeScore}  -  {engine.AwayScore}  {away?.displayName}\\n" +
+                $"{verdict}\\n\\nMATCH FACTS\\nGOALS  {goals.Count}\\nSHOTS RECORDED  {shots}\\nYELLOW CARDS  {cards}\\n\\nGOALSCORERS\\n{scorers}";
+            resultPanel.SetActive(true);
+        }
 
         private void Refresh()
         {
