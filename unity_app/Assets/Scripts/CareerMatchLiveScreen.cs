@@ -100,11 +100,11 @@ namespace FC2026
             var shots = events.Count(item => item.type == CareerMatchEventType.Shot);
             var cards = events.Count(item => item.type == CareerMatchEventType.YellowCard);
             var scorers = goals.Count == 0 ? "No goals scored" :
-                string.Join("\\n", goals.Select(item => $"{item.minute}'  {item.playerName}  ({(item.homeTeam ? home?.shortName : away?.shortName)})"));
+                string.Join("\n", goals.Select(item => $"{item.minute}'  {item.playerName}  ({(item.homeTeam ? home?.shortName : away?.shortName)})"));
             var verdict = engine.HomeScore == engine.AwayScore ? "DRAW" :
                 engine.HomeScore > engine.AwayScore ? $"{home?.shortName} WIN" : $"{away?.shortName} WIN";
-            resultText.text = $"{home?.displayName}  {engine.HomeScore}  -  {engine.AwayScore}  {away?.displayName}\\n" +
-                $"{verdict}\\n\\nMATCH FACTS\\nGOALS  {goals.Count}\\nSHOTS RECORDED  {shots}\\nYELLOW CARDS  {cards}\\n\\nGOALSCORERS\\n{scorers}";
+            resultText.text = $"{home?.displayName}  {engine.HomeScore}  -  {engine.AwayScore}  {away?.displayName}\n" +
+                $"{verdict}\n\nMATCH FACTS\nGOALS  {goals.Count}\nSHOTS RECORDED  {shots}\nYELLOW CARDS  {cards}\n\nGOALSCORERS\n{scorers}";
             resultPanel.SetActive(true);
         }
 
