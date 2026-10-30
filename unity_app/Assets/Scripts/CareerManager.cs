@@ -61,9 +61,22 @@ namespace FC2026
             InitializeContracts(managedTeam);
             table = clubs.Select(team => new LeagueEntry { team = team }).ToList();
             fixtures.Clear();
-            var opponents = clubs.Where(team => team != managedTeam).Take(7).ToList();
-            foreach (var opponent in opponents) fixtures.Add(new FixtureData { home = managedTeam, away = opponent });
+            var opponents = clubs.Where(team => team != managedTeam).ToList();
+            foreach (var opponent in opponents)
+            {
+                fixtures.Add(new FixtureData { home = managedTeam, away = opponent });
+                fixtures.Add(new FixtureData { home = opponent, away = managedTeam });
+            }
             CareerChanged?.Invoke();
+        }
+
+        public bool InitializeFromWorldCatalog(FootballWorldDatabase database, string leagueId, string managedClubId)
+        {
+            var teams = FootballWorldTeamFactory.CreateLeagueTeams(database, leagueId);
+            var managed = teams.FirstOrDefault(team => team.id == managedClubId);
+            if (managed == null || teams.Count < 2) return false;
+            Initialize(managed, teams);
+            return true;
         }
 
         public FixtureData NextFixture => fixtures.FirstOrDefault(f => !f.completed);

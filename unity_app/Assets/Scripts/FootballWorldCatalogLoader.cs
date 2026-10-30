@@ -11,7 +11,7 @@ namespace FC2026
 
     public sealed class FootballWorldCatalogLoader : MonoBehaviour
     {
-        [Header("Assign JSON files from Assets/Data/FootballWorld")]
+        [Header("Optional explicit overrides; otherwise Resources/FootballWorld is used")]
         [SerializeField] private TextAsset playersJson;
         [SerializeField] private TextAsset clubsJson;
         [SerializeField] private TextAsset leaguesJson;
@@ -25,10 +25,17 @@ namespace FC2026
 
         private void Awake()
         {
-            if (playersJson != null || clubsJson != null || leaguesJson != null || competitionsJson != null) LoadIntoDatabase();
+            if (!LastLoadSucceeded) LoadIntoDatabase();
         }
 
-        public FootballWorldDatabase LoadIntoDatabase() => LoadIntoDatabase(playersJson, clubsJson, leaguesJson, competitionsJson);
+        public FootballWorldDatabase LoadIntoDatabase()
+        {
+            playersJson ??= Resources.Load<TextAsset>("FootballWorld/players");
+            clubsJson ??= Resources.Load<TextAsset>("FootballWorld/clubs");
+            leaguesJson ??= Resources.Load<TextAsset>("FootballWorld/leagues");
+            competitionsJson ??= Resources.Load<TextAsset>("FootballWorld/competitions");
+            return LoadIntoDatabase(playersJson, clubsJson, leaguesJson, competitionsJson);
+        }
 
         public FootballWorldDatabase LoadIntoDatabase(TextAsset players, TextAsset clubs, TextAsset leagues, TextAsset competitions)
         {
@@ -42,6 +49,8 @@ namespace FC2026
             }
             LastLoadSucceeded = LastReport.IsValid;
             LogReport(LastReport);
+            if (LastLoadSucceeded)
+                Debug.Log($"[Football World] Loaded {database.leagues.Count} leagues, {database.clubs.Count} clubs, {database.players.Count} players and {database.competitions.Count} competitions.", this);
             return database;
         }
 
