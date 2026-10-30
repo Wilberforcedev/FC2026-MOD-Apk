@@ -13,6 +13,7 @@ namespace FC2026
         [SerializeField] private SeasonCalendarManager calendar;
         [SerializeField] private CareerManager career;
         [SerializeField] private PlayerProgressionManager progression;
+        [SerializeField] private TransferMarketManager transferMarket;
         [SerializeField] private string managedClubId;
         [SerializeField] private Canvas canvas;
 
@@ -28,6 +29,9 @@ namespace FC2026
             calendar ??= FindFirstObjectByType<SeasonCalendarManager>();
             career ??= FindFirstObjectByType<CareerManager>();
             progression ??= FindFirstObjectByType<PlayerProgressionManager>();
+            transferMarket ??= FindFirstObjectByType<TransferMarketManager>();
+            if (transferMarket == null) transferMarket = gameObject.AddComponent<TransferMarketManager>();
+            transferMarket.Configure(database, career, managedClubId);
             if (calendar != null) calendar.CalendarChanged += Refresh; if (career != null) career.CareerChanged += Refresh;
             BuildScreen(); Refresh();
         }
@@ -52,6 +56,7 @@ namespace FC2026
             var side = Panel(shell.transform, "CareerSidePanel", Theme(t => t.panel), new Vector2(.64f, 0), new Vector2(1, 1)); Anchor(side.GetComponent<RectTransform>(), new Vector2(.64f, 0), new Vector2(1, 1), new Vector2(8, 104), new Vector2(-theme.pagePadding, -132));
             detailsText = Label(side.transform, "CLUB OBJECTIVES", 16, Theme(t => t.body), TextAlignmentOptions.TopLeft); Anchor(detailsText.rectTransform, Vector2.zero, Vector2.one, new Vector2(24, 24), new Vector2(-24, -24));
             var train = Button(side.transform, "OPEN PLAYER PROGRESSION", Theme(t => t.focus), () => statusText.text = "PLAYER PROGRESSION READY  /  SELECT A PLAYER TRAINING PLAN"); Anchor(train.GetComponent<RectTransform>(), new Vector2(0, 0), new Vector2(1, 0), new Vector2(24, 24), new Vector2(-24, 70));
+            var market = Button(side.transform, "SCOUT TRANSFER MARKET", Theme(t => t.focus), ShowTransferShortlist); Anchor(market.GetComponent<RectTransform>(), new Vector2(0, 0), new Vector2(1, 0), new Vector2(24, 104), new Vector2(-24, 156));
 
             var footer = Panel(shell.transform, "DashboardFooter", Theme(t => t.panel), new Vector2(0, 0), new Vector2(1, 0)); Anchor(footer.GetComponent<RectTransform>(), new Vector2(0, 0), new Vector2(1, 0), new Vector2(theme.pagePadding, 22), new Vector2(-theme.pagePadding, 84));
             statusText = Label(footer.transform, "LIVE CAREER DATA", 13, Theme(t => t.muted), TextAlignmentOptions.Left); Anchor(statusText.rectTransform, new Vector2(0, 0), new Vector2(.72f, 1), new Vector2(18, 0), new Vector2(0, 0));
@@ -74,6 +79,16 @@ namespace FC2026
             var rank = managed == null ? table.Count : table.ToList().FindIndex(item => item.clubId == managedClubId) + 1;
             detailsText.text = $"CLUB OBJECTIVES\n\n{database.FindClub(managedClubId)?.displayName ?? "SELECT CLUB"}\n\nFINISH TOP 2        {Progress(rank, 2)}\nWIN 3 MATCHES       {Progress(managed?.wins ?? 0, 3)}\nPOSITIVE GOAL DIFF  {Progress(managed?.GoalDifference ?? 0, 1)}\n\nNEXT FIXTURE\n{home}  vs  {away}\nMATCHWEEK  {fixture?.matchweek ?? 0}\n\nTRANSFER BUDGET\n€{budget / 1000000f:0.0}M\n\nSQUAD CONTRACTS\nWEEKLY PAYROLL  €{(career?.WeeklyPayroll ?? 0):N0}\nEXPIRED DEALS   {career?.ExpiredContracts ?? 0}\nACTIVE DEALS    {career?.Contracts.Count ?? 0}\n\nPLAYER DEVELOPMENT\n{(progression == null ? "Assign PlayerProgressionManager" : $"{progression.Records.Count} progression records active")}";
             statusText.text = $"LIVE  /  MATCHWEEK {fixture?.matchweek ?? calendar.Fixtures.Count}  /  {table.Count} CLUBS";
+        }
+
+        private void ShowTransferShortlist()
+        {
+            if (transferMarket == null) { statusText.text = "TRANSFER MARKET UNAVAILABLE"; return; }
+            var targets = transferMarket.Scout().Take(5).ToList();
+            statusText.text = $"SCOUTING  /  {transferMarket.Scout().Count} AVAILABLE PLAYERS";
+            var shortlist = targets.Count == 0 ? "No available players in the scouting database." :
+                string.Join("\\n", targets.Select(player => $"{player.displayName}  {player.position}  OVR {player.overall}  €{transferMarket.SuggestedAskingPrice(player):N0}"));
+            detailsText.text += "\\n\\nSCOUTING SHORTLIST\\n" + shortlist;
         }
 
         private static string Progress(int value, int target) => target == 1 ? (value > 0 ? "COMPLETE" : "IN PROGRESS") : $"{Mathf.Clamp(value, 0, target)}/{target}";
