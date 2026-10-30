@@ -46,6 +46,7 @@ namespace FC2026
         public IReadOnlyList<LeagueEntry> Table => table.OrderByDescending(x => x.points).ThenByDescending(x => x.goalDifference).ToList();
         public event Action CareerChanged;
         public IReadOnlyList<PlayerContract> Contracts => contracts;
+        public TeamData ManagedTeam => userTeam;
         public int WeeklyPayroll => contracts.Where(x => !x.expired).Sum(x => x.weeklyWage);
         public int ExpiredContracts => contracts.Count(x => x.expired);
         [SerializeField] private List<PlayerContract> contracts = new();
