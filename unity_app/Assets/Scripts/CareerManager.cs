@@ -24,6 +24,19 @@ namespace FC2026
         public int goalDifference;
     }
 
+    [Serializable]
+    public class PlayerContract
+    {
+        public PlayerData player;
+        public int weeklyWage;
+        public int weeksRemaining = 104;
+        public int appearances;
+        public int starts;
+        public int morale = 70;
+        public bool transferRequested;
+        public bool expired => weeksRemaining <= 0;
+    }
+
     public sealed class CareerManager : MonoBehaviour
     {
         public int Season { get; private set; } = 1;
@@ -32,6 +45,10 @@ namespace FC2026
         public IReadOnlyList<FixtureData> Fixtures => fixtures;
         public IReadOnlyList<LeagueEntry> Table => table.OrderByDescending(x => x.points).ThenByDescending(x => x.goalDifference).ToList();
         public event Action CareerChanged;
+        public IReadOnlyList<PlayerContract> Contracts => contracts;
+        public int WeeklyPayroll => contracts.Where(x => !x.expired).Sum(x => x.weeklyWage);
+        public int ExpiredContracts => contracts.Count(x => x.expired);
+        [SerializeField] private List<PlayerContract> contracts = new();
 
         [SerializeField] private List<FixtureData> fixtures = new();
         [SerializeField] private List<LeagueEntry> table = new();
@@ -40,6 +57,7 @@ namespace FC2026
         public void Initialize(TeamData managedTeam, IEnumerable<TeamData> clubs)
         {
             userTeam = managedTeam;
+            InitializeContracts(managedTeam);
             table = clubs.Select(team => new LeagueEntry { team = team }).ToList();
             fixtures.Clear();
             var opponents = clubs.Where(team => team != managedTeam).Take(7).ToList();
@@ -60,6 +78,58 @@ namespace FC2026
             if (home != null) { home.played++; home.goalDifference += homeGoals - awayGoals; home.points += homeGoals > awayGoals ? 3 : homeGoals == awayGoals ? 1 : 0; }
             if (away != null) { away.played++; away.goalDifference += awayGoals - homeGoals; away.points += awayGoals > homeGoals ? 3 : homeGoals == awayGoals ? 1 : 0; }
             Matchweek++;
+            CareerChanged?.Invoke();
+        }
+
+        public PlayerContract ContractFor(PlayerData player) => contracts.FirstOrDefault(x => x.player == player);
+
+        public void InitializeContracts(TeamData team)
+        {
+            contracts.Clear();
+            if (team?.players == null) return;
+            foreach (var player in team.players)
+            {
+                if (player == null) continue;
+                contracts.Add(new PlayerContract
+                {
+                    player = player,
+                    weeklyWage = Mathf.Max(500, player.overall * 100),
+                    weeksRemaining = 104,
+                    morale = 70
+                });
+            }
+        }
+
+        public bool RenewContract(PlayerData player, int newWeeklyWage, int weeks = 104)
+        {
+            var contract = ContractFor(player);
+            if (contract == null || newWeeklyWage < contract.weeklyWage || weeks <= 0) return false;
+            contract.weeklyWage = newWeeklyWage;
+            contract.weeksRemaining = weeks;
+            contract.transferRequested = false;
+            contract.morale = Mathf.Clamp(contract.morale + 8, 0, 100);
+            CareerChanged?.Invoke();
+            return true;
+        }
+
+        public void RecordPlayingTime(PlayerData player, bool started)
+        {
+            var contract = ContractFor(player);
+            if (contract == null || contract.expired) return;
+            contract.appearances++;
+            if (started) { contract.starts++; contract.morale = Mathf.Clamp(contract.morale + 2, 0, 100); }
+            else contract.morale = Mathf.Clamp(contract.morale - 1, 0, 100);
+            if (contract.morale < 30) contract.transferRequested = true;
+            CareerChanged?.Invoke();
+        }
+
+        public void AdvanceContractWeek()
+        {
+            foreach (var contract in contracts)
+            {
+                if (contract.weeksRemaining > 0) contract.weeksRemaining--;
+                if (contract.weeksRemaining == 0) contract.transferRequested = true;
+            }
             CareerChanged?.Invoke();
         }
 
