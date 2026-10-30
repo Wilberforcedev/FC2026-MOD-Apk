@@ -134,6 +134,30 @@ namespace FC2026
             CareerChanged?.Invoke();
         }
 
+        public void CreditTransferBudget(int amount)
+        {
+            if (amount <= 0) return;
+            TransferBudget = Mathf.Min(int.MaxValue, TransferBudget + amount);
+            CareerChanged?.Invoke();
+        }
+
+        public bool AddPlayerToSquad(PlayerData player, int weeklyWage)
+        {
+            if (userTeam?.players == null || player == null || userTeam.players.Any(x => x.id == player.id)) return false;
+            userTeam.players.Add(player);
+            contracts.Add(new PlayerContract { player = player, weeklyWage = Mathf.Max(500, weeklyWage), weeksRemaining = 104, morale = 75 });
+            CareerChanged?.Invoke();
+            return true;
+        }
+
+        public bool RemovePlayerFromSquad(PlayerData player)
+        {
+            if (userTeam?.players == null || player == null || !userTeam.players.Remove(player)) return false;
+            contracts.RemoveAll(x => x.player == player);
+            CareerChanged?.Invoke();
+            return true;
+        }
+
         public bool CanAfford(int fee) => fee >= 0 && fee <= TransferBudget;
         public bool SpendTransferBudget(int fee) { if (!CanAfford(fee)) return false; TransferBudget -= fee; CareerChanged?.Invoke(); return true; }
     }
