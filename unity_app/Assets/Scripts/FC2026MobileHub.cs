@@ -60,6 +60,11 @@ namespace FC2026
 
         private void Start()
         {
+            Screen.orientation = ScreenOrientation.LandscapeLeft;
+            Screen.autorotateToPortrait = false;
+            Screen.autorotateToPortraitUpsideDown = false;
+            Screen.autorotateToLandscapeLeft = true;
+            Screen.autorotateToLandscapeRight = true;
             theme = Resources.Load<FC2026UITheme>("FC2026UITheme");
             if (theme == null) theme = ScriptableObject.CreateInstance<FC2026UITheme>();
             CreateStadiumBackdrop();
@@ -101,8 +106,8 @@ namespace FC2026
             canvas.sortingOrder = 100;
             var scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(900, 1600);
-            scaler.matchWidthOrHeight = .45f;
+            scaler.referenceResolution = new Vector2(1600, 900);
+            scaler.matchWidthOrHeight = .5f;
 
             if (FindFirstObjectByType<EventSystem>() == null)
             {
@@ -113,7 +118,7 @@ namespace FC2026
             var shell = Panel(canvas.transform, "StadiumShell", C(t => t.background), Vector2.zero, Vector2.one);
             shell.GetComponent<Image>().color = new Color(C(t => t.background).r, C(t => t.background).g, C(t => t.background).b, .68f);
             var top = Panel(shell.transform, "TopBar", C(t => t.overlay), new Vector2(0, 1), new Vector2(1, 1));
-            SetRect(top, new Vector2(0, -154), Vector2.zero, new Vector2(0, 0));
+            SetRect(top, new Vector2(0, -104), Vector2.zero, new Vector2(0, 0));
             var brand = Label(top.transform, "FC 2026", 27, C(t => t.heading), TextAlignmentOptions.MidlineLeft);
             SetAnchors(brand.rectTransform, new Vector2(0, 0), new Vector2(.62f, 1), new Vector2(22, 8), new Vector2(0, -4));
             var tagline = Label(top.transform, "THE WORLD IS YOUR STADIUM", 10, C(t => t.muted), TextAlignmentOptions.MidlineLeft);
@@ -124,14 +129,14 @@ namespace FC2026
             var bottom = Panel(shell.transform, "BottomNavigation", C(t => t.overlay), new Vector2(0, 0), new Vector2(1, 0));
             var bottomRect = bottom.GetComponent<RectTransform>();
             bottomRect.anchorMin = new Vector2(0, 0); bottomRect.anchorMax = new Vector2(1, 0);
-            bottomRect.pivot = new Vector2(.5f, 0); bottomRect.offsetMin = Vector2.zero; bottomRect.offsetMax = new Vector2(0, 122);
+            bottomRect.pivot = new Vector2(.5f, 0); bottomRect.offsetMin = Vector2.zero; bottomRect.offsetMax = new Vector2(0, 78);
             var oldLayout = bottom.AddComponent<HorizontalLayoutGroup>();
             oldLayout.childAlignment = TextAnchor.MiddleCenter; oldLayout.spacing = 4;
             oldLayout.padding = new RectOffset(8, 8, 8, 8);
             oldLayout.childForceExpandWidth = true; oldLayout.childForceExpandHeight = true;
 
             var body = Panel(shell.transform, "PageViewport", new Color(0, 0, 0, 0), Vector2.zero, Vector2.one);
-            SetAnchors(body.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0, 122), new Vector2(0, -154));
+            SetAnchors(body.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0, 78), new Vector2(0, -104));
             scroll = body.AddComponent<ScrollRect>();
             scroll.horizontal = false; scroll.vertical = true; scroll.movementType = ScrollRect.MovementType.Clamped;
             var viewport = Panel(body.transform, "Viewport", new Color(0, 0, 0, 0), Vector2.zero, Vector2.one);
@@ -143,8 +148,8 @@ namespace FC2026
             content.anchorMin = new Vector2(0, 1); content.anchorMax = new Vector2(1, 1);
             content.offsetMin = Vector2.zero; content.offsetMax = Vector2.zero;
             var vertical = contentObject.AddComponent<VerticalLayoutGroup>();
-            vertical.padding = new RectOffset(22, 22, 18, 28);
-            vertical.spacing = 18;
+            vertical.padding = new RectOffset(28, 28, 16, 22);
+            vertical.spacing = 12;
             vertical.childAlignment = TextAnchor.UpperCenter;
             vertical.childForceExpandWidth = true;
             vertical.childForceExpandHeight = false;
@@ -159,7 +164,7 @@ namespace FC2026
             AddNav(bottom.transform, "CAREER", Page.Career);
             AddNav(bottom.transform, "MORE", Page.Tournaments);
             statusLabel = Label(shell.transform, "READY FOR KICK-OFF", 10, C(t => t.muted), TextAlignmentOptions.MidlineLeft);
-            SetAnchors(statusLabel.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(20, 122), new Vector2(-20, 144));
+            SetAnchors(statusLabel.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(20, 78), new Vector2(-20, 96));
         }
 
         private void Open(Page next)
@@ -241,21 +246,69 @@ namespace FC2026
 
         private void BuildHome()
         {
-            Header("YOUR CLUB. YOUR LEGACY.", "SEASON 01  /  MOBILE MATCHDAY");
+            Header("FC 2026  /  FOOTBALL HUB", "YOUR CLUB. YOUR LEGACY.  •  SEASON 01");
             var hero = Panel(content, "FeaturedMatch", C(t => t.panel), Vector2.zero, Vector2.one);
-            Size(hero, 280);
+            Size(hero, 188);
             AddAccent(hero.transform, C(t => t.focus));
-            Label(hero.transform, "MATCHDAY 01  •  FRIENDLY", 11, C(t => t.focus), TextAlignmentOptions.TopLeft, new Vector2(18, -18), new Vector2(-18, 28));
-            Label(hero.transform, "OWN THE\nNIGHT.", 42, C(t => t.heading), TextAlignmentOptions.TopLeft, new Vector2(18, -52), new Vector2(-18, 116));
-            Label(hero.transform, "FC CITY     VS     NORTH LONDON", 13, C(t => t.body), TextAlignmentOptions.MidlineLeft, new Vector2(20, 88), new Vector2(-20, 26));
-            ActionButton(hero.transform, "PLAY MATCH  →", C(t => t.focus), () => StartMatch(), new Vector2(18, 18), new Vector2(-18, 66));
-            SectionTitle("YOUR FOOTBALL WORLD", "PICK UP WHERE YOU LEFT OFF");
-            Tile("SQUAD HUB", "FORMATION  •  PLAYER RATINGS", "Manage XI", () => Open(Page.Squad));
-            Tile("CAREER MODE", "LEAGUE TABLE  •  TRANSFERS", "Continue season", () => Open(Page.Career));
-            Tile("TOURNAMENTS", "CUP RUN  •  ELIMINATION NIGHTS", "Enter competition", () => Open(Page.Tournaments));
-            Tile("KIT ROOM", "HOME  •  AWAY  •  SPECIAL EDITIONS", "Choose your look", () => Open(Page.Kits));
-            Tile("ULTIMATE STORE", "SCOUT PLAYERS  •  BUILD YOUR XI", "Explore market", () => Open(Page.Store));
-            FooterNote("BUILT FOR TOUCH  /  44 PX+ ACTION TARGETS  /  FC 2026");
+            Label(hero.transform, "CAREER MODE  /  MATCHDAY 01", 11, C(t => t.focus), TextAlignmentOptions.TopLeft, new Vector2(22, -16), new Vector2(-22, 24));
+            Label(hero.transform, "BUILD YOUR\nFOOTBALL LEGACY", 30, C(t => t.heading), TextAlignmentOptions.TopLeft, new Vector2(22, -42), new Vector2(-22, 94));
+            Label(hero.transform, "FC CITY     VS     NORTH LONDON", 13, C(t => t.body), TextAlignmentOptions.MidlineLeft, new Vector2(22, 22), new Vector2(-250, 28));
+            ActionButton(hero.transform, "PLAY MATCH  →", C(t => t.focus), () => StartMatch(), new Vector2(-220, 22), new Vector2(-22, 72));
+            SectionTitle("YOUR FOOTBALL WORLD", "SELECT A GAME MODE");
+            DashboardRow(
+                new DashboardItem("CAREER", "League campaign  •  fixtures", () => Open(Page.Career), C(t => t.danger)),
+                new DashboardItem("SQUAD", "Line-up  •  formations  •  ratings", () => Open(Page.Squad), C(t => t.focus)),
+                new DashboardItem("SCENARIO", "Cup nights  •  challenges", () => Open(Page.Tournaments), C(t => t.success)));
+            DashboardRow(
+                new DashboardItem("DREAM LEAGUE LIVE", "Play matches  •  build your record", () => StartMatch(), C(t => t.focus)),
+                new DashboardItem("TRANSFERS", "Scout players  •  strengthen your XI", () => Open(Page.Store), C(t => t.goldCard)),
+                new DashboardItem("MY CLUB", "Kits  •  club identity  •  upgrades", () => Open(Page.Kits), C(t => t.socialAccent)));
+            FooterNote("FC 2026  /  BUILT FOR LANDSCAPE MOBILE FOOTBALL");
+        }
+
+        private readonly struct DashboardItem
+        {
+            public readonly string title;
+            public readonly string description;
+            public readonly UnityEngine.Events.UnityAction action;
+            public readonly Color accent;
+
+            public DashboardItem(string title, string description, UnityEngine.Events.UnityAction action, Color accent)
+            {
+                this.title = title;
+                this.description = description;
+                this.action = action;
+                this.accent = accent;
+            }
+        }
+
+        private void DashboardRow(params DashboardItem[] items)
+        {
+            var row = new GameObject("DashboardRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            row.transform.SetParent(content, false);
+            row.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 116);
+            var rowLayout = row.GetComponent<HorizontalLayoutGroup>();
+            rowLayout.spacing = 12;
+            rowLayout.childAlignment = TextAnchor.MiddleCenter;
+            rowLayout.childForceExpandWidth = true;
+            rowLayout.childForceExpandHeight = true;
+            foreach (var item in items)
+            {
+                var card = Panel(row.transform, item.title.Replace(" ", "") + "Tile", C(t => t.panel), Vector2.zero, Vector2.one);
+                var layout = card.AddComponent<LayoutElement>();
+                layout.minWidth = 180;
+                layout.flexibleWidth = 1;
+                var image = card.GetComponent<Image>();
+                image.color = Color.Lerp(C(t => t.panel), item.accent, .16f);
+                var stripe = Panel(card.transform, "Accent", item.accent, Vector2.zero, new Vector2(0, 1));
+                stripe.GetComponent<RectTransform>().sizeDelta = new Vector2(5, 0);
+                var button = card.AddComponent<Button>();
+                button.targetGraphic = image;
+                button.onClick.AddListener(item.action);
+                Label(card.transform, item.title, 16, C(t => t.heading), TextAlignmentOptions.TopLeft, new Vector2(18, -16), new Vector2(-14, 42));
+                Label(card.transform, item.description, 10, C(t => t.muted), TextAlignmentOptions.TopLeft, new Vector2(18, -48), new Vector2(-14, 14));
+                Label(card.transform, "OPEN  →", 9, item.accent, TextAlignmentOptions.BottomRight, new Vector2(12, 8), new Vector2(-14, 24));
+            }
         }
 
         private void BuildSquad()
@@ -467,7 +520,7 @@ namespace FC2026
         {
             var button = Button(parent, label, C(t => t.panelSoft), () => Open(destination));
             var layout = button.gameObject.AddComponent<LayoutElement>();
-            layout.minHeight = 58; layout.preferredHeight = 64; layout.flexibleWidth = 1;
+            layout.minHeight = 42; layout.preferredHeight = 50; layout.flexibleWidth = 1;
         }
 
         private void Header(string title, string subtitle)
