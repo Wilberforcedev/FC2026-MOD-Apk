@@ -22,6 +22,7 @@ namespace FC2026
     {
         [SerializeField] private FootballWorldDatabase database;
         [SerializeField] private CareerManager career;
+        [SerializeField] private TransferWindowManager transferWindow;
         [SerializeField] private string managedClubId;
         [SerializeField] private List<TransferOffer> offers = new();
         [SerializeField] private List<string> completedPlayerIds = new();
@@ -35,14 +36,25 @@ namespace FC2026
         {
             database ??= FindFirstObjectByType<FootballWorldCatalogLoader>()?.Database;
             career ??= FindFirstObjectByType<CareerManager>();
+            transferWindow ??= FindFirstObjectByType<TransferWindowManager>();
         }
 
         public void Configure(FootballWorldDatabase worldDatabase, CareerManager careerManager, string clubId)
         {
+            Configure(worldDatabase, careerManager, clubId, transferWindow);
+        }
+
+        public void Configure(FootballWorldDatabase worldDatabase, CareerManager careerManager, string clubId,
+            TransferWindowManager windowManager)
+        {
             database = worldDatabase;
             career = careerManager;
             managedClubId = clubId;
+            transferWindow = windowManager;
         }
+
+        public bool IsTransferWindowOpen => transferWindow == null || transferWindow.IsWindowOpen;
+        public string TransferWindowStatus => transferWindow == null ? "TRANSFER WINDOW UNCONFIGURED" : transferWindow.StatusLabel;
 
         public IReadOnlyList<WorldPlayerDefinition> Scout(string searchTerm = "", string position = null, int minimumOverall = 1)
         {
@@ -58,7 +70,7 @@ namespace FC2026
         public TransferOffer MakeOffer(string playerId, int fee)
         {
             var target = database?.FindPlayer(playerId);
-            if (target == null || !IsAvailable(target) || fee <= 0) return null;
+            if (!IsTransferWindowOpen || target == null || !IsAvailable(target) || fee <= 0) return null;
             var offer = new TransferOffer
             {
                 playerId = target.id,
@@ -83,7 +95,7 @@ namespace FC2026
 
         public bool CompleteSigning(TransferOffer offer, int weeklyWage)
         {
-            if (offer == null || !offers.Contains(offer) || offer.status != TransferOfferStatus.Accepted ||
+            if (!IsTransferWindowOpen || offer == null || !offers.Contains(offer) || offer.status != TransferOfferStatus.Accepted ||
                 career == null || weeklyWage <= 0 || !career.CanAfford(offer.offeredFee)) return false;
             var definition = database?.FindPlayer(offer.playerId);
             if (definition == null || !IsAvailable(definition)) return false;
@@ -102,7 +114,7 @@ namespace FC2026
 
         public bool SellPlayer(PlayerData player, int saleFee)
         {
-            if (career?.ManagedTeam?.players == null || player == null || saleFee <= 0 ||
+            if (!IsTransferWindowOpen || career?.ManagedTeam?.players == null || player == null || saleFee <= 0 ||
                 !career.ManagedTeam.players.Contains(player)) return false;
             if (!career.RemovePlayerFromSquad(player)) return false;
             career.CreditTransferBudget(saleFee);
