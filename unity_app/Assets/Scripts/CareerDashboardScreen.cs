@@ -14,6 +14,7 @@ namespace FC2026
         [SerializeField] private CareerManager career;
         [SerializeField] private PlayerProgressionManager progression;
         [SerializeField] private TransferMarketManager transferMarket;
+        [SerializeField] private TransferWindowManager transferWindow;
         [SerializeField] private string managedClubId;
         [SerializeField] private Canvas canvas;
 
@@ -30,15 +31,20 @@ namespace FC2026
             career ??= FindFirstObjectByType<CareerManager>();
             progression ??= FindFirstObjectByType<PlayerProgressionManager>();
             transferMarket ??= FindFirstObjectByType<TransferMarketManager>();
+            transferWindow ??= FindFirstObjectByType<TransferWindowManager>();
+            if (transferWindow == null) transferWindow = gameObject.AddComponent<TransferWindowManager>();
+            transferWindow.Configure(calendar);
             if (transferMarket == null) transferMarket = gameObject.AddComponent<TransferMarketManager>();
-            transferMarket.Configure(database, career, managedClubId);
+            transferMarket.Configure(database, career, managedClubId, transferWindow);
             if (calendar != null) calendar.CalendarChanged += Refresh; if (career != null) career.CareerChanged += Refresh;
+            if (transferWindow != null) transferWindow.WindowStateChanged += Refresh;
             BuildScreen(); Refresh();
         }
 
         private void OnDestroy()
         {
             if (calendar != null) calendar.CalendarChanged -= Refresh; if (career != null) career.CareerChanged -= Refresh;
+            if (transferWindow != null) transferWindow.WindowStateChanged -= Refresh;
         }
 
         public void BuildScreen()
@@ -69,7 +75,7 @@ namespace FC2026
             if (calendar == null || database == null) { standingsText.text = "NO SEASON CALENDAR ASSIGNED"; return; }
             var table = calendar.Standings;
             if (string.IsNullOrEmpty(managedClubId) && table.Count > 0) managedClubId = table[0].clubId;
-            transferMarket?.Configure(database, career, managedClubId);
+            transferMarket?.Configure(database, career, managedClubId, transferWindow);
             seasonTitle.text = $"CAREER DASHBOARD  /  SEASON {calendar.Season:00}";
             standingsText.text = "POS   CLUB                          P   GD   PTS\n" + string.Join("\n", table.Select((entry, index) => $"{index + 1,2}    {database.FindClub(entry.clubId)?.displayName ?? entry.clubId,-28} {entry.played,2}  {entry.GoalDifference,3}  {entry.points,3}"));
             var managed = table.FirstOrDefault(item => item.clubId == managedClubId);
@@ -78,15 +84,17 @@ namespace FC2026
             var away = fixture == null ? "complete" : database.FindClub(fixture.awayClubId)?.shortName ?? fixture.awayClubId;
             var budget = career?.TransferBudget ?? database.FindClub(managedClubId)?.startingBudget ?? 0;
             var rank = managed == null ? table.Count : table.ToList().FindIndex(item => item.clubId == managedClubId) + 1;
-            detailsText.text = $"CLUB OBJECTIVES\n\n{database.FindClub(managedClubId)?.displayName ?? "SELECT CLUB"}\n\nFINISH TOP 2        {Progress(rank, 2)}\nWIN 3 MATCHES       {Progress(managed?.wins ?? 0, 3)}\nPOSITIVE GOAL DIFF  {Progress(managed?.GoalDifference ?? 0, 1)}\n\nNEXT FIXTURE\n{home}  vs  {away}\nMATCHWEEK  {fixture?.matchweek ?? 0}\n\nTRANSFER BUDGET\n€{budget / 1000000f:0.0}M\n\nSQUAD CONTRACTS\nWEEKLY PAYROLL  €{(career?.WeeklyPayroll ?? 0):N0}\nEXPIRED DEALS   {career?.ExpiredContracts ?? 0}\nACTIVE DEALS    {career?.Contracts.Count ?? 0}\n\nPLAYER DEVELOPMENT\n{(progression == null ? "Assign PlayerProgressionManager" : $"{progression.Records.Count} progression records active")}";
-            statusText.text = $"LIVE  /  MATCHWEEK {fixture?.matchweek ?? calendar.Fixtures.Count}  /  {table.Count} CLUBS";
+            detailsText.text = $"CLUB OBJECTIVES\n\n{transferWindow?.StatusLabel ?? "TRANSFER WINDOW UNCONFIGURED"}  /  MATCHWEEK {transferWindow?.CurrentMatchweek ?? 1}\n\n{database.FindClub(managedClubId)?.displayName ?? "SELECT CLUB"}\n\nFINISH TOP 2        {Progress(rank, 2)}\nWIN 3 MATCHES       {Progress(managed?.wins ?? 0, 3)}\nPOSITIVE GOAL DIFF  {Progress(managed?.GoalDifference ?? 0, 1)}\n\nNEXT FIXTURE\n{home}  vs  {away}\nMATCHWEEK  {fixture?.matchweek ?? 0}\n\nTRANSFER BUDGET\n€{budget / 1000000f:0.0}M\n\nSQUAD CONTRACTS\nWEEKLY PAYROLL  €{(career?.WeeklyPayroll ?? 0):N0}\nEXPIRED DEALS   {career?.ExpiredContracts ?? 0}\nACTIVE DEALS    {career?.Contracts.Count ?? 0}\n\nPLAYER DEVELOPMENT\n{(progression == null ? "Assign PlayerProgressionManager" : $"{progression.Records.Count} progression records active")}";
+            statusText.text = $"LIVE  /  MATCHWEEK {fixture?.matchweek ?? calendar.Fixtures.Count}  /  {table.Count} CLUBS  /  {transferWindow?.StatusLabel ?? "WINDOW UNCONFIGURED"}";
         }
 
         private void ShowTransferShortlist()
         {
             if (transferMarket == null) { statusText.text = "TRANSFER MARKET UNAVAILABLE"; return; }
             var targets = transferMarket.Scout().Take(5).ToList();
-            statusText.text = $"SCOUTING  /  {transferMarket.Scout().Count} AVAILABLE PLAYERS";
+            statusText.text = transferMarket.IsTransferWindowOpen
+                ? $"SCOUTING  /  {transferMarket.Scout().Count} AVAILABLE PLAYERS"
+                : "TRANSFER WINDOW CLOSED  /  NEGOTIATIONS UNAVAILABLE";
             var shortlist = targets.Count == 0 ? "No available players in the scouting database." :
                 string.Join("\n", targets.Select(player => $"{player.displayName}  {player.position}  OVR {player.overall}  €{transferMarket.SuggestedAskingPrice(player):N0}"));
             detailsText.text += "\n\nSCOUTING SHORTLIST\n" + shortlist;
