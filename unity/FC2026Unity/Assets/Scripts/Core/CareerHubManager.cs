@@ -188,7 +188,8 @@ namespace FC2026.Core
                 "Choose your formation", bodyStyle);
 
             var gap = 8f;
-            var buttonWidth = (width - gap * 2f) / 3f;
+            var formationCount = CareerFormationSystem.FormationIds.Length;
+            var buttonWidth = (width - gap * (formationCount - 1)) / formationCount;
             var buttonHeight = Mathf.Clamp(panel.height * 0.12f, 56f, 78f);
             var formationY = panel.y + 134f;
             for (var i = 0; i < CareerFormationSystem.FormationIds.Length; i++)
