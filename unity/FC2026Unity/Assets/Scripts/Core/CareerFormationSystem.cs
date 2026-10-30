@@ -82,12 +82,19 @@ namespace FC2026.Core
             var forwardShift = style == "Attacking" ? 5f : style == "Defensive" ? -5f : 0f;
             var widthScale = style == "Attacking" ? 1.08f : style == "Defensive" ? 0.9f : 1f;
 
+            var formation = NormalizeFormation(formationId);
             for (var i = 1; i < positions.Length; i++)
             {
                 var point = positions[i];
-                var isForward = i >= 9;
-                positions[i] = new Vector3(point.x * widthScale, point.y,
-                    point.z + (isForward ? forwardShift : forwardShift * 0.45f));
+                var isForward = formation switch
+                {
+                    "4-3-3" => i >= 8,
+                    "4-2-3-1" => i >= 10,
+                    _ => i >= 9
+                };
+                var isAttackingMidfielder = formation == "4-2-3-1" && i >= 7 && i <= 9;
+                var depthShift = isForward ? forwardShift : isAttackingMidfielder ? forwardShift * 0.65f : forwardShift * 0.45f;
+                positions[i] = new Vector3(point.x * widthScale, point.y, point.z + depthShift);
             }
 
             return positions;
