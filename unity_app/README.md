@@ -48,11 +48,11 @@ All screens follow one FC 2026 presentation system inspired by the supplied kit-
 
 ## Android-first cinematic mobile hub
 
-`FC2026MobileHub` is the runtime entry UI for the Unity 6 project. It attaches itself after a scene loads and creates a portrait-first Canvas using a 900 × 1600 reference resolution and Scale With Screen Size. The home hub, squad manager, kit room, career dashboard, tournament entry, transfer store, and matchday scoreboard share the FC2026UITheme palette and touch-first card/button treatment.
+`FC2026MobileHub` is the runtime entry UI for the Unity 6 project. It attaches itself after a scene loads and creates a landscape-first Canvas using a 1600 × 900 reference resolution and Scale With Screen Size. The home hub, squad manager, kit room, career dashboard, tournament entry, transfer store, and matchday scoreboard share the FC2026UITheme palette and touch-first card/button treatment.
 
 The hub uses a lightweight procedural stadium backdrop rather than large background textures. Selecting Play Match creates the existing `MatchArenaBootstrap` when a scene does not already contain one, then opens the match presentation layer. Squad swaps use `SquadManager`; career funds use `CareerManager` when present; player listings use `FootballWorldDatabase` when available and fall back to demo entries when it is not.
 
-The kit room currently previews and stores the selected club accent color in runtime team data. Hook that selection to production kit materials when those assets are introduced. The generated UI is intentionally code-driven so the project can launch without a pre-authored menu scene; validate portrait and landscape aspect ratios in Unity Game view and on a physical Android device before release.
+The kit room currently previews and stores the selected club accent color in runtime team data. Hook that selection to production kit materials when those assets are introduced. The generated UI is intentionally code-driven so the project can launch without a pre-authored menu scene; validate 16:9 and wider landscape aspect ratios in Unity Game view and on a physical Android device before release.
 
 ## Transfer market
 
