@@ -78,6 +78,7 @@ namespace FC2026
             if (home != null) { home.played++; home.goalDifference += homeGoals - awayGoals; home.points += homeGoals > awayGoals ? 3 : homeGoals == awayGoals ? 1 : 0; }
             if (away != null) { away.played++; away.goalDifference += awayGoals - homeGoals; away.points += awayGoals > homeGoals ? 3 : homeGoals == awayGoals ? 1 : 0; }
             Matchweek++;
+            AdvanceContractWeek();
             CareerChanged?.Invoke();
         }
 
