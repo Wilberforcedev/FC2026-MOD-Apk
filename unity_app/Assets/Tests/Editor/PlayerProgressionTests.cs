@@ -84,5 +84,72 @@ namespace FC2026.Tests
             Assert.That(manager.Records[0].matchesStarted, Is.EqualTo(1));
             Assert.That(manager.Records[0].matchesWon, Is.EqualTo(1));
         }
+
+        [Test]
+        public void ContractsInitializeWithWagesAndTwoYearTerms()
+        {
+            managerObject = new GameObject("Career Contract Test");
+            var career = managerObject.AddComponent<CareerManager>();
+            var player = new PlayerData { id = "c1", displayName = "Ari Vale", overall = 80 };
+            career.InitializeContracts(new TeamData { players = new System.Collections.Generic.List<PlayerData> { player } });
+
+            var contract = career.ContractFor(player);
+            Assert.That(contract, Is.Not.Null);
+            Assert.That(contract.weeklyWage, Is.EqualTo(8000));
+            Assert.That(contract.weeksRemaining, Is.EqualTo(104));
+            Assert.That(career.WeeklyPayroll, Is.EqualTo(8000));
+        }
+
+        [Test]
+        public void RenewalImprovesMoraleAndResetsContract()
+        {
+            managerObject = new GameObject("Career Contract Test");
+            var career = managerObject.AddComponent<CareerManager>();
+            var player = new PlayerData { id = "c2", overall = 70 };
+            career.InitializeContracts(new TeamData { players = new System.Collections.Generic.List<PlayerData> { player } });
+            var contract = career.ContractFor(player);
+            contract.weeksRemaining = 2;
+            contract.morale = 50;
+
+            Assert.That(career.RenewContract(player, 8000, 156), Is.True);
+            Assert.That(contract.weeksRemaining, Is.EqualTo(156));
+            Assert.That(contract.morale, Is.EqualTo(58));
+            Assert.That(contract.transferRequested, Is.False);
+        }
+
+        [Test]
+        public void PlayingTimeAffectsMoraleAndLowMoraleTriggersTransferRequest()
+        {
+            managerObject = new GameObject("Career Contract Test");
+            var career = managerObject.AddComponent<CareerManager>();
+            var player = new PlayerData { id = "c3", overall = 70 };
+            career.InitializeContracts(new TeamData { players = new System.Collections.Generic.List<PlayerData> { player } });
+            var contract = career.ContractFor(player);
+            contract.morale = 30;
+
+            career.RecordPlayingTime(player, false);
+            Assert.That(contract.appearances, Is.EqualTo(1));
+            Assert.That(contract.transferRequested, Is.True);
+            career.RecordPlayingTime(player, true);
+            Assert.That(contract.starts, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ExpiringContractTriggersTransferRequestAndLeavesPayroll()
+        {
+            managerObject = new GameObject("Career Contract Test");
+            var career = managerObject.AddComponent<CareerManager>();
+            var player = new PlayerData { id = "c4", overall = 75 };
+            career.InitializeContracts(new TeamData { players = new System.Collections.Generic.List<PlayerData> { player } });
+            var contract = career.ContractFor(player);
+            contract.weeksRemaining = 1;
+
+            career.AdvanceContractWeek();
+
+            Assert.That(contract.expired, Is.True);
+            Assert.That(contract.transferRequested, Is.True);
+            Assert.That(career.WeeklyPayroll, Is.EqualTo(0));
+            Assert.That(career.ExpiredContracts, Is.EqualTo(1));
+        }
     }
 }
