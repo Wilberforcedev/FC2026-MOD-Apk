@@ -29,6 +29,49 @@ namespace FC2026.Tests
         }
 
         [Test]
+        public void TrainingBuildsFatigueAndRecoveryRestoresAvailability()
+        {
+            managerObject = new GameObject("Progression Test");
+            var manager = managerObject.AddComponent<PlayerProgressionManager>();
+            var player = new PlayerData { id = "p3", displayName = "Kai North", overall = 70 };
+            var record = manager.GetOrCreate(player);
+
+            Assert.That(manager.TrainPlayer(player, TrainingFocus.Pace, 3), Is.True);
+            Assert.That(record.fatigue, Is.EqualTo(30));
+            Assert.That(manager.RecoverPlayer(player), Is.True);
+            Assert.That(record.fatigue, Is.EqualTo(0));
+            Assert.That(record.recoverySessions, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void HighFatigueBlocksTrainingUntilRecovery()
+        {
+            managerObject = new GameObject("Progression Test");
+            var manager = managerObject.AddComponent<PlayerProgressionManager>();
+            var player = new PlayerData { id = "p4", displayName = "Noah Reed", overall = 70 };
+            var record = manager.GetOrCreate(player);
+            record.fatigue = 90;
+
+            Assert.That(manager.TrainPlayer(player, TrainingFocus.Passing, 2), Is.False);
+            Assert.That(manager.RecoverPlayer(player), Is.True);
+            Assert.That(manager.TrainPlayer(player, TrainingFocus.Passing, 2), Is.True);
+        }
+
+        [Test]
+        public void WeeklyAdvanceReducesFatigue()
+        {
+            managerObject = new GameObject("Progression Test");
+            var manager = managerObject.AddComponent<PlayerProgressionManager>();
+            var player = new PlayerData { id = "p5", displayName = "Eli Stone", overall = 70 };
+            var record = manager.GetOrCreate(player);
+            record.fatigue = 75;
+
+            manager.AdvanceWeek();
+
+            Assert.That(record.fatigue, Is.EqualTo(35));
+        }
+
+        [Test]
         public void MatchResultChangesFormAndMorale()
         {
             managerObject = new GameObject("Progression Test");
