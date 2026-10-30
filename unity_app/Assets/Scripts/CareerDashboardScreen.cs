@@ -69,6 +69,7 @@ namespace FC2026
             if (calendar == null || database == null) { standingsText.text = "NO SEASON CALENDAR ASSIGNED"; return; }
             var table = calendar.Standings;
             if (string.IsNullOrEmpty(managedClubId) && table.Count > 0) managedClubId = table[0].clubId;
+            transferMarket?.Configure(database, career, managedClubId);
             seasonTitle.text = $"CAREER DASHBOARD  /  SEASON {calendar.Season:00}";
             standingsText.text = "POS   CLUB                          P   GD   PTS\n" + string.Join("\n", table.Select((entry, index) => $"{index + 1,2}    {database.FindClub(entry.clubId)?.displayName ?? entry.clubId,-28} {entry.played,2}  {entry.GoalDifference,3}  {entry.points,3}"));
             var managed = table.FirstOrDefault(item => item.clubId == managedClubId);
@@ -87,8 +88,8 @@ namespace FC2026
             var targets = transferMarket.Scout().Take(5).ToList();
             statusText.text = $"SCOUTING  /  {transferMarket.Scout().Count} AVAILABLE PLAYERS";
             var shortlist = targets.Count == 0 ? "No available players in the scouting database." :
-                string.Join("\\n", targets.Select(player => $"{player.displayName}  {player.position}  OVR {player.overall}  €{transferMarket.SuggestedAskingPrice(player):N0}"));
-            detailsText.text += "\\n\\nSCOUTING SHORTLIST\\n" + shortlist;
+                string.Join("\n", targets.Select(player => $"{player.displayName}  {player.position}  OVR {player.overall}  €{transferMarket.SuggestedAskingPrice(player):N0}"));
+            detailsText.text += "\n\nSCOUTING SHORTLIST\n" + shortlist;
         }
 
         private static string Progress(int value, int target) => target == 1 ? (value > 0 ? "COMPLETE" : "IN PROGRESS") : $"{Mathf.Clamp(value, 0, target)}/{target}";
