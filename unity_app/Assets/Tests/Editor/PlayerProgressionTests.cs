@@ -88,6 +88,40 @@ namespace FC2026.Tests
         }
 
         [Test]
+        public void MatchdayControllerUpdatesManagedStartersAndAdvancesWeekOnlyOnce()
+        {
+            managerObject = new GameObject("Career Matchday Test");
+            var player = new PlayerData { id = "matchday-1", displayName = "Ari Vale", overall = 70 };
+            var team = new TeamData { id = "managed-club", players = new System.Collections.Generic.List<PlayerData> { player } };
+            var squad = managerObject.AddComponent<SquadManager>();
+            squad.Initialize(team);
+            var career = managerObject.AddComponent<CareerManager>();
+            career.Initialize(team, new[] { team });
+            var progression = managerObject.AddComponent<PlayerProgressionManager>();
+            var controller = managerObject.AddComponent<CareerMatchdayController>();
+            controller.Configure(null, squad, career, progression, "managed-club");
+            var fixture = new SeasonFixture
+            {
+                fixtureId = "matchday-draw-1",
+                homeClubId = "managed-club",
+                awayClubId = "opponent"
+            };
+
+            Assert.That(controller.ProcessMatchdayResult(fixture, 1, 1), Is.True);
+            var record = progression.GetOrCreate(player);
+            Assert.That(record.matchesPlayed, Is.EqualTo(1));
+            Assert.That(record.matchesStarted, Is.EqualTo(1));
+            Assert.That(record.matchesDrawn, Is.EqualTo(1));
+            Assert.That(career.ContractFor(player).appearances, Is.EqualTo(1));
+            Assert.That(career.ContractFor(player).starts, Is.EqualTo(1));
+            Assert.That(career.ContractFor(player).weeksRemaining, Is.EqualTo(103));
+
+            Assert.That(controller.ProcessMatchdayResult(fixture, 1, 1), Is.False);
+            Assert.That(record.matchesPlayed, Is.EqualTo(1));
+            Assert.That(career.ContractFor(player).weeksRemaining, Is.EqualTo(103));
+        }
+
+        [Test]
         public void ContractsInitializeWithWagesAndTwoYearTerms()
         {
             managerObject = new GameObject("Career Contract Test");
