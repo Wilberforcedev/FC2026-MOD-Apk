@@ -72,7 +72,7 @@ namespace FC2026
             var away = fixture == null ? "complete" : database.FindClub(fixture.awayClubId)?.shortName ?? fixture.awayClubId;
             var budget = career?.TransferBudget ?? database.FindClub(managedClubId)?.startingBudget ?? 0;
             var rank = managed == null ? table.Count : table.ToList().FindIndex(item => item.clubId == managedClubId) + 1;
-            detailsText.text = $"CLUB OBJECTIVES\n\n{database.FindClub(managedClubId)?.displayName ?? "SELECT CLUB"}\n\nFINISH TOP 2        {Progress(rank, 2)}\nWIN 3 MATCHES       {Progress(managed?.wins ?? 0, 3)}\nPOSITIVE GOAL DIFF  {Progress(managed?.GoalDifference ?? 0, 1)}\n\nNEXT FIXTURE\n{home}  vs  {away}\nMATCHWEEK  {fixture?.matchweek ?? 0}\n\nTRANSFER BUDGET\n€{budget / 1000000f:0.0}M\n\nPLAYER DEVELOPMENT\n{(progression == null ? "Assign PlayerProgressionManager" : $"{progression.Records.Count} progression records active")}";
+            detailsText.text = $"CLUB OBJECTIVES\n\n{database.FindClub(managedClubId)?.displayName ?? "SELECT CLUB"}\n\nFINISH TOP 2        {Progress(rank, 2)}\nWIN 3 MATCHES       {Progress(managed?.wins ?? 0, 3)}\nPOSITIVE GOAL DIFF  {Progress(managed?.GoalDifference ?? 0, 1)}\n\nNEXT FIXTURE\n{home}  vs  {away}\nMATCHWEEK  {fixture?.matchweek ?? 0}\n\nTRANSFER BUDGET\n€{budget / 1000000f:0.0}M\n\nSQUAD CONTRACTS\nWEEKLY PAYROLL  €{(career?.WeeklyPayroll ?? 0):N0}\nEXPIRED DEALS   {career?.ExpiredContracts ?? 0}\nACTIVE DEALS    {career?.Contracts.Count ?? 0}\n\nPLAYER DEVELOPMENT\n{(progression == null ? "Assign PlayerProgressionManager" : $"{progression.Records.Count} progression records active")}";
             statusText.text = $"LIVE  /  MATCHWEEK {fixture?.matchweek ?? calendar.Fixtures.Count}  /  {table.Count} CLUBS";
         }
 
