@@ -16,6 +16,8 @@ namespace FC2026
         [Range(1, 99)] public int potential = 88;
         public float trainingXp;
         public int trainingSessions;
+        [Range(0, 100)] public int fatigue;
+        public int recoverySessions;
         public int matchesStarted;
         public int matchesWon;
     }
@@ -45,11 +47,12 @@ namespace FC2026
         public bool TrainPlayer(PlayerData player, TrainingFocus focus, int intensity = 2)
         {
             var record = GetOrCreate(player);
-            if (record == null || player.overall >= record.potential) return false;
+            if (record == null || player.overall >= record.potential || record.fatigue >= 85) return false;
             intensity = Mathf.Clamp(intensity, 1, 3);
             var xpGain = intensity * 10f + record.morale * .05f;
             record.trainingXp += xpGain;
             record.trainingSessions++;
+            record.fatigue = Mathf.Clamp(record.fatigue + intensity * 10, 0, 100);
             record.form = Mathf.Clamp(record.form + intensity, 0, 100);
             record.morale = Mathf.Clamp(record.morale + (intensity == 3 ? -1 : 1), 0, 100);
             while (record.trainingXp >= xpPerAttributePoint && player.overall < record.potential)
@@ -78,10 +81,22 @@ namespace FC2026
             ProgressionChanged?.Invoke();
         }
 
+        public bool RecoverPlayer(PlayerData player)
+        {
+            var record = GetOrCreate(player);
+            if (record == null || record.fatigue == 0) return false;
+            record.fatigue = Mathf.Max(0, record.fatigue - 35);
+            record.morale = Mathf.Clamp(record.morale + 2, 0, 100);
+            record.recoverySessions++;
+            ProgressionChanged?.Invoke();
+            return true;
+        }
+
         public void AdvanceWeek()
         {
             foreach (var record in records)
             {
+                record.fatigue = Mathf.Max(0, record.fatigue - 40);
                 record.form = Mathf.RoundToInt(Mathf.MoveTowards(record.form, 50, 4));
                 record.morale = Mathf.RoundToInt(Mathf.MoveTowards(record.morale, 65, 3));
             }
