@@ -10,7 +10,7 @@ namespace FC2026.Core
     /// </summary>
     public static class CareerFormationSystem
     {
-        public static readonly string[] FormationIds = { "4-3-3", "4-4-2", "3-5-2" };
+        public static readonly string[] FormationIds = { "4-3-3", "4-2-3-1", "4-4-2", "3-5-2" };
         public static readonly string[] TacticalStyles = { "Balanced", "Attacking", "Defensive" };
 
         private static readonly Vector3[] Formation433 =
@@ -19,6 +19,15 @@ namespace FC2026.Core
             new(-23, 0, -36), new(-8, 0, -39), new(8, 0, -39), new(23, 0, -36),
             new(-15, 0, -18), new(0, 0, -21), new(15, 0, -18),
             new(-21, 0, 4), new(0, 0, 11), new(21, 0, 4)
+        };
+
+        private static readonly Vector3[] Formation4231 =
+        {
+            new(0, 0, -48),
+            new(-23, 0, -36), new(-8, 0, -39), new(8, 0, -39), new(23, 0, -36),
+            new(-10, 0, -21), new(10, 0, -21),
+            new(-21, 0, -2), new(0, 0, 1), new(21, 0, -2),
+            new(0, 0, 12)
         };
 
         private static readonly Vector3[] Formation442 =
@@ -62,6 +71,7 @@ namespace FC2026.Core
         {
             var source = NormalizeFormation(formationId) switch
             {
+                "4-2-3-1" => Formation4231,
                 "4-4-2" => Formation442,
                 "3-5-2" => Formation352,
                 _ => Formation433
