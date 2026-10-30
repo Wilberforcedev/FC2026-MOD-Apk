@@ -63,10 +63,10 @@ namespace FC2026
             {
                 playerId = target.id,
                 playerName = target.displayName,
-                askingPrice = Mathf.Max(1, target.marketValue),
+                askingPrice = SuggestedAskingPrice(target),
                 offeredFee = fee,
-                counterFee = fee >= target.marketValue ? 0 : Mathf.CeilToInt(target.marketValue * 1.1f),
-                status = fee >= target.marketValue ? TransferOfferStatus.Accepted : TransferOfferStatus.Countered
+                counterFee = fee >= SuggestedAskingPrice(target) ? 0 : Mathf.CeilToInt(SuggestedAskingPrice(target) * 1.1f),
+                status = fee >= SuggestedAskingPrice(target) ? TransferOfferStatus.Accepted : TransferOfferStatus.Countered
             };
             offers.Add(offer);
             return offer;
