@@ -18,8 +18,10 @@ namespace FC2026
         public int trainingSessions;
         [Range(0, 100)] public int fatigue;
         public int recoverySessions;
+        public int matchesPlayed;
         public int matchesStarted;
         public int matchesWon;
+        public int matchesDrawn;
     }
 
     public sealed class PlayerProgressionManager : MonoBehaviour
@@ -73,11 +75,44 @@ namespace FC2026
 
         public void ApplyMatchResult(PlayerData player, bool started, bool won)
         {
+            ApplyMatchdayResult(player, started, won, false);
+        }
+
+        public void ApplyMatchdayResult(PlayerData player, bool started, bool won, bool drawn)
+        {
             var record = GetOrCreate(player);
             if (record == null) return;
+            record.matchesPlayed++;
             if (started) record.matchesStarted++;
-            if (won) { record.matchesWon++; record.form = Mathf.Clamp(record.form + 5, 0, 100); record.morale = Mathf.Clamp(record.morale + 6, 0, 100); }
-            else { record.form = Mathf.Clamp(record.form - 2, 0, 100); record.morale = Mathf.Clamp(record.morale - 3, 0, 100); }
+            if (won)
+            {
+                record.matchesWon++;
+                record.form = Mathf.Clamp(record.form + 5, 0, 100);
+                record.morale = Mathf.Clamp(record.morale + 6, 0, 100);
+            }
+            else if (drawn)
+            {
+                record.matchesDrawn++;
+                record.form = Mathf.Clamp(record.form + 1, 0, 100);
+                record.morale = Mathf.Clamp(record.morale + 2, 0, 100);
+            }
+            else
+            {
+                record.form = Mathf.Clamp(record.form - 2, 0, 100);
+                record.morale = Mathf.Clamp(record.morale - 3, 0, 100);
+            }
+
+            if (started)
+            {
+                record.fatigue = Mathf.Clamp(record.fatigue + 15, 0, 100);
+                record.trainingXp += 8f;
+                while (record.trainingXp >= xpPerAttributePoint && player.overall < record.potential)
+                {
+                    record.trainingXp -= xpPerAttributePoint;
+                    IncreaseAttribute(player, TrainingFocus.Balanced);
+                    player.overall = Mathf.Clamp(player.overall + 1, 1, record.potential);
+                }
+            }
             ProgressionChanged?.Invoke();
         }
 
