@@ -109,10 +109,17 @@ namespace FC2026.Core
             y += 2f * (buttonHeight + gap) + 8f;
             if (save != null)
             {
+                var fixture = CareerLeagueSystem.GetFixtureForClub(save.managedClubId, save.matchweek);
+                var opponentId = fixture == null
+                    ? string.Empty
+                    : fixture.HomeClubId == save.managedClubId ? fixture.AwayClubId : fixture.HomeClubId;
+                var venue = fixture == null
+                    ? "FIXTURE UNAVAILABLE"
+                    : fixture.HomeClubId == save.managedClubId ? "HOME v" : "AWAY at";
                 GUI.Label(new Rect(x, y, width, 96f),
-                    $"Season {save.season}  •  Matchweek {save.matchweek}\n" +
-                    $"{ClubDisplayName(save.managedClubId)}  •  Budget: {save.transferBudget:N0}\n" +
-                    $"Played {save.played}   W {save.wins}   D {save.draws}   L {save.losses}",
+                    $"Season {save.season}  •  Matchweek {save.matchweek}/{CareerLeagueSystem.MatchweeksPerSeason}\n" +
+                    $"{ClubDisplayName(save.managedClubId)}  •  {venue} {CareerLeagueSystem.GetClubName(opponentId)}\n" +
+                    $"Budget: {save.transferBudget:N0}  •  Played {save.played}   W {save.wins}   D {save.draws}   L {save.losses}",
                     bodyStyle);
                 y += 100f;
             }
