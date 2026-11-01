@@ -701,13 +701,14 @@ namespace FC2026.Core
             if (!isPaused && !matchFinished && GUI.Button(new Rect(Screen.width - 120f, 14f, 104f, 54f), "PAUSE", buttonStyle))
                 SetPaused(true);
 
-            if (isPaused)
-                DrawPauseOverlay();
-            else if (Application.isMobilePlatform)
-                DrawMobileControls();
-            else
-                GUI.Label(new Rect(18f, Screen.height - 48f, Screen.width - 36f, 36f),
-                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch", helpStyle);
+            if (!isPaused)
+            {
+                if (Application.isMobilePlatform)
+                    DrawMobileControls();
+                else
+                    GUI.Label(new Rect(18f, Screen.height - 48f, Screen.width - 36f, 36f),
+                        "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch", helpStyle);
+            }
 
             if (Time.time < goalBannerUntil)
                 GUI.Label(new Rect(0, Screen.height * 0.33f, Screen.width, 100f), goalBanner, goalStyle);
@@ -743,6 +744,10 @@ namespace FC2026.Core
                     panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", buttonStyle))
                     CompleteCareerMatch();
             }
+
+            // Draw the pause surface last so it remains above the score and commentary HUD.
+            if (isPaused)
+                DrawPauseOverlay();
         }
 
         private void SetPaused(bool paused)
