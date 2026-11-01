@@ -263,8 +263,12 @@ namespace FC2026.Gameplay
             direction.y = 0f;
 
             var footballer = GetComponent<FootballPlayerController>();
+            var shouldSprint = !goalkeeper && direction.sqrMagnitude > 64f;
+            // AI cannot manually release sprint, so treat exhaustion as a rest
+            // interval and let the player sprint again after recovering.
+            var sprintRequested = shouldSprint && (footballer == null || !footballer.IsSprintExhausted);
             var sprinting = footballer != null && footballer.UpdateStamina(
-                !goalkeeper && direction.sqrMagnitude > 64f,
+                sprintRequested,
                 Time.fixedDeltaTime);
 
             if (direction.sqrMagnitude > 0.12f)
