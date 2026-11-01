@@ -124,13 +124,21 @@ namespace FC2026.Core
                 return;
 
             var position = ball.transform.position;
-            // Keep the prototype match playable: loose balls beyond the touchline,
-            // goal line or below the pitch are brought back for a centre restart.
-            if (Mathf.Abs(position.x) > PitchWidth * 0.5f + 7f ||
-                Mathf.Abs(position.z) > PitchLength * 0.5f + 7f || position.y < -2f)
+            // Detect the ball just beyond the field and restart near the crossing
+            // point instead of teleporting every out-of-play ball to the centre.
+            var halfWidth = PitchWidth * 0.5f;
+            var halfLength = PitchLength * 0.5f;
+            if (Mathf.Abs(position.x) > halfWidth + 0.5f ||
+                Mathf.Abs(position.z) > halfLength + 0.5f || position.y < -2f)
             {
                 ballOutUntil = Time.time + 1.25f;
-                ball.ResetBall(new Vector3(0f, 0.14f, 0f));
+                var restartPosition = position.y < -2f
+                    ? new Vector3(0f, 0.14f, 0f)
+                    : new Vector3(
+                        Mathf.Clamp(position.x, -halfWidth + 0.35f, halfWidth - 0.35f),
+                        0.14f,
+                        Mathf.Clamp(position.z, -halfLength + 0.35f, halfLength - 0.35f));
+                ball.ResetBall(restartPosition);
                 goalBanner = "BALL OUT — RESTART";
                 goalBannerUntil = Time.time + 1.15f;
             }
