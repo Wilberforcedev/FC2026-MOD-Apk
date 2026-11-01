@@ -868,7 +868,7 @@ namespace FC2026.Core
             var hub = GetComponent<CareerHubManager>();
             if (hub != null)
             {
-                hub.RefreshCareer();
+                hub.RefreshCareer(false);
                 hub.enabled = true;
             }
 
@@ -894,6 +894,7 @@ namespace FC2026.Core
         {
             if (resultSaved) return;
             resultSaved = true;
+            var careerResultSaved = false;
             var save = CareerSaveSystem.Load();
             if (save != null)
             {
@@ -914,7 +915,8 @@ namespace FC2026.Core
                     save.transferBudget += 2500000;
                     CareerLeagueSystem.ResetStandings(save);
                 }
-                if (!CareerSaveSystem.Save(save))
+                careerResultSaved = CareerSaveSystem.Save(save);
+                if (!careerResultSaved)
                     Debug.LogWarning("FC 2026: match finished, but career result could not be saved.");
             }
             // The hub and match manager share this root. Preserve it and remove only generated children.
@@ -923,7 +925,7 @@ namespace FC2026.Core
             var hub = GetComponent<CareerHubManager>();
             if (hub != null)
             {
-                hub.RefreshCareer();
+                hub.RefreshCareer(careerResultSaved);
                 hub.enabled = true;
             }
 
