@@ -945,6 +945,7 @@ namespace FC2026.Core
             }
 
             DrawJoystick(joyCenter, radius, stickOffset);
+            DrawStaminaBar(joyCenter, radius);
 
             var right = Screen.width - 24f;
             var bottom = Screen.height - 24f;
@@ -974,6 +975,35 @@ namespace FC2026.Core
             userPlayer.SetMobileMove(move, sprint);
 
             GUI.color = Color.white;
+        }
+
+        private void DrawStaminaBar(Vector2 joystickCenter, float joystickRadius)
+        {
+            if (userPlayer == null)
+                return;
+
+            var value = userPlayer.StaminaNormalized;
+            var width = joystickRadius * 2f;
+            var bar = new Rect(joystickCenter.x - joystickRadius,
+                joystickCenter.y - joystickRadius - 28f, width, 16f);
+            GUI.color = Color.white;
+            GUI.Box(bar, string.Empty);
+
+            var fillWidth = (bar.width - 4f) * value;
+            var fill = new Rect(bar.x + 2f, bar.y + 2f, fillWidth, bar.height - 4f);
+            GUI.color = value > 0.5f
+                ? new Color(0.25f, 0.88f, 0.55f)
+                : value > 0.2f
+                    ? new Color(1f, 0.72f, 0.2f)
+                    : new Color(0.95f, 0.28f, 0.25f);
+            if (fill.width > 0f)
+                GUI.DrawTexture(fill, Texture2D.whiteTexture);
+            GUI.color = Color.white;
+
+            var label = userPlayer.IsSprintExhausted
+                ? "SPRINT EXHAUSTED"
+                : $"STAMINA {Mathf.RoundToInt(value * 100f)}%";
+            GUI.Label(new Rect(bar.x, bar.y - 21f, bar.width, 18f), label, labelSmallStyle);
         }
 
         private void DrawJoystick(Vector2 center, float radius, Vector2 offset)
