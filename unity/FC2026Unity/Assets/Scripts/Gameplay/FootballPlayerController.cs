@@ -7,6 +7,12 @@ namespace FC2026.Gameplay
     {
         [SerializeField] private float moveSpeed = 7.2f;
         [SerializeField] private float sprintSpeed = 9.8f;
+        private const float MaxStamina = 100f;
+        private const float SprintDrainPerSecond = 19f;
+        private const float StaminaRecoveryPerSecond = 11f;
+        private const float SprintRecoveryThreshold = 22f;
+        private float stamina = MaxStamina;
+        private bool sprintExhausted;
         [SerializeField] private float acceleration = 18f;
         [SerializeField] private float rotationSpeed = 12f;
         [SerializeField] private float kickDistance = 2.25f;
@@ -29,6 +35,8 @@ namespace FC2026.Gameplay
         public bool IsUserControlled { get; set; } = true;
         public int TeamDirection { get; set; } = 1;
         public static FootballPlayerController ActiveUserPlayer { get; private set; }
+        public float StaminaNormalized => Mathf.Clamp01(stamina / MaxStamina);
+        public bool IsSprintExhausted => sprintExhausted;
 
         public void SetUserControlled(bool active)
         {
@@ -84,7 +92,8 @@ namespace FC2026.Gameplay
                 return;
 
             var move = ReadMove();
-            var sprint = ReadSprint();
+            var sprintRequested = ReadSprint() && move.sqrMagnitude > 0.05f;
+            var sprint = UpdateStamina(sprintRequested, Time.fixedDeltaTime);
             var desiredSpeed = sprint ? sprintSpeed : moveSpeed;
             var desired = new Vector3(move.x, 0f, move.y);
             if (desired.sqrMagnitude > 1f)
@@ -133,6 +142,27 @@ namespace FC2026.Gameplay
                 chipShotQueued = false;
                 finesseShotQueued = false;
             }
+        }
+
+        public bool UpdateStamina(bool sprintRequested, float deltaTime)
+        {
+            var elapsed = Mathf.Max(0f, deltaTime);
+            if (sprintExhausted && stamina >= SprintRecoveryThreshold)
+                sprintExhausted = false;
+
+            if (sprintRequested && !sprintExhausted && stamina > 0f)
+            {
+                stamina = Mathf.Max(0f, stamina - SprintDrainPerSecond * elapsed);
+                if (stamina <= 0f)
+                {
+                    sprintExhausted = true;
+                    return false;
+                }
+                return true;
+            }
+
+            stamina = Mathf.Min(MaxStamina, stamina + StaminaRecoveryPerSecond * elapsed);
+            return false;
         }
 
         private Vector2 ReadMove()
