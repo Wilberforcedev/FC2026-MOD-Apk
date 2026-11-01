@@ -64,10 +64,14 @@ namespace FC2026.Core
                 wordWrap = true
             };
 
-            var panelWidth = Mathf.Min(Screen.width - 32f, 760f);
-            var panelHeight = Mathf.Min(Screen.height - 32f, 660f);
-            var panel = new Rect((Screen.width - panelWidth) / 2f,
-                (Screen.height - panelHeight) / 2f, panelWidth, panelHeight);
+            var safeArea = Screen.safeArea;
+            var safeTop = Screen.height - safeArea.yMax;
+            var panelWidth = Mathf.Min(safeArea.width - 32f, 960f);
+            var panelHeight = Mathf.Min(safeArea.height - 24f, 660f);
+            var panel = new Rect(
+                safeArea.xMin + (safeArea.width - panelWidth) * 0.5f,
+                safeTop + (safeArea.height - panelHeight) * 0.5f,
+                panelWidth, panelHeight);
             GUI.Box(panel, string.Empty);
 
             if (showLeagueTable)
@@ -78,6 +82,12 @@ namespace FC2026.Core
             if (showSquadManagement)
             {
                 DrawSquadManagement(panel);
+                return;
+            }
+
+            if (panel.width > panel.height)
+            {
+                DrawCareerHomeLandscape(panel);
                 return;
             }
 
@@ -133,31 +143,7 @@ namespace FC2026.Core
             var actionHeight = Mathf.Clamp(panel.height * 0.105f, 54f, 76f);
             if (GUI.Button(new Rect(x, y, width, actionHeight),
                 save == null ? "START CAREER" : "RESUME CAREER", buttonStyle))
-            {
-                if (save == null)
-                {
-                    save = new CareerSaveData
-                    {
-                        managedClubId = ClubIds[selectedClub],
-                        season = 1,
-                        matchweek = 1,
-                        transferBudget = 15000000
-                    };
-                    if (!CareerSaveSystem.Save(save))
-                    {
-                        save = null;
-                        notice = "Could not save career. Please try again.";
-                    }
-                    else
-                    {
-                        notice = "Career created and saved on this device.";
-                    }
-                }
-                else
-                {
-                    notice = "Career save loaded.";
-                }
-            }
+                StartOrResumeCareer();
 
             y += actionHeight + 8f;
             var actionGap = 8f;
@@ -182,8 +168,242 @@ namespace FC2026.Core
 
 
 
+        private void DrawCareerHomeLandscape(Rect panel)
+        {
+            var inset = Mathf.Clamp(panel.width * 0.025f, 14f, 24f);
+            var headerHeight = Mathf.Clamp(panel.height * 0.14f, 40f, 54f);
+            GUI.Label(new Rect(panel.x + inset, panel.y + 8f,
+                panel.width - inset * 2f, headerHeight),
+                "FC 2026  |  CAREER MODE", titleStyle);
+
+            var gap = Mathf.Clamp(panel.width * 0.018f, 8f, 14f);
+            var cardY = panel.y + headerHeight + 8f;
+            var cardHeight = panel.yMax - cardY - 14f;
+            var cardWidth = (panel.width - inset * 2f - gap) * 0.5f;
+            var leftCard = new Rect(panel.x + inset, cardY, cardWidth, cardHeight);
+            var rightCard = new Rect(leftCard.xMax + gap, cardY, cardWidth, cardHeight);
+            GUI.Box(leftCard, string.Empty);
+            GUI.Box(rightCard, string.Empty);
+
+            var pad = 12f;
+            GUI.Label(new Rect(leftCard.x + pad, leftCard.y + 6f,
+                leftCard.width - pad * 2f, 30f), "CHOOSE YOUR CLUB", bodyStyle);
+            var clubGap = 6f;
+            var clubButtonHeight = Mathf.Clamp(cardHeight * 0.19f, 38f, 52f);
+            var clubButtonWidth = (leftCard.width - pad * 2f - clubGap) * 0.5f;
+            var clubY = leftCard.y + 42f;
+            var canChooseClub = save == null;
+            GUI.enabled = canChooseClub;
+            for (var i = 0; i < ClubNames.Length; i++)
+            {
+                var column = i % 2;
+                var row = i / 2;
+                var rect = new Rect(leftCard.x + pad + column * (clubButtonWidth + clubGap),
+                    clubY + row * (clubButtonHeight + clubGap),
+                    clubButtonWidth, clubButtonHeight);
+                var label = (selectedClub == i ? "✓  " : string.Empty) + ClubNames[i];
+                if (GUI.Button(rect, label, buttonStyle))
+                {
+                    selectedClub = i;
+                    notice = "Selected " + ClubNames[i] + ".";
+                }
+            }
+            GUI.enabled = true;
+
+            var selectionY = clubY + 2f * (clubButtonHeight + clubGap) + 2f;
+            var selectedLabel = save != null
+                ? "MANAGED CLUB"
+                : "SELECTED CLUB";
+            var clubLabel = save != null
+                ? ClubDisplayName(save.managedClubId)
+                : ClubNames[Mathf.Clamp(selectedClub, 0, ClubNames.Length - 1)];
+            GUI.Label(new Rect(leftCard.x + pad, selectionY,
+                leftCard.width - pad * 2f, 28f), selectedLabel, labelSmallStyle);
+            GUI.Label(new Rect(leftCard.x + pad, selectionY + 24f,
+                leftCard.width - pad * 2f, 32f), clubLabel, bodyStyle);
+
+            GUI.Label(new Rect(rightCard.x + pad, rightCard.y + 6f,
+                rightCard.width - pad * 2f, 30f), "CAREER OVERVIEW", bodyStyle);
+            var infoY = rightCard.y + 40f;
+            var infoHeight = Mathf.Clamp(cardHeight * 0.27f, 58f, 78f);
+            GUI.Box(new Rect(rightCard.x + pad, infoY,
+                rightCard.width - pad * 2f, infoHeight), string.Empty);
+            if (save != null)
+            {
+                var fixture = CareerLeagueSystem.GetFixtureForClub(save.managedClubId, save.matchweek);
+                var opponentId = fixture == null
+                    ? string.Empty
+                    : fixture.HomeClubId == save.managedClubId ? fixture.AwayClubId : fixture.HomeClubId;
+                var venue = fixture == null
+                    ? "FIXTURE UNAVAILABLE"
+                    : fixture.HomeClubId == save.managedClubId ? "HOME v" : "AWAY at";
+                GUI.Label(new Rect(rightCard.x + pad + 6f, infoY + 3f,
+                    rightCard.width - pad * 2f - 12f, infoHeight - 6f),
+                    $"SEASON {save.season}  •  WEEK {save.matchweek}/{CareerLeagueSystem.MatchweeksPerSeason}\n" +
+                    $"{venue} {CareerLeagueSystem.GetClubName(opponentId)}\n" +
+                    $"BUDGET {save.transferBudget:N0}  •  P {save.played}  W {save.wins}  D {save.draws}  L {save.losses}",
+                    labelSmallStyle);
+            }
+            else
+            {
+                GUI.Label(new Rect(rightCard.x + pad + 8f, infoY + 6f,
+                    rightCard.width - pad * 2f - 16f, infoHeight - 12f),
+                    "Start a career to manage your club and season.", bodyStyle);
+            }
+
+            var actionHeight = Mathf.Clamp(cardHeight * 0.17f, 38f, 50f);
+            var actionY = infoY + infoHeight + 7f;
+            if (GUI.Button(new Rect(rightCard.x + pad, actionY,
+                rightCard.width - pad * 2f, actionHeight),
+                save == null ? "START CAREER" : "RESUME CAREER", buttonStyle))
+                StartOrResumeCareer();
+
+            actionY += actionHeight + 5f;
+            var actionGap = 6f;
+            var actionWidth = (rightCard.width - pad * 2f - actionGap) * 0.5f;
+            GUI.enabled = save != null;
+            if (GUI.Button(new Rect(rightCard.x + pad, actionY,
+                actionWidth, actionHeight), "PLAY NEXT MATCH", buttonStyle))
+            {
+                enabled = false;
+                var manager = GetComponent<MatchManager3D>();
+                if (manager == null)
+                    gameObject.AddComponent<MatchManager3D>();
+            }
+            if (GUI.Button(new Rect(rightCard.x + pad + actionWidth + actionGap, actionY,
+                actionWidth, actionHeight), "SQUAD & TACTICS", buttonStyle))
+                showSquadManagement = true;
+            GUI.enabled = true;
+
+            actionY += actionHeight + 5f;
+            var tableHeight = Mathf.Clamp(actionHeight * 0.86f, 34f, 44f);
+            if (GUI.Button(new Rect(rightCard.x + pad, actionY,
+                rightCard.width - pad * 2f, tableHeight), "VIEW LEAGUE TABLE", buttonStyle))
+                showLeagueTable = true;
+
+            var noticeY = actionY + tableHeight + 2f;
+            GUI.Label(new Rect(rightCard.x + pad, noticeY,
+                rightCard.width - pad * 2f, Mathf.Max(24f, rightCard.yMax - noticeY - 4f)),
+                notice, labelSmallStyle);
+        }
+
+        private void DrawSquadManagementLandscape(Rect panel)
+        {
+            var inset = Mathf.Clamp(panel.width * 0.025f, 14f, 24f);
+            var headerHeight = Mathf.Clamp(panel.height * 0.14f, 40f, 54f);
+            GUI.Label(new Rect(panel.x + inset, panel.y + 8f,
+                panel.width - inset * 2f, headerHeight), "SQUAD & TACTICS", titleStyle);
+
+            var gap = Mathf.Clamp(panel.width * 0.018f, 8f, 14f);
+            var footerButtonHeight = Mathf.Clamp(panel.height * 0.14f, 38f, 50f);
+            var footerY = panel.yMax - footerButtonHeight - 14f;
+            var cardY = panel.y + headerHeight + 8f;
+            var cardHeight = footerY - cardY - 10f;
+            var cardWidth = (panel.width - inset * 2f - gap) * 0.5f;
+            var formationCard = new Rect(panel.x + inset, cardY, cardWidth, cardHeight);
+            var tacticsCard = new Rect(formationCard.xMax + gap, cardY, cardWidth, cardHeight);
+            GUI.Box(formationCard, string.Empty);
+            GUI.Box(tacticsCard, string.Empty);
+
+            var pad = 12f;
+            GUI.Label(new Rect(formationCard.x + pad, formationCard.y + 6f,
+                formationCard.width - pad * 2f, 28f), "FORMATION", bodyStyle);
+            GUI.Label(new Rect(tacticsCard.x + pad, tacticsCard.y + 6f,
+                tacticsCard.width - pad * 2f, 28f), "TEAM MENTALITY", bodyStyle);
+
+            var formationCount = CareerFormationSystem.FormationIds.Length;
+            var formationColumns = Mathf.Min(formationCount, 2);
+            var formationGap = 6f;
+            var formationWidth = (formationCard.width - pad * 2f - formationGap) * 0.5f;
+            var formationHeight = Mathf.Clamp(cardHeight * 0.24f, 38f, 50f);
+            var formationY = formationCard.y + 40f;
+            for (var i = 0; i < formationCount; i++)
+            {
+                var id = CareerFormationSystem.FormationIds[i];
+                var selected = save.formationId == id;
+                var rect = new Rect(formationCard.x + pad + (i % formationColumns) * (formationWidth + formationGap),
+                    formationY + (i / formationColumns) * (formationHeight + formationGap),
+                    formationWidth, formationHeight);
+                if (GUI.Button(rect, (selected ? "✓ " : string.Empty) + id, buttonStyle))
+                {
+                    save.formationId = id;
+                    CareerSaveSystem.Save(save);
+                    notice = "Formation saved: " + id;
+                }
+            }
+
+            var styleCount = CareerFormationSystem.TacticalStyles.Length;
+            var styleColumns = Mathf.Min(styleCount, 2);
+            var styleWidth = (tacticsCard.width - pad * 2f - formationGap) * 0.5f;
+            var styleHeight = Mathf.Clamp(cardHeight * 0.24f, 38f, 50f);
+            var styleY = tacticsCard.y + 40f;
+            for (var i = 0; i < styleCount; i++)
+            {
+                var style = CareerFormationSystem.TacticalStyles[i];
+                var selected = save.tacticalStyle == style;
+                var rect = new Rect(tacticsCard.x + pad + (i % styleColumns) * (styleWidth + formationGap),
+                    styleY + (i / styleColumns) * (styleHeight + formationGap),
+                    styleWidth, styleHeight);
+                if (GUI.Button(rect, (selected ? "✓ " : string.Empty) + style, buttonStyle))
+                {
+                    save.tacticalStyle = style;
+                    CareerSaveSystem.Save(save);
+                    notice = "Team mentality saved: " + style;
+                }
+            }
+
+            GUI.Label(new Rect(formationCard.x + pad, formationCard.yMax - 34f,
+                formationCard.width - pad * 2f, 28f),
+                "Settings apply to your next match.", labelSmallStyle);
+            GUI.Label(new Rect(tacticsCard.x + pad, tacticsCard.yMax - 34f,
+                tacticsCard.width - pad * 2f, 28f), notice, labelSmallStyle);
+
+            var footerGap = 8f;
+            var backWidth = (panel.width - inset * 2f - footerGap) * 0.32f;
+            if (GUI.Button(new Rect(panel.x + inset, footerY,
+                backWidth, footerButtonHeight), "BACK", buttonStyle))
+                showSquadManagement = false;
+            if (GUI.Button(new Rect(panel.x + inset + backWidth + footerGap, footerY,
+                panel.width - inset * 2f - backWidth - footerGap, footerButtonHeight),
+                "VIEW LEAGUE TABLE", buttonStyle))
+                showLeagueTable = true;
+        }
+
+        private void StartOrResumeCareer()
+        {
+            if (save == null)
+            {
+                save = new CareerSaveData
+                {
+                    managedClubId = ClubIds[selectedClub],
+                    season = 1,
+                    matchweek = 1,
+                    transferBudget = 15000000
+                };
+                if (!CareerSaveSystem.Save(save))
+                {
+                    save = null;
+                    notice = "Could not save career. Please try again.";
+                }
+                else
+                {
+                    notice = "Career created and saved on this device.";
+                }
+            }
+            else
+            {
+                notice = "Career save loaded.";
+            }
+        }
+
         private void DrawSquadManagement(Rect panel)
         {
+            if (panel.width > panel.height)
+            {
+                DrawSquadManagementLandscape(panel);
+                return;
+            }
+
             var x = panel.x + 24f;
             var width = panel.width - 48f;
             var heading = new GUIStyle(titleStyle)
