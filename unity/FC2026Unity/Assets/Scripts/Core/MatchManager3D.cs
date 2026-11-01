@@ -20,6 +20,8 @@ namespace FC2026.Core
         private int homeScore;
         private int awayScore;
         private bool resetting;
+        private bool isRestarting;
+        private Coroutine goalResetRoutine;
         private bool isPaused;
         private float previousTimeScale = 1f;
         private GUIStyle scoreStyle;
@@ -608,7 +610,7 @@ namespace FC2026.Core
 
         public void RegisterGoal(bool homeGoal)
         {
-            if (resetting)
+            if (resetting || matchFinished)
                 return;
 
             // Entering the home goal means the away side scored, and vice versa.
@@ -619,7 +621,7 @@ namespace FC2026.Core
             commentary = homeGoal ? "GOAL for the away side! What a finish!" : "GOAL for the home side! The crowd erupts!";
             nextCommentaryAt = matchElapsed + 14f;
             goalBannerUntil = Time.time + 2.2f;
-            StartCoroutine(ResetAfterGoal());
+            goalResetRoutine = StartCoroutine(ResetAfterGoal());
         }
 
         private IEnumerator ResetAfterGoal()
@@ -649,6 +651,7 @@ namespace FC2026.Core
             }
 
             resetting = false;
+            goalResetRoutine = null;
         }
 
         private void OnGUI()
@@ -736,19 +739,75 @@ namespace FC2026.Core
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = Color.white }
                 };
-                var panel = new Rect(Screen.width * 0.18f, Screen.height * 0.28f, Screen.width * 0.64f, Screen.height * 0.42f);
+                var panelWidth = Screen.width * 0.74f;
+                var panelHeight = Mathf.Min(Screen.height - 32f, 280f);
+                var panel = new Rect((Screen.width - panelWidth) * 0.5f,
+                    (Screen.height - panelHeight) * 0.5f, panelWidth, panelHeight);
                 GUI.Box(panel, string.Empty);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 22f, panel.width - 24f, 62f), "FULL TIME", fullTimeStyle);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 92f, panel.width - 24f, 58f),
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 12f, panel.width - 24f, 58f), "FULL TIME", fullTimeStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 70f, panel.width - 24f, 54f),
                     $"HOME  {homeScore}  —  {awayScore}  AWAY", scoreStyle);
-                if (GUI.Button(new Rect(panel.x + panel.width * 0.15f, panel.y + panel.height - 82f,
-                    panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", buttonStyle))
+                GUI.Label(new Rect(panel.x + 16f, panel.y + 124f, panel.width - 32f, 30f),
+                    "Play again without recording, or save this result to your career.", labelSmallStyle);
+                var actionWidth = panel.width * 0.78f;
+                var actionX = panel.x + (panel.width - actionWidth) * 0.5f;
+                if (GUI.Button(new Rect(actionX, panel.y + panel.height - 112f,
+                    actionWidth, 46f), "PLAY AGAIN", buttonStyle))
+                    RestartMatch();
+                if (GUI.Button(new Rect(actionX, panel.y + panel.height - 58f,
+                    actionWidth, 46f), "SAVE RESULT & RETURN TO CAREER", buttonStyle))
                     CompleteCareerMatch();
             }
 
             // Draw the pause surface last so it remains above the score and commentary HUD.
             if (isPaused)
                 DrawPauseOverlay();
+        }
+
+        private void RestartMatch()
+        {
+            if (isRestarting)
+                return;
+
+            StartCoroutine(RestartMatchRoutine());
+        }
+
+        private IEnumerator RestartMatchRoutine()
+        {
+            isRestarting = true;
+            isPaused = false;
+            resetting = true;
+            Time.timeScale = previousTimeScale;
+
+            if (goalResetRoutine != null)
+            {
+                StopCoroutine(goalResetRoutine);
+                goalResetRoutine = null;
+            }
+
+            for (var i = transform.childCount - 1; i >= 0; i--)
+                Destroy(transform.GetChild(i).gameObject);
+
+            yield return null;
+
+            playerStarts.Clear();
+            userPlayer = null;
+            ball = null;
+            broadcastCamera = null;
+            homeScore = 0;
+            awayScore = 0;
+            matchElapsed = 0f;
+            nextCommentaryAt = 8f;
+            matchFinished = false;
+            resultSaved = false;
+            goalBanner = string.Empty;
+            goalBannerUntil = 0f;
+            ballOutUntil = 0f;
+            commentary = "The referee gets us underway!";
+
+            BuildWorld();
+            resetting = false;
+            isRestarting = false;
         }
 
         private void SetPaused(bool paused)
