@@ -147,10 +147,15 @@ namespace FC2026.Gameplay
         public bool UpdateStamina(bool sprintRequested, float deltaTime)
         {
             var elapsed = Mathf.Max(0f, deltaTime);
-            if (sprintExhausted && stamina >= SprintRecoveryThreshold)
-                sprintExhausted = false;
+            if (sprintExhausted)
+            {
+                stamina = Mathf.Min(MaxStamina, stamina + StaminaRecoveryPerSecond * elapsed);
+                if (!sprintRequested && stamina >= SprintRecoveryThreshold)
+                    sprintExhausted = false;
+                return false;
+            }
 
-            if (sprintRequested && !sprintExhausted && stamina > 0f)
+            if (sprintRequested && stamina > 0f)
             {
                 stamina = Mathf.Max(0f, stamina - SprintDrainPerSecond * elapsed);
                 if (stamina <= 0f)
