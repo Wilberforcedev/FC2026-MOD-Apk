@@ -89,6 +89,7 @@ namespace FC2026.Core
             if (matchElapsed >= MatchDurationSeconds)
             {
                 matchFinished = true;
+                Time.timeScale = 0f;
                 commentary = "Full time! The referee brings the match to an end.";
                 goalBannerUntil = 0f;
                 return;
