@@ -262,10 +262,15 @@ namespace FC2026.Gameplay
             var direction = target - selfFlat;
             direction.y = 0f;
 
+            var footballer = GetComponent<FootballPlayerController>();
+            var sprinting = footballer != null && footballer.UpdateStamina(
+                !goalkeeper && direction.sqrMagnitude > 64f,
+                Time.fixedDeltaTime);
+
             if (direction.sqrMagnitude > 0.12f)
             {
                 direction.Normalize();
-                var targetVelocity = direction * speed;
+                var targetVelocity = direction * speed * (sprinting ? 1.18f : 1f);
                 var current = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
                 var changed = Vector3.MoveTowards(current, targetVelocity, acceleration * Time.fixedDeltaTime);
                 body.linearVelocity = new Vector3(changed.x, body.linearVelocity.y, changed.z);
