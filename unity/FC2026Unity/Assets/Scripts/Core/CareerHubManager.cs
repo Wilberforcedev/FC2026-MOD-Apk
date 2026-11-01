@@ -218,7 +218,7 @@ namespace FC2026.Core
                 ? ClubDisplayName(save.managedClubId)
                 : ClubNames[Mathf.Clamp(selectedClub, 0, ClubNames.Length - 1)];
             GUI.Label(new Rect(leftCard.x + pad, selectionY,
-                leftCard.width - pad * 2f, 28f), selectedLabel, labelSmallStyle);
+                leftCard.width - pad * 2f, 28f), selectedLabel, bodyStyle);
             GUI.Label(new Rect(leftCard.x + pad, selectionY + 24f,
                 leftCard.width - pad * 2f, 32f), clubLabel, bodyStyle);
 
@@ -242,7 +242,7 @@ namespace FC2026.Core
                     $"SEASON {save.season}  •  WEEK {save.matchweek}/{CareerLeagueSystem.MatchweeksPerSeason}\n" +
                     $"{venue} {CareerLeagueSystem.GetClubName(opponentId)}\n" +
                     $"BUDGET {save.transferBudget:N0}  •  P {save.played}  W {save.wins}  D {save.draws}  L {save.losses}",
-                    labelSmallStyle);
+                    bodyStyle);
             }
             else
             {
@@ -284,7 +284,7 @@ namespace FC2026.Core
             var noticeY = actionY + tableHeight + 2f;
             GUI.Label(new Rect(rightCard.x + pad, noticeY,
                 rightCard.width - pad * 2f, Mathf.Max(24f, rightCard.yMax - noticeY - 4f)),
-                notice, labelSmallStyle);
+                notice, bodyStyle);
         }
 
         private void DrawSquadManagementLandscape(Rect panel)
@@ -354,9 +354,9 @@ namespace FC2026.Core
 
             GUI.Label(new Rect(formationCard.x + pad, formationCard.yMax - 34f,
                 formationCard.width - pad * 2f, 28f),
-                "Settings apply to your next match.", labelSmallStyle);
+                "Settings apply to your next match.", bodyStyle);
             GUI.Label(new Rect(tacticsCard.x + pad, tacticsCard.yMax - 34f,
-                tacticsCard.width - pad * 2f, 28f), notice, labelSmallStyle);
+                tacticsCard.width - pad * 2f, 28f), notice, bodyStyle);
 
             var footerGap = 8f;
             var backWidth = (panel.width - inset * 2f - footerGap) * 0.32f;
