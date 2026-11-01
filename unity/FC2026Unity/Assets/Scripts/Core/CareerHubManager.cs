@@ -299,13 +299,15 @@ namespace FC2026.Core
                 showLeagueTable = false;
         }
 
-        public void RefreshCareer()
+        public void RefreshCareer(bool matchResultSaved)
         {
             save = CareerSaveSystem.Load();
             if (save != null)
             {
                 selectedClub = FindClubIndex(save.managedClubId);
-                notice = "Match result saved. Career updated.";
+                notice = matchResultSaved
+                    ? "Match result saved. Career updated."
+                    : "Match ended without recording a result.";
             }
             else notice = "Match ended. Start a career to save progress.";
         }
