@@ -19,7 +19,12 @@ namespace FC2026.Core
         private BroadcastCameraController broadcastCamera;
         private int homeScore;
         private int awayScore;
+        private bool managedClubIsHome = true;
         private bool resetting;
+        private bool isRestarting;
+        private Coroutine goalResetRoutine;
+        private bool isPaused;
+        private float previousTimeScale = 1f;
         private GUIStyle scoreStyle;
         private GUIStyle helpStyle;
         private GUIStyle goalStyle;
@@ -37,11 +42,13 @@ namespace FC2026.Core
         private bool resultSaved;
         private GUIStyle commentaryStyle;
         private GUIStyle fullTimeStyle;
+        private GUIStyle pauseTitleStyle;
 
         private Vector3[] homeFormation;
 
         private void Awake()
         {
+            previousTimeScale = Time.timeScale;
             Application.targetFrameRate = 60;
             QualitySettings.vSyncCount = 0;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
@@ -54,18 +61,43 @@ namespace FC2026.Core
             var career = CareerSaveSystem.Load();
             homeFormation = CareerFormationSystem.GetPositions(career != null ? career.formationId : null,
                 career != null ? career.tacticalStyle : null);
+            if (career != null)
+            {
+                var fixture = CareerLeagueSystem.GetFixtureForClub(career.managedClubId, career.matchweek);
+                managedClubIsHome = fixture == null || fixture.HomeClubId == career.managedClubId;
+            }
 
             BuildWorld();
             CreateJoystickTexture();
         }
 
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused && !matchFinished)
+                SetPaused(true);
+        }
+
+        private void OnDestroy()
+        {
+            Time.timeScale = previousTimeScale;
+            if (joystickDisc != null)
+                Destroy(joystickDisc);
+        }
+
         private void Update()
         {
-            if (matchFinished) return;
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Backspace))
+            {
+                if (!matchFinished)
+                    SetPaused(!isPaused);
+            }
+
+            if (isPaused || matchFinished) return;
             matchElapsed += Time.deltaTime;
             if (matchElapsed >= MatchDurationSeconds)
             {
                 matchFinished = true;
+                Time.timeScale = 0f;
                 commentary = "Full time! The referee brings the match to an end.";
                 goalBannerUntil = 0f;
                 return;
@@ -80,7 +112,7 @@ namespace FC2026.Core
                 var controllers = FindObjectsByType<FootballPlayerController>(FindObjectsSortMode.None);
                 foreach (var controller in controllers)
                 {
-                    if (controller == null || !controller.IsUserControlled || controller.TeamDirection != 1)
+                    if (controller == null || !controller.IsUserControlled)
                         continue;
                     userPlayer = controller;
                     broadcastCamera?.SetControlledPlayer(userPlayer.transform);
@@ -92,13 +124,21 @@ namespace FC2026.Core
                 return;
 
             var position = ball.transform.position;
-            // Keep the prototype match playable: loose balls beyond the touchline,
-            // goal line or below the pitch are brought back for a centre restart.
-            if (Mathf.Abs(position.x) > PitchWidth * 0.5f + 7f ||
-                Mathf.Abs(position.z) > PitchLength * 0.5f + 7f || position.y < -2f)
+            // Detect the ball just beyond the field and restart near the crossing
+            // point instead of teleporting every out-of-play ball to the centre.
+            var halfWidth = PitchWidth * 0.5f;
+            var halfLength = PitchLength * 0.5f;
+            if (Mathf.Abs(position.x) > halfWidth + 0.5f ||
+                Mathf.Abs(position.z) > halfLength + 0.5f || position.y < -2f)
             {
                 ballOutUntil = Time.time + 1.25f;
-                ball.ResetBall(new Vector3(0f, 0.14f, 0f));
+                var restartPosition = position.y < -2f
+                    ? new Vector3(0f, 0.14f, 0f)
+                    : new Vector3(
+                        Mathf.Clamp(position.x, -halfWidth + 0.35f, halfWidth - 0.35f),
+                        0.14f,
+                        Mathf.Clamp(position.z, -halfLength + 0.35f, halfLength - 0.35f));
+                ball.ResetBall(restartPosition);
                 goalBanner = "BALL OUT — RESTART";
                 goalBannerUntil = Time.time + 1.15f;
             }
@@ -479,7 +519,7 @@ namespace FC2026.Core
                 if (i == 0) height = 1.10f;
                 if (i == 9) height = 1.04f;
                 var width = i is 2 or 3 or 9 ? 1.07f : 0.96f;
-                var isUser = i == 9;
+                var isUser = managedClubIsHome && i == 9;
                 var goalkeeper = i == 0;
                 var player = CreatePlayer($"Home Player {i + 1}", homeFormation[i], goalkeeper ? homeKeeperMaterial : homeMaterial, homeShorts, height, width, isUser, 1, goalkeeper);
                 if (isUser)
@@ -494,7 +534,10 @@ namespace FC2026.Core
                 if (i == 9) height = 1.12f;
                 var width = i is 0 or 2 or 3 or 9 ? 1.08f : 0.97f;
                 var goalkeeper = i == 0;
-                CreatePlayer($"Away Player {i + 1}", mirrored, goalkeeper ? awayKeeperMaterial : awayMaterial, awayShorts, height, width, false, -1, goalkeeper);
+                var isUser = !managedClubIsHome && i == 9;
+                var player = CreatePlayer($"Away Player {i + 1}", mirrored, goalkeeper ? awayKeeperMaterial : awayMaterial, awayShorts, height, width, isUser, -1, goalkeeper);
+                if (isUser)
+                    userPlayer = player.GetComponent<FootballPlayerController>();
             }
         }
 
@@ -584,7 +627,7 @@ namespace FC2026.Core
 
         public void RegisterGoal(bool homeGoal)
         {
-            if (resetting)
+            if (resetting || matchFinished)
                 return;
 
             // Entering the home goal means the away side scored, and vice versa.
@@ -595,7 +638,7 @@ namespace FC2026.Core
             commentary = homeGoal ? "GOAL for the away side! What a finish!" : "GOAL for the home side! The crowd erupts!";
             nextCommentaryAt = matchElapsed + 14f;
             goalBannerUntil = Time.time + 2.2f;
-            StartCoroutine(ResetAfterGoal());
+            goalResetRoutine = StartCoroutine(ResetAfterGoal());
         }
 
         private IEnumerator ResetAfterGoal()
@@ -625,6 +668,7 @@ namespace FC2026.Core
             }
 
             resetting = false;
+            goalResetRoutine = null;
         }
 
         private void OnGUI()
@@ -675,11 +719,17 @@ namespace FC2026.Core
             GUI.Label(new Rect(boardRect.x, boardRect.y + 2f, boardRect.width, 36f), $"HOME   {homeScore}  —  {awayScore}   AWAY", scoreStyle);
             GUI.Label(new Rect(boardRect.x, boardRect.y + 36f, boardRect.width, 20f), "FC 2026  •  CAREER MATCH", labelSmallStyle);
 
-            if (Application.isMobilePlatform)
-                DrawMobileControls();
-            else
-                GUI.Label(new Rect(18f, Screen.height - 48f, Screen.width - 36f, 36f),
-                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch", helpStyle);
+            if (!isPaused && !matchFinished && GUI.Button(new Rect(Screen.width - 120f, 14f, 104f, 54f), "PAUSE", buttonStyle))
+                SetPaused(true);
+
+            if (!isPaused)
+            {
+                if (Application.isMobilePlatform)
+                    DrawMobileControls();
+                else
+                    GUI.Label(new Rect(18f, Screen.height - 48f, Screen.width - 36f, 36f),
+                        "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch", helpStyle);
+            }
 
             if (Time.time < goalBannerUntil)
                 GUI.Label(new Rect(0, Screen.height * 0.33f, Screen.width, 100f), goalBanner, goalStyle);
@@ -706,15 +756,131 @@ namespace FC2026.Core
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = Color.white }
                 };
-                var panel = new Rect(Screen.width * 0.18f, Screen.height * 0.28f, Screen.width * 0.64f, Screen.height * 0.42f);
+                var panelWidth = Screen.width * 0.74f;
+                var panelHeight = Mathf.Min(Screen.height - 32f, 280f);
+                var panel = new Rect((Screen.width - panelWidth) * 0.5f,
+                    (Screen.height - panelHeight) * 0.5f, panelWidth, panelHeight);
                 GUI.Box(panel, string.Empty);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 22f, panel.width - 24f, 62f), "FULL TIME", fullTimeStyle);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 92f, panel.width - 24f, 58f),
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 12f, panel.width - 24f, 58f), "FULL TIME", fullTimeStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 70f, panel.width - 24f, 54f),
                     $"HOME  {homeScore}  —  {awayScore}  AWAY", scoreStyle);
-                if (GUI.Button(new Rect(panel.x + panel.width * 0.15f, panel.y + panel.height - 82f,
-                    panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", buttonStyle))
+                GUI.Label(new Rect(panel.x + 16f, panel.y + 124f, panel.width - 32f, 30f),
+                    "Play again without recording, or save this result to your career.", labelSmallStyle);
+                var actionWidth = panel.width * 0.78f;
+                var actionX = panel.x + (panel.width - actionWidth) * 0.5f;
+                if (GUI.Button(new Rect(actionX, panel.y + panel.height - 112f,
+                    actionWidth, 46f), "PLAY AGAIN", buttonStyle))
+                    RestartMatch();
+                if (GUI.Button(new Rect(actionX, panel.y + panel.height - 58f,
+                    actionWidth, 46f), "SAVE RESULT & RETURN TO CAREER", buttonStyle))
                     CompleteCareerMatch();
             }
+
+            // Draw the pause surface last so it remains above the score and commentary HUD.
+            if (isPaused)
+                DrawPauseOverlay();
+        }
+
+        private void RestartMatch()
+        {
+            if (isRestarting)
+                return;
+
+            StartCoroutine(RestartMatchRoutine());
+        }
+
+        private IEnumerator RestartMatchRoutine()
+        {
+            isRestarting = true;
+            isPaused = false;
+            resetting = true;
+            Time.timeScale = previousTimeScale;
+
+            if (goalResetRoutine != null)
+            {
+                StopCoroutine(goalResetRoutine);
+                goalResetRoutine = null;
+            }
+
+            for (var i = transform.childCount - 1; i >= 0; i--)
+                Destroy(transform.GetChild(i).gameObject);
+
+            yield return null;
+
+            playerStarts.Clear();
+            userPlayer = null;
+            ball = null;
+            broadcastCamera = null;
+            homeScore = 0;
+            awayScore = 0;
+            matchElapsed = 0f;
+            nextCommentaryAt = 8f;
+            matchFinished = false;
+            resultSaved = false;
+            goalBanner = string.Empty;
+            goalBannerUntil = 0f;
+            ballOutUntil = 0f;
+            commentary = "The referee gets us underway!";
+
+            BuildWorld();
+            resetting = false;
+            isRestarting = false;
+        }
+
+        private void SetPaused(bool paused)
+        {
+            if (matchFinished && paused)
+                return;
+
+            isPaused = paused;
+            Time.timeScale = paused ? 0f : previousTimeScale;
+            userPlayer?.SetMobileMove(Vector2.zero);
+        }
+
+        private void DrawPauseOverlay()
+        {
+            var panelWidth = Mathf.Min(Screen.width - 32f, 520f);
+            var panelHeight = Mathf.Min(Screen.height - 32f, 250f);
+            var panel = new Rect((Screen.width - panelWidth) * 0.5f,
+                (Screen.height - panelHeight) * 0.5f, panelWidth, panelHeight);
+            GUI.Box(panel, string.Empty);
+
+            pauseTitleStyle ??= new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = Mathf.Clamp(Screen.height / 16, 28, 48),
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = Color.white }
+            };
+            GUI.Label(new Rect(panel.x + 16f, panel.y + 20f, panel.width - 32f, 58f),
+                "MATCH PAUSED", pauseTitleStyle);
+            GUI.Label(new Rect(panel.x + 18f, panel.y + 80f, panel.width - 36f, 42f),
+                "Leaving now will discard this match result.", labelSmallStyle);
+
+            var buttonGap = 12f;
+            var buttonWidth = (panel.width - 48f - buttonGap) * 0.5f;
+            var buttonY = panel.y + panel.height - 76f;
+            if (GUI.Button(new Rect(panel.x + 24f, buttonY, buttonWidth, 54f), "RESUME", buttonStyle))
+                SetPaused(false);
+            if (GUI.Button(new Rect(panel.x + 24f + buttonWidth + buttonGap, buttonY,
+                buttonWidth, 54f), "END MATCH", buttonStyle))
+                LeaveMatchWithoutResult();
+        }
+
+        private void LeaveMatchWithoutResult()
+        {
+            SetPaused(false);
+            for (var i = transform.childCount - 1; i >= 0; i--)
+                Destroy(transform.GetChild(i).gameObject);
+
+            var hub = GetComponent<CareerHubManager>();
+            if (hub != null)
+            {
+                hub.RefreshCareer(false);
+                hub.enabled = true;
+            }
+
+            Destroy(this);
         }
 
         private void UpdateCommentary()
@@ -736,26 +902,29 @@ namespace FC2026.Core
         {
             if (resultSaved) return;
             resultSaved = true;
+            var careerResultSaved = false;
             var save = CareerSaveSystem.Load();
             if (save != null)
             {
-                var opponentClubId = CareerLeagueSystem.GetOpponentClubId(save.managedClubId, save.matchweek);
-                if (!CareerLeagueSystem.ApplyResult(save, save.managedClubId, opponentClubId, homeScore, awayScore))
-                    Debug.LogWarning("FC 2026: could not update the league table for this match.");
+                if (!CareerLeagueSystem.ApplyMatchweekResults(save, save.matchweek, homeScore, awayScore))
+                    Debug.LogWarning("FC 2026: could not update the league table for this matchweek.");
 
+                var managedGoals = managedClubIsHome ? homeScore : awayScore;
+                var opponentGoals = managedClubIsHome ? awayScore : homeScore;
                 save.played++;
-                if (homeScore > awayScore) save.wins++;
-                else if (homeScore < awayScore) save.losses++;
+                if (managedGoals > opponentGoals) save.wins++;
+                else if (managedGoals < opponentGoals) save.losses++;
                 else save.draws++;
                 save.matchweek++;
-                if (save.matchweek > 38)
+                if (save.matchweek > CareerLeagueSystem.MatchweeksPerSeason)
                 {
                     save.matchweek = 1;
                     save.season++;
                     save.transferBudget += 2500000;
                     CareerLeagueSystem.ResetStandings(save);
                 }
-                if (!CareerSaveSystem.Save(save))
+                careerResultSaved = CareerSaveSystem.Save(save);
+                if (!careerResultSaved)
                     Debug.LogWarning("FC 2026: match finished, but career result could not be saved.");
             }
             // The hub and match manager share this root. Preserve it and remove only generated children.
@@ -764,7 +933,7 @@ namespace FC2026.Core
             var hub = GetComponent<CareerHubManager>();
             if (hub != null)
             {
-                hub.RefreshCareer();
+                hub.RefreshCareer(careerResultSaved);
                 hub.enabled = true;
             }
 
@@ -796,6 +965,7 @@ namespace FC2026.Core
             }
 
             DrawJoystick(joyCenter, radius, stickOffset);
+            DrawStaminaBar(joyCenter, radius);
 
             var right = Screen.width - 24f;
             var bottom = Screen.height - 24f;
@@ -825,6 +995,35 @@ namespace FC2026.Core
             userPlayer.SetMobileMove(move, sprint);
 
             GUI.color = Color.white;
+        }
+
+        private void DrawStaminaBar(Vector2 joystickCenter, float joystickRadius)
+        {
+            if (userPlayer == null)
+                return;
+
+            var value = userPlayer.StaminaNormalized;
+            var width = joystickRadius * 2f;
+            var bar = new Rect(joystickCenter.x - joystickRadius,
+                joystickCenter.y - joystickRadius - 28f, width, 16f);
+            GUI.color = Color.white;
+            GUI.Box(bar, string.Empty);
+
+            var fillWidth = (bar.width - 4f) * value;
+            var fill = new Rect(bar.x + 2f, bar.y + 2f, fillWidth, bar.height - 4f);
+            GUI.color = value > 0.5f
+                ? new Color(0.25f, 0.88f, 0.55f)
+                : value > 0.2f
+                    ? new Color(1f, 0.72f, 0.2f)
+                    : new Color(0.95f, 0.28f, 0.25f);
+            if (fill.width > 0f)
+                GUI.DrawTexture(fill, Texture2D.whiteTexture);
+            GUI.color = Color.white;
+
+            var label = userPlayer.IsSprintExhausted
+                ? "SPRINT EXHAUSTED"
+                : $"STAMINA {Mathf.RoundToInt(value * 100f)}%";
+            GUI.Label(new Rect(bar.x, bar.y - 21f, bar.width, 18f), label, labelSmallStyle);
         }
 
         private void DrawJoystick(Vector2 center, float radius, Vector2 offset)

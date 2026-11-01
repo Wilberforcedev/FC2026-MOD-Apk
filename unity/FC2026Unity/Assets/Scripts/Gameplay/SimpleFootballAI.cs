@@ -262,10 +262,19 @@ namespace FC2026.Gameplay
             var direction = target - selfFlat;
             direction.y = 0f;
 
+            var footballer = GetComponent<FootballPlayerController>();
+            var shouldSprint = !goalkeeper && direction.sqrMagnitude > 64f;
+            // AI cannot manually release sprint, so treat exhaustion as a rest
+            // interval and let the player sprint again after recovering.
+            var sprintRequested = shouldSprint && (footballer == null || !footballer.IsSprintExhausted);
+            var sprinting = footballer != null && footballer.UpdateStamina(
+                sprintRequested,
+                Time.fixedDeltaTime);
+
             if (direction.sqrMagnitude > 0.12f)
             {
                 direction.Normalize();
-                var targetVelocity = direction * speed;
+                var targetVelocity = direction * speed * (sprinting ? 1.18f : 1f);
                 var current = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
                 var changed = Vector3.MoveTowards(current, targetVelocity, acceleration * Time.fixedDeltaTime);
                 body.linearVelocity = new Vector3(changed.x, body.linearVelocity.y, changed.z);
