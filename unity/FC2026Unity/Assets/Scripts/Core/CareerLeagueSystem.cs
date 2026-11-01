@@ -168,16 +168,6 @@ namespace FC2026.Core
             }).ToArray();
         }
 
-        public static string GetOpponentClubId(string managedClubId, int matchweek)
-        {
-            var managedIndex = Array.IndexOf(ClubIds, managedClubId);
-            if (managedIndex < 0)
-                managedIndex = 0;
-
-            var offset = (Math.Max(1, matchweek) - 1) % (ClubIds.Length - 1) + 1;
-            return ClubIds[(managedIndex + offset) % ClubIds.Length];
-        }
-
         public static bool ApplyResult(CareerSaveData save, string homeClubId, string awayClubId,
             int homeGoals, int awayGoals)
         {
