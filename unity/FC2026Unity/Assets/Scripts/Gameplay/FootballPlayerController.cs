@@ -56,6 +56,9 @@ namespace FC2026.Gameplay
 
         private void Start()
         {
+            lastMoveDirection = Vector3.forward * (TeamDirection >= 0 ? 1f : -1f);
+            transform.rotation = Quaternion.LookRotation(lastMoveDirection, Vector3.up);
+
             var styleSeed = (uint)gameObject.name.GetHashCode() / (float)uint.MaxValue;
             motion = FootballVisualFactory.EnsureAnimatedRig(gameObject, false, styleSeed);
             ball = FindFirstObjectByType<BallController>();
