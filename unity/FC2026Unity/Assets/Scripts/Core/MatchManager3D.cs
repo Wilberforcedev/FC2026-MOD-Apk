@@ -20,6 +20,8 @@ namespace FC2026.Core
         private int homeScore;
         private int awayScore;
         private bool resetting;
+        private bool isPaused;
+        private float previousTimeScale = 1f;
         private GUIStyle scoreStyle;
         private GUIStyle helpStyle;
         private GUIStyle goalStyle;
@@ -37,11 +39,13 @@ namespace FC2026.Core
         private bool resultSaved;
         private GUIStyle commentaryStyle;
         private GUIStyle fullTimeStyle;
+        private GUIStyle pauseTitleStyle;
 
         private Vector3[] homeFormation;
 
         private void Awake()
         {
+            previousTimeScale = Time.timeScale;
             Application.targetFrameRate = 60;
             QualitySettings.vSyncCount = 0;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
@@ -59,9 +63,28 @@ namespace FC2026.Core
             CreateJoystickTexture();
         }
 
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused && !matchFinished)
+                SetPaused(true);
+        }
+
+        private void OnDestroy()
+        {
+            Time.timeScale = previousTimeScale;
+            if (joystickDisc != null)
+                Destroy(joystickDisc);
+        }
+
         private void Update()
         {
-            if (matchFinished) return;
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Backspace))
+            {
+                if (!matchFinished)
+                    SetPaused(!isPaused);
+            }
+
+            if (isPaused || matchFinished) return;
             matchElapsed += Time.deltaTime;
             if (matchElapsed >= MatchDurationSeconds)
             {
@@ -675,7 +698,12 @@ namespace FC2026.Core
             GUI.Label(new Rect(boardRect.x, boardRect.y + 2f, boardRect.width, 36f), $"HOME   {homeScore}  —  {awayScore}   AWAY", scoreStyle);
             GUI.Label(new Rect(boardRect.x, boardRect.y + 36f, boardRect.width, 20f), "FC 2026  •  CAREER MATCH", labelSmallStyle);
 
-            if (Application.isMobilePlatform)
+            if (!isPaused && !matchFinished && GUI.Button(new Rect(Screen.width - 120f, 14f, 104f, 54f), "PAUSE", buttonStyle))
+                SetPaused(true);
+
+            if (isPaused)
+                DrawPauseOverlay();
+            else if (Application.isMobilePlatform)
                 DrawMobileControls();
             else
                 GUI.Label(new Rect(18f, Screen.height - 48f, Screen.width - 36f, 36f),
@@ -715,6 +743,62 @@ namespace FC2026.Core
                     panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", buttonStyle))
                     CompleteCareerMatch();
             }
+        }
+
+        private void SetPaused(bool paused)
+        {
+            if (matchFinished && paused)
+                return;
+
+            isPaused = paused;
+            Time.timeScale = paused ? 0f : previousTimeScale;
+            userPlayer?.SetMobileMove(Vector2.zero);
+        }
+
+        private void DrawPauseOverlay()
+        {
+            var panelWidth = Mathf.Min(Screen.width - 32f, 520f);
+            var panelHeight = Mathf.Min(Screen.height - 32f, 250f);
+            var panel = new Rect((Screen.width - panelWidth) * 0.5f,
+                (Screen.height - panelHeight) * 0.5f, panelWidth, panelHeight);
+            GUI.Box(panel, string.Empty);
+
+            pauseTitleStyle ??= new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = Mathf.Clamp(Screen.height / 16, 28, 48),
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = Color.white }
+            };
+            GUI.Label(new Rect(panel.x + 16f, panel.y + 20f, panel.width - 32f, 58f),
+                "MATCH PAUSED", pauseTitleStyle);
+            GUI.Label(new Rect(panel.x + 18f, panel.y + 80f, panel.width - 36f, 42f),
+                "Leaving now will discard this match result.", labelSmallStyle);
+
+            var buttonGap = 12f;
+            var buttonWidth = (panel.width - 48f - buttonGap) * 0.5f;
+            var buttonY = panel.y + panel.height - 76f;
+            if (GUI.Button(new Rect(panel.x + 24f, buttonY, buttonWidth, 54f), "RESUME", buttonStyle))
+                SetPaused(false);
+            if (GUI.Button(new Rect(panel.x + 24f + buttonWidth + buttonGap, buttonY,
+                buttonWidth, 54f), "END MATCH", buttonStyle))
+                LeaveMatchWithoutResult();
+        }
+
+        private void LeaveMatchWithoutResult()
+        {
+            SetPaused(false);
+            for (var i = transform.childCount - 1; i >= 0; i--)
+                Destroy(transform.GetChild(i).gameObject);
+
+            var hub = GetComponent<CareerHubManager>();
+            if (hub != null)
+            {
+                hub.RefreshCareer();
+                hub.enabled = true;
+            }
+
+            Destroy(this);
         }
 
         private void UpdateCommentary()
