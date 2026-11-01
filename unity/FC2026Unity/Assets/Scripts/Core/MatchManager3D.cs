@@ -19,6 +19,7 @@ namespace FC2026.Core
         private BroadcastCameraController broadcastCamera;
         private int homeScore;
         private int awayScore;
+        private bool managedClubIsHome = true;
         private bool resetting;
         private bool isRestarting;
         private Coroutine goalResetRoutine;
@@ -60,6 +61,11 @@ namespace FC2026.Core
             var career = CareerSaveSystem.Load();
             homeFormation = CareerFormationSystem.GetPositions(career != null ? career.formationId : null,
                 career != null ? career.tacticalStyle : null);
+            if (career != null)
+            {
+                var fixture = CareerLeagueSystem.GetFixtureForClub(career.managedClubId, career.matchweek);
+                managedClubIsHome = fixture == null || fixture.HomeClubId == career.managedClubId;
+            }
 
             BuildWorld();
             CreateJoystickTexture();
@@ -106,7 +112,7 @@ namespace FC2026.Core
                 var controllers = FindObjectsByType<FootballPlayerController>(FindObjectsSortMode.None);
                 foreach (var controller in controllers)
                 {
-                    if (controller == null || !controller.IsUserControlled || controller.TeamDirection != 1)
+                    if (controller == null || !controller.IsUserControlled)
                         continue;
                     userPlayer = controller;
                     broadcastCamera?.SetControlledPlayer(userPlayer.transform);
@@ -505,7 +511,7 @@ namespace FC2026.Core
                 if (i == 0) height = 1.10f;
                 if (i == 9) height = 1.04f;
                 var width = i is 2 or 3 or 9 ? 1.07f : 0.96f;
-                var isUser = i == 9;
+                var isUser = managedClubIsHome && i == 9;
                 var goalkeeper = i == 0;
                 var player = CreatePlayer($"Home Player {i + 1}", homeFormation[i], goalkeeper ? homeKeeperMaterial : homeMaterial, homeShorts, height, width, isUser, 1, goalkeeper);
                 if (isUser)
@@ -520,7 +526,10 @@ namespace FC2026.Core
                 if (i == 9) height = 1.12f;
                 var width = i is 0 or 2 or 3 or 9 ? 1.08f : 0.97f;
                 var goalkeeper = i == 0;
-                CreatePlayer($"Away Player {i + 1}", mirrored, goalkeeper ? awayKeeperMaterial : awayMaterial, awayShorts, height, width, false, -1, goalkeeper);
+                var isUser = !managedClubIsHome && i == 9;
+                var player = CreatePlayer($"Away Player {i + 1}", mirrored, goalkeeper ? awayKeeperMaterial : awayMaterial, awayShorts, height, width, isUser, -1, goalkeeper);
+                if (isUser)
+                    userPlayer = player.GetComponent<FootballPlayerController>();
             }
         }
 
@@ -888,16 +897,17 @@ namespace FC2026.Core
             var save = CareerSaveSystem.Load();
             if (save != null)
             {
-                var opponentClubId = CareerLeagueSystem.GetOpponentClubId(save.managedClubId, save.matchweek);
-                if (!CareerLeagueSystem.ApplyResult(save, save.managedClubId, opponentClubId, homeScore, awayScore))
-                    Debug.LogWarning("FC 2026: could not update the league table for this match.");
+                if (!CareerLeagueSystem.ApplyMatchweekResults(save, save.matchweek, homeScore, awayScore))
+                    Debug.LogWarning("FC 2026: could not update the league table for this matchweek.");
 
+                var managedGoals = managedClubIsHome ? homeScore : awayScore;
+                var opponentGoals = managedClubIsHome ? awayScore : homeScore;
                 save.played++;
-                if (homeScore > awayScore) save.wins++;
-                else if (homeScore < awayScore) save.losses++;
+                if (managedGoals > opponentGoals) save.wins++;
+                else if (managedGoals < opponentGoals) save.losses++;
                 else save.draws++;
                 save.matchweek++;
-                if (save.matchweek > 38)
+                if (save.matchweek > CareerLeagueSystem.MatchweeksPerSeason)
                 {
                     save.matchweek = 1;
                     save.season++;
