@@ -5,11 +5,11 @@ namespace FC2026.Gameplay
     [RequireComponent(typeof(Camera))]
     public sealed class BroadcastCameraController : MonoBehaviour
     {
-        [SerializeField] private Vector3 broadcastOffset = new Vector3(0f, 27f, -31f);
+        [SerializeField] private Vector3 broadcastOffset = new Vector3(0f, 22.5f, -30f);
         [SerializeField] private float positionSmooth = 4.5f;
         [SerializeField] private float rotationSmooth = 7f;
-        [SerializeField] private float minFieldOfView = 43f;
-        [SerializeField] private float maxFieldOfView = 56f;
+        [SerializeField] private float minFieldOfView = 40f;
+        [SerializeField] private float maxFieldOfView = 54f;
 
         private Transform ball;
         private Transform controlledPlayer;
@@ -65,18 +65,18 @@ namespace FC2026.Gameplay
 
             // Keep the broadcast rig above the sideline while following play up field.
             var desired = new Vector3(
-                Mathf.Clamp(focus.x * 0.48f, -18f, 18f),
+                Mathf.Clamp(focus.x * 0.55f, -22f, 22f),
                 broadcastOffset.y,
-                Mathf.Clamp(focus.z * 0.42f + broadcastOffset.z, -45f, -8f));
+                Mathf.Clamp(focus.z * 0.46f + broadcastOffset.z, -46f, -9f));
 
             transform.position = Vector3.Lerp(transform.position, desired, 1f - Mathf.Exp(-positionSmooth * Time.deltaTime));
 
-            var lookPoint = new Vector3(focus.x * 0.55f, 0.8f, focus.z * 0.82f + 5f);
+            var lookPoint = new Vector3(focus.x * 0.6f, 0.9f, focus.z * 0.9f + 7f);
             var desiredRotation = Quaternion.LookRotation(lookPoint - transform.position, Vector3.up);
             transform.rotation = Quaternion.Slerp(transform.rotation, desiredRotation, 1f - Mathf.Exp(-rotationSmooth * Time.deltaTime));
 
             var separation = controlledPlayer == null ? 0f : Vector3.Distance(ball.position, controlledPlayer.position);
-            var targetFov = Mathf.Lerp(minFieldOfView, maxFieldOfView, Mathf.InverseLerp(2f, 25f, separation));
+            var targetFov = Mathf.Lerp(minFieldOfView, maxFieldOfView, Mathf.InverseLerp(2f, 30f, separation));
             broadcastCamera.fieldOfView = Mathf.Lerp(broadcastCamera.fieldOfView, targetFov, 1f - Mathf.Exp(-3f * Time.deltaTime));
         }
 

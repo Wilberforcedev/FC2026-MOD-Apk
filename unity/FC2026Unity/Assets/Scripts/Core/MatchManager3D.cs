@@ -14,22 +14,29 @@ namespace FC2026.Core
 
         private readonly List<(Transform transform, Vector3 start)> playerStarts = new();
 
+        private const float HalfDurationSeconds = 90f;
+
         private BallController ball;
         private FootballPlayerController userPlayer;
         private BroadcastCameraController broadcastCamera;
         private int homeScore;
         private int awayScore;
         private bool resetting;
+        private bool live;
+        private bool halfTimePending;
+        private int half;
+        private float halfElapsed;
+        private float autoSwitchTimer;
+        private float homePossession;
+        private float awayPossession;
         private GUIStyle scoreStyle;
         private GUIStyle helpStyle;
         private GUIStyle goalStyle;
         private float goalBannerUntil;
         private string goalBanner = string.Empty;
-        private float ballOutUntil;
         private GUIStyle buttonStyle;
         private GUIStyle labelSmallStyle;
         private Texture2D joystickDisc;
-        private const float MatchDurationSeconds = 180f;
         private float matchElapsed;
         private float nextCommentaryAt = 8f;
         private string commentary = "The referee gets us underway!";
@@ -39,9 +46,17 @@ namespace FC2026.Core
         private GUIStyle fullTimeStyle;
 
         private Vector3[] homeFormation;
+        private string formationId = "4-3-3";
+        private string homeTeamName = "HOME";
+        private string awayTeamName = "AWAY";
+
+        public static MatchManager3D Instance { get; private set; }
+        public static bool IsLive => Instance != null && Instance.live;
+        public bool Live => live;
 
         private void Awake()
         {
+            Instance = this;
             Application.targetFrameRate = 60;
             QualitySettings.vSyncCount = 0;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
@@ -52,56 +67,350 @@ namespace FC2026.Core
             Screen.autorotateToLandscapeRight = true;
 
             var career = CareerSaveSystem.Load();
+            formationId = career != null ? career.formationId : "4-3-3";
             homeFormation = CareerFormationSystem.GetPositions(career != null ? career.formationId : null,
                 career != null ? career.tacticalStyle : null);
+            ResolveTeamNames(career);
 
             BuildWorld();
             CreateJoystickTexture();
+            StartCoroutine(StartMatch());
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
+        }
+
+        private void ResolveTeamNames(CareerSaveData career)
+        {
+            if (career == null)
+                return;
+
+            homeTeamName = ClubNameFor(career.managedClubId);
+            var opponentId = CareerLeagueSystem.GetOpponentClubId(career.managedClubId, career.matchweek);
+            awayTeamName = ClubNameFor(opponentId);
+        }
+
+        private static string ClubNameFor(string clubId)
+        {
+            var index = System.Array.IndexOf(CareerLeagueSystem.ClubIds, clubId);
+            return index >= 0 && index < CareerLeagueSystem.ClubNames.Length
+                ? CareerLeagueSystem.ClubNames[index]
+                : "FC 2026";
+        }
+
+        private IEnumerator StartMatch()
+        {
+            yield return new WaitForSeconds(1.1f);
+            yield return StartCoroutine(BeginKickoff(1, 0.7f));
         }
 
         private void Update()
         {
-            if (matchFinished) return;
+            if (matchFinished)
+                return;
+
+            if (userPlayer == null || !userPlayer.IsUserControlled)
+                FindUserPlayer();
+
+            if (halfTimePending || !live)
+                return;
+
+            halfElapsed += Time.deltaTime;
             matchElapsed += Time.deltaTime;
-            if (matchElapsed >= MatchDurationSeconds)
+            TrackPossession();
+
+            if (halfElapsed >= HalfDurationSeconds)
             {
-                matchFinished = true;
-                commentary = "Full time! The referee brings the match to an end.";
-                goalBannerUntil = 0f;
+                EndHalf();
                 return;
             }
+
             if (matchElapsed >= nextCommentaryAt)
             {
                 UpdateCommentary();
                 nextCommentaryAt = matchElapsed + Random.Range(12f, 21f);
             }
-            if (userPlayer == null || !userPlayer.IsUserControlled)
-            {
-                var controllers = FindObjectsByType<FootballPlayerController>(FindObjectsSortMode.None);
-                foreach (var controller in controllers)
-                {
-                    if (controller == null || !controller.IsUserControlled || controller.TeamDirection != 1)
-                        continue;
-                    userPlayer = controller;
-                    broadcastCamera?.SetControlledPlayer(userPlayer.transform);
-                    break;
-                }
-            }
 
-            if (ball == null || resetting || Time.time < ballOutUntil)
+            UpdateAutoSwitch();
+
+            if (ball == null)
                 return;
 
             var position = ball.transform.position;
-            // Keep the prototype match playable: loose balls beyond the touchline,
-            // goal line or below the pitch are brought back for a centre restart.
-            if (Mathf.Abs(position.x) > PitchWidth * 0.5f + 7f ||
-                Mathf.Abs(position.z) > PitchLength * 0.5f + 7f || position.y < -2f)
+            if (Mathf.Abs(position.x) > PitchWidth * 0.5f + 0.35f ||
+                Mathf.Abs(position.z) > PitchLength * 0.5f + 0.35f || position.y < -2f)
             {
-                ballOutUntil = Time.time + 1.25f;
-                ball.ResetBall(new Vector3(0f, 0.14f, 0f));
-                goalBanner = "BALL OUT — RESTART";
-                goalBannerUntil = Time.time + 1.15f;
+                HandleOutOfPlay(position);
             }
+        }
+
+        private void FindUserPlayer()
+        {
+            foreach (var controller in FootballPlayerController.All)
+            {
+                if (controller == null || !controller.IsUserControlled)
+                    continue;
+                userPlayer = controller;
+                broadcastCamera?.SetControlledPlayer(userPlayer.transform);
+                return;
+            }
+        }
+
+        private void TrackPossession()
+        {
+            var owner = ball != null ? ball.Owner : null;
+            if (owner == null)
+                return;
+
+            if (owner.TeamId == 1) homePossession += Time.deltaTime;
+            else awayPossession += Time.deltaTime;
+        }
+
+        private void UpdateAutoSwitch()
+        {
+            if (userPlayer == null || ball == null)
+                return;
+
+            autoSwitchTimer = Mathf.Max(0f, autoSwitchTimer - Time.deltaTime);
+            if (autoSwitchTimer > 0f)
+                return;
+
+            var owner = ball.Owner;
+            if (owner == null || owner.TeamDirection == userPlayer.TeamDirection)
+                return;
+
+            var ballPosition = ball.Position;
+            var userDistance = FlatDistance(userPlayer.transform.position, ballPosition);
+            var best = FootballPlayerController.FindNearestTo(ballPosition, userPlayer.TeamDirection, true);
+            if (best == null || best == userPlayer)
+                return;
+
+            var bestDistance = FlatDistance(best.transform.position, ballPosition);
+            if (bestDistance > userDistance - 5f)
+                return;
+
+            var switched = userPlayer.SwitchToNearestTeammate();
+            if (switched != null && switched != userPlayer)
+            {
+                userPlayer = switched;
+                broadcastCamera?.SetControlledPlayer(switched.transform);
+                autoSwitchTimer = 0.9f;
+            }
+        }
+
+        private static float FlatDistance(Vector3 a, Vector3 b)
+        {
+            a.y = 0f;
+            b.y = 0f;
+            return Vector3.Distance(a, b);
+        }
+
+        private void EndHalf()
+        {
+            if (half == 0)
+            {
+                halfTimePending = true;
+                live = false;
+                commentary = "Half time. The players head in for the break.";
+                return;
+            }
+
+            FinishMatch();
+        }
+
+        public void BeginSecondHalf()
+        {
+            if (!halfTimePending)
+                return;
+
+            halfTimePending = false;
+            half = 1;
+            halfElapsed = 0f;
+            commentary = "The second half is under way.";
+            SwitchSides();
+            StartCoroutine(BeginKickoff(1, 1.05f));
+        }
+
+        private void FinishMatch()
+        {
+            matchFinished = true;
+            live = false;
+            halfTimePending = false;
+            commentary = "Full time! The referee brings the match to an end.";
+            goalBannerUntil = 0f;
+        }
+
+        private void SwitchSides()
+        {
+            foreach (var controller in FootballPlayerController.All)
+            {
+                if (controller == null)
+                    continue;
+                controller.FlipSides();
+                var ai = controller.GetComponent<SimpleFootballAI>();
+                if (ai != null)
+                    ai.FlipSides();
+            }
+
+            for (var i = 0; i < playerStarts.Count; i++)
+            {
+                var entry = playerStarts[i];
+                playerStarts[i] = (entry.transform, new Vector3(-entry.start.x, entry.start.y, -entry.start.z));
+            }
+
+            userPlayer?.ClearQueuedActions();
+        }
+
+        private IEnumerator BeginKickoff(int kickoffTeamDirection, float delay)
+        {
+            live = false;
+            resetting = true;
+
+            if (ball != null)
+                ball.ResetBall(new Vector3(0f, 0.14f, 0f));
+
+            foreach (var entry in playerStarts)
+            {
+                if (entry.transform == null) continue;
+                var rigidbody = entry.transform.GetComponent<Rigidbody>();
+                if (rigidbody != null)
+                {
+                    rigidbody.linearVelocity = Vector3.zero;
+                    rigidbody.angularVelocity = Vector3.zero;
+                }
+                entry.transform.position = entry.start;
+            }
+
+            yield return new WaitForSeconds(delay);
+            resetting = false;
+
+            if (ball != null)
+            {
+                var taker = FootballPlayerController.FindNearestTo(new Vector3(0f, 0f, 0f), kickoffTeamDirection, true);
+                if (taker != null)
+                {
+                    taker.transform.position = new Vector3(0f, taker.transform.position.y, -kickoffTeamDirection * 0.9f);
+                    if (taker.Body != null)
+                    {
+                        taker.Body.linearVelocity = Vector3.zero;
+                        taker.Body.angularVelocity = Vector3.zero;
+                    }
+                    ball.ForcePossession(taker);
+                }
+            }
+
+            goalBanner = "KICK OFF";
+            goalBannerUntil = Time.time + 1.1f;
+            live = true;
+        }
+
+        private void HandleOutOfPlay(Vector3 position)
+        {
+            if (resetting)
+                return;
+
+            var lastDirection = LastTouchDirection();
+
+            if (Mathf.Abs(position.x) > PitchWidth * 0.5f + 0.3f)
+            {
+                var awarded = lastDirection == 0 ? 1 : -lastDirection;
+                var spot = new Vector3(
+                    Mathf.Sign(position.x) * (PitchWidth * 0.5f - 0.5f),
+                    0.14f,
+                    Mathf.Clamp(position.z, -48f, 48f));
+                StartCoroutine(RestartPlay(spot, awarded, false, 1.05f, "THROW-IN"));
+                return;
+            }
+
+            if (Mathf.Abs(position.z) > PitchLength * 0.5f + 0.3f)
+            {
+                var side = Mathf.Sign(position.z);
+                var defendingDirection = -side;
+                if (lastDirection == defendingDirection)
+                {
+                    var awarded = -defendingDirection;
+                    var cornerX = Mathf.Sign(position.x == 0f ? 1f : position.x) * (PitchWidth * 0.5f - 0.5f);
+                    var spot = new Vector3(cornerX, 0.14f, side * (PitchLength * 0.5f - 0.5f));
+                    StartCoroutine(RestartPlay(spot, awarded, false, 1.3f, "CORNER"));
+                }
+                else
+                {
+                    var spot = new Vector3(0f, 0.14f, side * (PitchLength * 0.5f - 5.5f));
+                    StartCoroutine(RestartPlay(spot, defendingDirection, true, 1.1f, "GOAL KICK"));
+                }
+                return;
+            }
+
+            if (position.y < -2f)
+                StartCoroutine(RestartPlay(new Vector3(0f, 0.14f, 0f), 1, false, 0.8f, "RESTART"));
+        }
+
+        private IEnumerator RestartPlay(Vector3 spot, int awardedDirection, bool useGoalkeeper, float delay, string label)
+        {
+            resetting = true;
+            live = false;
+
+            if (ball != null)
+                ball.ResetBall(spot);
+
+            yield return null;
+
+            var taker = useGoalkeeper
+                ? FindGoalkeeper(awardedDirection)
+                : FootballPlayerController.FindNearestTo(spot, awardedDirection, true);
+
+            if (taker != null && ball != null)
+            {
+                var standPosition = spot - new Vector3(0f, 0f, awardedDirection * 0.8f);
+                standPosition.y = taker.transform.position.y;
+                taker.transform.position = standPosition;
+                taker.transform.rotation = Quaternion.LookRotation(new Vector3(0f, 0f, awardedDirection), Vector3.up);
+                if (taker.Body != null)
+                {
+                    taker.Body.linearVelocity = Vector3.zero;
+                    taker.Body.angularVelocity = Vector3.zero;
+                }
+                ball.ForcePossession(taker);
+            }
+
+            goalBanner = label;
+            goalBannerUntil = Time.time + delay;
+            commentary = label switch
+            {
+                "CORNER" => "A corner kick is awarded. Bodies pile into the box.",
+                "GOAL KICK" => "The goalkeeper will restart play from the back.",
+                "THROW-IN" => "A throw-in restarts the game down the touchline.",
+                _ => "Play restarts."
+            };
+
+            yield return new WaitForSeconds(delay);
+            resetting = false;
+            live = true;
+        }
+
+        private int LastTouchDirection()
+        {
+            if (ball == null)
+                return 0;
+            if (ball.Owner != null)
+                return ball.Owner.TeamDirection;
+
+            var last = ball.LastKicker;
+            var controller = last != null ? last.GetComponent<FootballPlayerController>() : null;
+            return controller != null ? controller.TeamDirection : 0;
+        }
+
+        private static FootballPlayerController FindGoalkeeper(int teamDirection)
+        {
+            foreach (var controller in FootballPlayerController.All)
+            {
+                if (controller != null && controller.IsGoalkeeper && controller.TeamDirection == teamDirection)
+                    return controller;
+            }
+            return null;
         }
 
         private void BuildWorld()
@@ -117,16 +426,19 @@ namespace FC2026.Core
 
         private void CreateLighting()
         {
-            RenderSettings.ambientLight = new Color(0.38f, 0.42f, 0.5f);
+            StadiumPresentation.ApplyAtmosphere();
+            RenderSettings.ambientLight = new Color(0.34f, 0.39f, 0.47f);
 
             var sun = new GameObject("Stadium Floodlight Sun");
             sun.transform.SetParent(transform);
             var light = sun.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.intensity = 1.25f;
-            light.color = new Color(1f, 0.96f, 0.9f);
+            light.intensity = 1.15f;
+            light.color = new Color(1f, 0.95f, 0.88f);
             light.shadows = LightShadows.Soft;
-            sun.transform.rotation = Quaternion.Euler(48f, -34f, 0f);
+            light.shadowStrength = 0.72f;
+            sun.transform.rotation = Quaternion.Euler(46f, -38f, 0f);
+            RenderSettings.sun = light;
 
             for (var i = 0; i < 4; i++)
             {
@@ -134,21 +446,25 @@ namespace FC2026.Core
                 flood.transform.SetParent(transform);
                 var spot = flood.AddComponent<Light>();
                 spot.type = LightType.Spot;
-                spot.range = 95f;
-                spot.intensity = 850f;
-                spot.spotAngle = 68f;
-                spot.color = new Color(0.88f, 0.94f, 1f);
+                spot.range = 125f;
+                spot.intensity = 340f;
+                spot.spotAngle = 76f;
+                spot.color = new Color(0.9f, 0.95f, 1f);
+                spot.shadows = LightShadows.None;
                 var x = i % 2 == 0 ? -39f : 39f;
                 var z = i < 2 ? -46f : 46f;
                 flood.transform.position = new Vector3(x, 24f, z);
                 flood.transform.LookAt(Vector3.zero);
             }
+
+            var metal = StadiumPresentation.CreateMetalMaterial();
+            var glow = StadiumPresentation.CreateFloodlightMaterial();
+            StadiumPresentation.CreateFloodlightTowers(transform, metal, glow);
         }
 
         private void CreatePitch()
         {
-            var grass = CreateMaterial(new Color(0.055f, 0.34f, 0.12f), 0.42f);
-            var stripe = CreateMaterial(new Color(0.065f, 0.40f, 0.14f), 0.42f);
+            var grass = StadiumPresentation.CreateGrassMaterial();
             var line = CreateMaterial(new Color(0.95f, 0.97f, 1f), 0.2f);
 
             var pitch = GameObject.CreatePrimitive(PrimitiveType.Plane);
@@ -156,17 +472,6 @@ namespace FC2026.Core
             pitch.transform.SetParent(transform);
             pitch.transform.localScale = new Vector3(PitchWidth / 10f, 1f, PitchLength / 10f);
             pitch.GetComponent<Renderer>().material = grass;
-
-            for (var i = 0; i < 10; i += 2)
-            {
-                var strip = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                strip.name = $"Mowing Stripe {i + 1}";
-                strip.transform.SetParent(transform);
-                strip.transform.position = new Vector3(0f, 0.012f, -PitchLength / 2f + (i + 0.5f) * (PitchLength / 10f));
-                strip.transform.localScale = new Vector3(PitchWidth, 0.018f, PitchLength / 10f);
-                strip.GetComponent<Renderer>().material = stripe;
-                Destroy(strip.GetComponent<Collider>());
-            }
 
             CreateLine(new Vector3(0, 0.035f, -PitchLength / 2f), new Vector3(PitchWidth, 0.04f, 0.12f), line);
             CreateLine(new Vector3(0, 0.035f, PitchLength / 2f), new Vector3(PitchWidth, 0.04f, 0.12f), line);
@@ -363,8 +668,8 @@ namespace FC2026.Core
         private void CreateStadiumShell()
         {
             var concrete = CreateMaterial(new Color(0.055f, 0.075f, 0.11f), 0.55f);
-            var crowdBlue = CreateMaterial(new Color(0.08f, 0.2f, 0.42f), 0.4f);
-            var crowdGold = CreateMaterial(new Color(0.65f, 0.38f, 0.04f), 0.45f);
+            var crowdBlue = StadiumPresentation.CreateCrowdMaterial(new Color(0.12f, 0.3f, 0.6f), new Color(0.92f, 0.92f, 0.95f));
+            var crowdGold = StadiumPresentation.CreateCrowdMaterial(new Color(0.75f, 0.45f, 0.06f), new Color(0.92f, 0.9f, 0.82f));
 
             CreateStand("West Stand", new Vector3(-47f, 6f, 0), new Vector3(20f, 12f, 118f), concrete, crowdBlue);
             CreateStand("East Stand", new Vector3(47f, 6f, 0), new Vector3(20f, 12f, 118f), concrete, crowdGold);
@@ -377,7 +682,7 @@ namespace FC2026.Core
             CreateStadiumBlock("North Canopy", new Vector3(0f, 17.6f, 66f), new Vector3(78f, 0.8f, 21f), canopy);
             CreateStadiumBlock("South Canopy", new Vector3(0f, 17.6f, -66f), new Vector3(78f, 0.8f, 21f), canopy);
 
-            var fascia = CreateMaterial(new Color(0.025f, 0.12f, 0.16f), 0.48f);
+            var fascia = StadiumPresentation.CreateAdBoardMaterial(new Color(0.12f, 0.68f, 0.9f));
             CreateStadiumBlock("West LED Fascia", new Vector3(-36.7f, 1.15f, 0f), new Vector3(0.35f, 0.7f, 104f), fascia);
             CreateStadiumBlock("East LED Fascia", new Vector3(36.7f, 1.15f, 0f), new Vector3(0.35f, 0.7f, 104f), fascia);
             CreateStadiumBlock("North LED Fascia", new Vector3(0f, 1.15f, 52.2f), new Vector3(66f, 0.7f, 0.35f), fascia);
@@ -403,6 +708,24 @@ namespace FC2026.Core
             stand.transform.position = position;
             stand.transform.localScale = scale;
             stand.GetComponent<Renderer>().material = baseMaterial;
+
+            var horizontal = scale.x > scale.z;
+            var inward = horizontal
+                ? new Vector3(0f, 0f, -Mathf.Sign(position.z))
+                : new Vector3(-Mathf.Sign(position.x), 0f, 0f);
+            var halfDepth = (horizontal ? scale.z : scale.x) * 0.5f;
+            var tierDepth = halfDepth * 0.3f;
+
+            for (var tier = 0; tier < 3; tier++)
+            {
+                var tierPosition = position
+                                   + inward * (halfDepth - tier * tierDepth - tierDepth * 0.5f)
+                                   + Vector3.up * (-4.6f + tier * 3.4f);
+                var tierScale = horizontal
+                    ? new Vector3(scale.x * 0.94f, 1.1f, tierDepth)
+                    : new Vector3(tierDepth, 1.1f, scale.z * 0.94f);
+                CreateStadiumBlock($"{name} Tier {tier + 1}", tierPosition, tierScale, crowdMaterial);
+            }
 
             var crowd = GameObject.CreatePrimitive(PrimitiveType.Cube);
             crowd.name = name + " Crowd";
@@ -459,7 +782,7 @@ namespace FC2026.Core
             ballObject.transform.SetParent(transform);
             ballObject.transform.position = new Vector3(0f, 0.14f, 0f);
             ballObject.transform.localScale = Vector3.one * 0.22f;
-            ballObject.GetComponent<Renderer>().material = CreateMaterial(new Color(0.96f, 0.97f, 1f), 0.28f);
+            ballObject.GetComponent<Renderer>().material = StadiumPresentation.CreateBallMaterial();
             ballObject.AddComponent<Rigidbody>();
             ball = ballObject.AddComponent<BallController>();
         }
@@ -480,8 +803,9 @@ namespace FC2026.Core
                 if (i == 9) height = 1.04f;
                 var width = i is 2 or 3 or 9 ? 1.07f : 0.96f;
                 var isUser = i == 9;
-                var goalkeeper = i == 0;
-                var player = CreatePlayer($"Home Player {i + 1}", homeFormation[i], goalkeeper ? homeKeeperMaterial : homeMaterial, homeShorts, height, width, isUser, 1, goalkeeper);
+                var role = RoleForIndex(i);
+                var player = CreatePlayer($"Home Player {i + 1}", homeFormation[i], role == PlayerRole.Goalkeeper ? homeKeeperMaterial : homeMaterial,
+                    homeShorts, height, width, isUser, 1, role, ShootingFor(role, i), PassingFor(role, i));
                 if (isUser)
                     userPlayer = player.GetComponent<FootballPlayerController>();
             }
@@ -493,12 +817,51 @@ namespace FC2026.Core
                 if (i == 0) height = 1.08f;
                 if (i == 9) height = 1.12f;
                 var width = i is 0 or 2 or 3 or 9 ? 1.08f : 0.97f;
-                var goalkeeper = i == 0;
-                CreatePlayer($"Away Player {i + 1}", mirrored, goalkeeper ? awayKeeperMaterial : awayMaterial, awayShorts, height, width, false, -1, goalkeeper);
+                var role = RoleForIndex(i);
+                CreatePlayer($"Away Player {i + 1}", mirrored, role == PlayerRole.Goalkeeper ? awayKeeperMaterial : awayMaterial,
+                    awayShorts, height, width, false, -1, role, ShootingFor(role, i), PassingFor(role, i));
             }
         }
 
-        private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts, float heightScale, float widthScale, bool user, int attackDirection, bool goalkeeper = false)
+        private PlayerRole RoleForIndex(int index)
+        {
+            if (index == 0)
+                return PlayerRole.Goalkeeper;
+
+            return formationId switch
+            {
+                "4-2-3-1" => index <= 4 ? PlayerRole.Defender : index <= 9 ? PlayerRole.Midfielder : PlayerRole.Forward,
+                "4-4-2" => index <= 4 ? PlayerRole.Defender : index <= 8 ? PlayerRole.Midfielder : PlayerRole.Forward,
+                "3-5-2" => index <= 3 ? PlayerRole.Defender : index <= 8 ? PlayerRole.Midfielder : PlayerRole.Forward,
+                _ => index <= 4 ? PlayerRole.Defender : index <= 7 ? PlayerRole.Midfielder : PlayerRole.Forward
+            };
+        }
+
+        private static float ShootingFor(PlayerRole role, int index)
+        {
+            var baseValue = role switch
+            {
+                PlayerRole.Forward => 0.82f,
+                PlayerRole.Midfielder => 0.66f,
+                PlayerRole.Defender => 0.48f,
+                _ => 0.34f
+            };
+            return Mathf.Clamp01(baseValue + ((index * 13) % 9 - 4) * 0.012f);
+        }
+
+        private static float PassingFor(PlayerRole role, int index)
+        {
+            var baseValue = role switch
+            {
+                PlayerRole.Forward => 0.72f,
+                PlayerRole.Midfielder => 0.84f,
+                PlayerRole.Defender => 0.7f,
+                _ => 0.55f
+            };
+            return Mathf.Clamp01(baseValue + ((index * 7) % 7 - 3) * 0.012f);
+        }
+
+        private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts, float heightScale, float widthScale, bool user, int attackDirection, PlayerRole role, float shooting, float passing)
         {
             var player = new GameObject(name);
             player.transform.SetParent(transform);
@@ -550,11 +913,11 @@ namespace FC2026.Core
             Destroy(hair.GetComponent<Collider>());
 
             var controller = player.AddComponent<FootballPlayerController>();
+            controller.Configure(role, start, attackDirection, shooting, passing);
             controller.SetUserControlled(user);
-            controller.TeamDirection = attackDirection;
 
             var ai = player.AddComponent<SimpleFootballAI>();
-            ai.Configure(start, attackDirection, goalkeeper ? 0.9f : 0.92f + Random.value * 0.16f, goalkeeper);
+            ai.Configure(start, attackDirection, role, role == PlayerRole.Goalkeeper ? 0.9f : 0.92f + Random.value * 0.16f);
             ai.enabled = !user;
 
             playerStarts.Add((player.transform, start));
@@ -563,12 +926,17 @@ namespace FC2026.Core
 
         private void CreateBroadcastCamera()
         {
+            var previousHubCamera = transform.Find("Career Hub Camera");
+            if (previousHubCamera != null)
+                previousHubCamera.gameObject.SetActive(false);
+
             var cameraObject = new GameObject("Broadcast Camera");
             cameraObject.transform.SetParent(transform);
             cameraObject.transform.position = new Vector3(0f, 27f, -31f);
             var camera = cameraObject.AddComponent<Camera>();
             camera.clearFlags = CameraClearFlags.Skybox;
             camera.allowHDR = true;
+            camera.depth = 1f;
             cameraObject.AddComponent<AudioListener>();
             broadcastCamera = cameraObject.AddComponent<BroadcastCameraController>();
             broadcastCamera.Configure(ball.transform, userPlayer != null ? userPlayer.transform : null);
@@ -576,7 +944,7 @@ namespace FC2026.Core
 
         private Material CreateMaterial(Color color, float smoothness)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            var shader = Shader.Find("Standard") ?? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Sprites/Default");
             var material = new Material(shader) { color = color };
             if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", smoothness);
             return material;
@@ -584,23 +952,35 @@ namespace FC2026.Core
 
         public void RegisterGoal(bool homeGoal)
         {
-            if (resetting)
+            if (resetting || matchFinished || !live)
                 return;
 
-            // Entering the home goal means the away side scored, and vice versa.
-            if (homeGoal) awayScore++;
-            else homeScore++;
+            var goalSide = homeGoal ? -1 : 1;
+            var scoringTeamId = 1;
+            foreach (var controller in FootballPlayerController.All)
+            {
+                if (controller != null && controller.TeamDirection == goalSide)
+                {
+                    scoringTeamId = controller.TeamId;
+                    break;
+                }
+            }
 
-            goalBanner = homeGoal ? "GOAL — AWAY" : "GOAL — HOME";
-            commentary = homeGoal ? "GOAL for the away side! What a finish!" : "GOAL for the home side! The crowd erupts!";
+            if (scoringTeamId == 1) homeScore++;
+            else awayScore++;
+
+            var scoringName = scoringTeamId == 1 ? homeTeamName : awayTeamName;
+            goalBanner = $"GOAL — {scoringName.ToUpperInvariant()}";
+            commentary = $"GOAL for {scoringName}! The crowd erupts!";
             nextCommentaryAt = matchElapsed + 14f;
-            goalBannerUntil = Time.time + 2.2f;
-            StartCoroutine(ResetAfterGoal());
+            goalBannerUntil = Time.time + 2.4f;
+            StartCoroutine(ResetAfterGoal(homeGoal));
         }
 
-        private IEnumerator ResetAfterGoal()
+        private IEnumerator ResetAfterGoal(bool homeGoal)
         {
             resetting = true;
+            live = false;
             if (ball != null)
             {
                 ball.Body.linearVelocity = Vector3.zero;
@@ -608,22 +988,7 @@ namespace FC2026.Core
             }
 
             yield return new WaitForSeconds(1.5f);
-
-            if (ball != null)
-                ball.ResetBall(new Vector3(0f, 0.14f, 0f));
-
-            foreach (var entry in playerStarts)
-            {
-                if (entry.transform == null) continue;
-                var rb = entry.transform.GetComponent<Rigidbody>();
-                if (rb != null)
-                {
-                    rb.linearVelocity = Vector3.zero;
-                    rb.angularVelocity = Vector3.zero;
-                }
-                entry.transform.position = entry.start;
-            }
-
+            yield return StartCoroutine(BeginKickoff(homeGoal ? 1 : -1, 0.9f));
             resetting = false;
         }
 
@@ -632,7 +997,7 @@ namespace FC2026.Core
             scoreStyle ??= new GUIStyle(GUI.skin.label)
             {
                 alignment = TextAnchor.MiddleCenter,
-                fontSize = Mathf.Clamp(Screen.height / 24, 22, 48),
+                fontSize = Mathf.Clamp(Screen.height / 30, 18, 34),
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = Color.white }
             };
@@ -669,11 +1034,19 @@ namespace FC2026.Core
                 normal = { textColor = new Color(0.78f, 0.88f, 0.98f) }
             };
 
-            var boardWidth = Mathf.Clamp(Screen.width * 0.34f, 260f, 470f);
-            var boardRect = new Rect((Screen.width - boardWidth) * 0.5f, 12f, boardWidth, 62f);
+            var boardWidth = Mathf.Clamp(Screen.width * 0.46f, 320f, 640f);
+            var boardRect = new Rect((Screen.width - boardWidth) * 0.5f, 10f, boardWidth, 84f);
             GUI.Box(boardRect, string.Empty);
-            GUI.Label(new Rect(boardRect.x, boardRect.y + 2f, boardRect.width, 36f), $"HOME   {homeScore}  —  {awayScore}   AWAY", scoreStyle);
-            GUI.Label(new Rect(boardRect.x, boardRect.y + 36f, boardRect.width, 20f), "FC 2026  •  CAREER MATCH", labelSmallStyle);
+            GUI.Label(new Rect(boardRect.x, boardRect.y + 2f, boardRect.width, 20f),
+                $"{homeTeamName.ToUpperInvariant()}   •   {awayTeamName.ToUpperInvariant()}", labelSmallStyle);
+            GUI.Label(new Rect(boardRect.x, boardRect.y + 19f, boardRect.width, 38f), $"{homeScore}  —  {awayScore}", scoreStyle);
+
+            var totalPossession = homePossession + awayPossession;
+            var homePossessionPercent = totalPossession > 0.5f ? Mathf.RoundToInt(homePossession / totalPossession * 100f) : 50;
+            var minute = Mathf.Clamp(half * 45 + Mathf.FloorToInt(halfElapsed / HalfDurationSeconds * 45f), 0, 90);
+            GUI.Label(new Rect(boardRect.x, boardRect.y + 60f, boardRect.width, 20f),
+                $"{(half == 0 ? "1ST HALF" : "2ND HALF")}  {minute:00}'   •   POSSESSION {homePossessionPercent}% - {100 - homePossessionPercent}%",
+                labelSmallStyle);
 
             if (Application.isMobilePlatform)
                 DrawMobileControls();
@@ -692,29 +1065,44 @@ namespace FC2026.Core
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = Color.white }
             };
-            GUI.Box(new Rect(Screen.width * 0.12f, 82f, Screen.width * 0.76f, 42f), commentary, commentaryStyle);
-            var remaining = Mathf.Max(0f, MatchDurationSeconds - matchElapsed);
-            GUI.Label(new Rect(Screen.width * 0.42f, 128f, Screen.width * 0.16f, 28f),
-                $"{Mathf.FloorToInt(remaining / 60f):00}:{Mathf.FloorToInt(remaining % 60f):00}", labelSmallStyle);
+            GUI.Box(new Rect(Screen.width * 0.12f, 100f, Screen.width * 0.76f, 42f), commentary, commentaryStyle);
+
+            if (halfTimePending)
+            {
+                fullTimeStyle ??= CreatePanelStyle();
+                var panel = new Rect(Screen.width * 0.2f, Screen.height * 0.3f, Screen.width * 0.6f, Screen.height * 0.36f);
+                GUI.Box(panel, string.Empty);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 20f, panel.width - 24f, 56f), "HALF TIME", fullTimeStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 84f, panel.width - 24f, 52f),
+                    $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", scoreStyle);
+                if (GUI.Button(new Rect(panel.x + panel.width * 0.16f, panel.y + panel.height - 76f,
+                    panel.width * 0.68f, 54f), "START SECOND HALF", buttonStyle))
+                    BeginSecondHalf();
+            }
 
             if (matchFinished)
             {
-                fullTimeStyle ??= new GUIStyle(GUI.skin.label)
-                {
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize = Mathf.Clamp(Screen.height / 16, 28, 54),
-                    fontStyle = FontStyle.Bold,
-                    normal = { textColor = Color.white }
-                };
+                fullTimeStyle ??= CreatePanelStyle();
                 var panel = new Rect(Screen.width * 0.18f, Screen.height * 0.28f, Screen.width * 0.64f, Screen.height * 0.42f);
                 GUI.Box(panel, string.Empty);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 22f, panel.width - 24f, 62f), "FULL TIME", fullTimeStyle);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 92f, panel.width - 24f, 58f),
-                    $"HOME  {homeScore}  —  {awayScore}  AWAY", scoreStyle);
+                    $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", scoreStyle);
                 if (GUI.Button(new Rect(panel.x + panel.width * 0.15f, panel.y + panel.height - 82f,
                     panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", buttonStyle))
                     CompleteCareerMatch();
             }
+        }
+
+        private static GUIStyle CreatePanelStyle()
+        {
+            return new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = Mathf.Clamp(Screen.height / 16, 28, 54),
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = Color.white }
+            };
         }
 
         private void UpdateCommentary()
@@ -761,6 +1149,35 @@ namespace FC2026.Core
             // The hub and match manager share this root. Preserve it and remove only generated children.
             for (var i = transform.childCount - 1; i >= 0; i--)
                 Destroy(transform.GetChild(i).gameObject);
+
+            var hasActiveCamera = false;
+            foreach (var candidateCamera in FindObjectsByType<Camera>(FindObjectsSortMode.None))
+            {
+                if (candidateCamera == null)
+                    continue;
+                if (candidateCamera.transform.IsChildOf(transform))
+                {
+                    candidateCamera.gameObject.SetActive(false);
+                    continue;
+                }
+                hasActiveCamera = true;
+            }
+
+            if (!hasActiveCamera)
+            {
+                var hubCameraObject = new GameObject("Career Hub Camera");
+                hubCameraObject.transform.SetParent(transform);
+                hubCameraObject.transform.position = new Vector3(0f, 1.8f, -7f);
+                hubCameraObject.transform.rotation = Quaternion.Euler(3f, 0f, 0f);
+                var hubCamera = hubCameraObject.AddComponent<Camera>();
+                hubCamera.clearFlags = CameraClearFlags.SolidColor;
+                hubCamera.backgroundColor = new Color(0.015f, 0.04f, 0.07f);
+                hubCamera.fieldOfView = 60f;
+                hubCamera.nearClipPlane = 0.1f;
+                hubCamera.farClipPlane = 120f;
+                hubCameraObject.AddComponent<AudioListener>();
+            }
+
             var hub = GetComponent<CareerHubManager>();
             if (hub != null)
             {
