@@ -163,7 +163,7 @@ export default function App() {
   };
 
   const handleOpenSocial = () => {
-    setInboxInitialTab('news');
+    setInboxInitialTab('social');
     setShowInboxModal(true);
   };
 
@@ -373,9 +373,8 @@ export default function App() {
       {currentScreen === 'main-menu' && (
         <MainMenu
           coins={coinsBalance}
-          navTab={navTab}
+          team={userTeam}
           onNavigate={handleMainMenuNavigate}
-          onSelectNavTab={handleSelectNavTab}
           onOpenInbox={handleOpenInbox}
           onOpenSocial={handleOpenSocial}
           onOpenSettings={() => setShowSettingsModal(true)}
