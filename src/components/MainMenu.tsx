@@ -1,18 +1,16 @@
 import React from 'react';
 import {
-  ArrowRight, Award, CalendarDays, ChevronRight, CircleUserRound,
-  Gift, Goal, Shield, ShoppingBag, Sparkles, Trophy, Users,
+  ArrowRight, ChevronRight, CircleUserRound, Goal, Mail, Shield, ShoppingBag, Trophy, Users,
 } from 'lucide-react';
-import { TEAMS } from '../data/teams';
+import type { Team } from '../types/soccer';
 import { FCHeaderBar } from './FCHeaderBar';
 
 export type MainMenuDestination = 'team-select' | 'career' | 'tournament' | 'penalties' | 'practice' | 'squad' | 'kits' | 'pack-store';
 
 interface MainMenuProps {
   coins: number;
-  navTab: 'home' | 'play' | 'club' | 'store';
+  team: Team;
   onNavigate: (destination: MainMenuDestination) => void;
-  onSelectNavTab: (tab: 'home' | 'play' | 'club' | 'store') => void;
   onOpenInbox: () => void;
   onOpenSocial: () => void;
   onOpenSettings: () => void;
@@ -41,10 +39,8 @@ const DashboardTile: React.FC<DashboardTileProps> = ({
 );
 
 export const MainMenu: React.FC<MainMenuProps> = ({
-  coins, onNavigate, onOpenInbox, onOpenSocial, onOpenSettings,
+  coins, team, onNavigate, onOpenInbox, onOpenSocial, onOpenSettings,
 }) => {
-  const team = TEAMS[0];
-  const featuredOpponent = TEAMS[1];
 
   return (
     <div className="home-shell matchday-home">
@@ -60,38 +56,38 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <div className="matchday-dashboard" aria-label="Main game menu">
           <DashboardTile title="Career" subtitle="Your journey to football greatness" tone="red" className="matchday-career" onClick={() => onNavigate('career')}>
             <span className="matchday-career-crest"><Trophy size={32} /><small>FC 26</small></span>
-            <span className="matchday-career-copy"><b>{team.name}</b><span className="matchday-stars" aria-label="Five star club">★ ★ ★ ★ ★</span><small>BUILD YOUR CLUB. MAKE HISTORY.</small></span>
-            <span className="matchday-career-progress"><b>SEASON 1</b><span>CONTINUE</span><ArrowRight size={19} /></span>
+            <span className="matchday-career-copy"><b>{team.name}</b><small>BUILD YOUR CLUB. MAKE HISTORY.</small></span>
+            <span className="matchday-career-progress"><b>CAREER MODE</b><span>OPEN CAREER</span><ArrowRight size={19} /></span>
           </DashboardTile>
 
-          <DashboardTile title="Scenario" subtitle="Play a featured challenge" tone="cyan" className="matchday-scenario" onClick={() => onNavigate('tournament')}>
-            <span className="matchday-versus"><b>{team.shortName.slice(0, 2)}</b><i>V</i><b>{featuredOpponent.shortName.slice(0, 2)}</b></span>
-            <small className="matchday-scenario-note"><CalendarDays size={12} /> MATCHDAY CHALLENGE</small>
+          <DashboardTile title="Tournament" subtitle="Compete for the cup" tone="cyan" className="matchday-scenario" onClick={() => onNavigate('tournament')}>
+            <span className="matchday-versus"><Trophy size={48} aria-hidden="true" /></span>
+            <small className="matchday-scenario-note">TOURNAMENT BRACKET</small>
           </DashboardTile>
 
-          <DashboardTile title="Friends" subtitle="Connect and compare progress" tone="cyan" className="matchday-friends" onClick={onOpenSocial}>
+          <DashboardTile title="Social" subtitle="See community updates" tone="cyan" className="matchday-friends" onClick={onOpenSocial}>
             <span className="matchday-friends-art"><CircleUserRound /><Users /><CircleUserRound /></span>
             <small>OPEN SOCIAL HUB</small>
           </DashboardTile>
 
-          <DashboardTile title="Dream League Live" subtitle="Take on the world" tone="cyan" className="matchday-live" onClick={() => onNavigate('team-select')}>
-            <span className="matchday-live-mark"><Goal size={42} /><b>LIVE</b></span>
-            <span className="matchday-live-copy"><b>ONLINE MATCHDAY</b><small>Ready for your next fixture</small></span>
-            <span className="matchday-rank"><b>01</b><small>RANK</small></span>
+          <DashboardTile title="Play Match" subtitle="Choose teams and kick off" tone="cyan" className="matchday-live" onClick={() => onNavigate('team-select')}>
+            <span className="matchday-live-mark"><Goal size={42} aria-hidden="true" /><b>PLAY</b></span>
+            <span className="matchday-live-copy"><b>LOCAL MATCH</b><small>Select the teams for your match</small></span>
           </DashboardTile>
 
-          <DashboardTile title="Clans" subtitle="Join your football community" tone="gold" className="matchday-clans" onClick={() => onNavigate('squad')}>
-            <span className="matchday-clan-crest"><Shield size={39} /><b>FC</b></span>
-            <small>CLUB COMMUNITY</small>
+          <DashboardTile title="Penalties" subtitle="Take on a shootout" tone="gold" className="matchday-penalties" onClick={() => onNavigate('penalties')}>
+            <Goal size={48} aria-hidden="true" />
+            <small>PENALTY MODE</small>
           </DashboardTile>
 
-          <DashboardTile title="Daily Bonus" subtitle="Claim your reward" tone="cyan" className="matchday-bonus" onClick={onOpenInbox}>
-            <span className="matchday-bonus-ball"><Gift size={36} /><Sparkles size={16} /></span>
-            <b className="matchday-bonus-label">FREE REWARD</b>
+          <DashboardTile title="Inbox" subtitle="Read your messages and updates" tone="cyan" className="matchday-inbox" onClick={onOpenInbox}>
+            <Mail className="matchday-inbox-icon" size={44} aria-hidden="true" />
+            <b className="matchday-inbox-label">OPEN INBOX</b>
           </DashboardTile>
 
-          <DashboardTile title="Challenges" tone="blue" className="matchday-small" onClick={() => onNavigate('tournament')}>
-            <span className="matchday-challenge-stats"><b>1/5<small>DAILY</small></b><b>0/5<small>WEEKLY</small></b><b>0/4<small>CAREER</small></b></span><Award size={21} />
+          <DashboardTile title="Practice" subtitle="Train in the practice arena" tone="blue" className="matchday-small" onClick={() => onNavigate('practice')}>
+            <Goal size={34} aria-hidden="true" />
+            <span className="matchday-small-copy"><b>Practice arena</b><small>TRAIN YOUR SKILLS</small></span>
           </DashboardTile>
 
           <DashboardTile title="Team" tone="blue" className="matchday-small" onClick={() => onNavigate('squad')}>
@@ -99,17 +95,17 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <span className="matchday-small-copy"><b>{team.name}</b><small>{team.formation} FORMATION</small></span>
           </DashboardTile>
 
-          <DashboardTile title="Transfers" tone="blue" className="matchday-small" onClick={() => onNavigate('pack-store')}>
-            <span className="matchday-transfer-card"><ShoppingBag size={25} /><b>MARKET</b></span>
-            <span className="matchday-small-copy"><b>Improve your squad</b><small>EXPLORE PLAYERS</small></span>
+          <DashboardTile title="Pack Shop" tone="blue" className="matchday-small" onClick={() => onNavigate('pack-store')}>
+            <span className="matchday-pack-card"><ShoppingBag size={25} /><b>PACKS</b></span>
+            <span className="matchday-small-copy"><b>Browse player packs</b><small>OPEN THE STORE</small></span>
           </DashboardTile>
 
-          <DashboardTile title="My Club" tone="blue" className="matchday-small" onClick={() => onNavigate('kits')}>
+          <DashboardTile title="Kit Room" tone="blue" className="matchday-small" onClick={() => onNavigate('kits')}>
             <span className="matchday-pitch-thumb"><span /></span>
-            <span className="matchday-small-copy"><b>Club customisation</b><small>KITS · STADIUM · IDENTITY</small></span>
+            <span className="matchday-small-copy"><b>Browse and equip kits</b><small>CLUB CUSTOMISATION</small></span>
           </DashboardTile>
         </div>
-        <div className="matchday-footer"><span>FC 2026 <i>•</i> THE BEAUTIFUL GAME</span><button onClick={onOpenInbox}>CLAIM DAILY REWARD <Gift size={13} /></button></div>
+        <div className="matchday-footer"><span>FC 2026 <i>•</i> THE BEAUTIFUL GAME</span><button onClick={onOpenInbox}>OPEN INBOX <Mail size={13} /></button></div>
       </main>
     </div>
   );
