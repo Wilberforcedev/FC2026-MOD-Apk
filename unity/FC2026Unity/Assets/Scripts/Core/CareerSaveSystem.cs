@@ -85,21 +85,30 @@ namespace FC2026.Core
 
         private static void Migrate(CareerSaveData data)
         {
+            var previousVersion = data.schemaVersion;
+            data.schemaVersion = CurrentSchemaVersion;
+            data.worldSeed = data.worldSeed == 0 ? WorldDatabase.DefaultWorldSeed : data.worldSeed;
+
             // v1-v3 used four hardcoded Ugandan club ids. Map the managed club
             // into the generated Uganda top division by its legacy order, keep
             // the player's career record and start the new table fresh.
-            var legacyIndex = Array.IndexOf(LegacyClubIds, data.managedClubId);
-            data.schemaVersion = CurrentSchemaVersion;
-            data.worldSeed = data.worldSeed == 0 ? WorldDatabase.DefaultWorldSeed : data.worldSeed;
-            data.leagueId = WorldDatabase.DefaultLeagueId;
-            data.matchweek = 1;
-            data.standings = Array.Empty<CareerClubStanding>();
+            if (previousVersion < 4)
+            {
+                var legacyIndex = Array.IndexOf(LegacyClubIds, data.managedClubId);
+                data.leagueId = WorldDatabase.DefaultLeagueId;
+                data.matchweek = 1;
+                data.standings = Array.Empty<CareerClubStanding>();
 
+                Normalize(data);
+
+                var clubs = WorldDatabase.GetLeagueClubs(data.leagueId);
+                if (clubs.Length > 0)
+                    data.managedClubId = clubs[legacyIndex >= 0 && legacyIndex < clubs.Length ? legacyIndex : 0].Id;
+                return;
+            }
+
+            // v4 raised the cup state; Normalize fills the new fields.
             Normalize(data);
-
-            var clubs = WorldDatabase.GetLeagueClubs(data.leagueId);
-            if (clubs.Length > 0)
-                data.managedClubId = clubs[legacyIndex >= 0 && legacyIndex < clubs.Length ? legacyIndex : 0].Id;
         }
 
         private static void Normalize(CareerSaveData data)
@@ -115,6 +124,7 @@ namespace FC2026.Core
             data.formationId = CareerFormationSystem.NormalizeFormation(data.formationId);
             data.tacticalStyle = CareerFormationSystem.NormalizeTacticalStyle(data.tacticalStyle);
             CareerLeagueSystem.EnsureStandings(data);
+            CareerCupSystem.Normalize(data);
         }
 
         private static bool StandingIsValid(CareerClubStanding standing, string leagueId)
@@ -151,7 +161,8 @@ namespace FC2026.Core
                 || data.standings == null
                 || data.standings.Length != WorldDatabase.ClubsPerLeague
                 || !CareerLeagueSystem.IsClubInLeague(data.leagueId, data.managedClubId)
-                || data.standings.Any(item => !StandingIsValid(item, data.leagueId)))
+                || data.standings.Any(item => !StandingIsValid(item, data.leagueId))
+                || !CupDataIsValid(data))
             {
                 return false;
             }
@@ -160,6 +171,52 @@ namespace FC2026.Core
                 .Select(item => item.clubId)
                 .Distinct(StringComparer.Ordinal)
                 .Count() == data.standings.Length;
+        }
+
+        private static bool CupDataIsValid(CareerSaveData data)
+        {
+            if (data.cupRound < 0
+                || data.cupRound > CareerCupSystem.Rounds
+                || data.honours == null
+                || data.honours.Length > CareerCupSystem.MaxHonours
+                || data.cupOpponentIds == null
+                || data.cupUserGoals == null
+                || data.cupOpponentGoals == null
+                || data.cupUserPenalties == null
+                || data.cupOpponentPenalties == null
+                || data.cupOpponentIds.Length != CareerCupSystem.Rounds
+                || data.cupUserGoals.Length != CareerCupSystem.Rounds
+                || data.cupOpponentGoals.Length != CareerCupSystem.Rounds
+                || data.cupUserPenalties.Length != CareerCupSystem.Rounds
+                || data.cupOpponentPenalties.Length != CareerCupSystem.Rounds)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < CareerCupSystem.Rounds; i++)
+            {
+                if (data.cupUserGoals[i] < 0
+                    || data.cupOpponentGoals[i] < 0
+                    || data.cupUserPenalties[i] < 0
+                    || data.cupOpponentPenalties[i] < 0)
+                {
+                    return false;
+                }
+
+                var opponentId = data.cupOpponentIds[i];
+                if (string.IsNullOrEmpty(opponentId))
+                    continue;
+                if (!CareerLeagueSystem.IsClubInLeague(data.leagueId, opponentId))
+                    return false;
+            }
+
+            if (!string.IsNullOrEmpty(data.cupChampionId) &&
+                !CareerLeagueSystem.IsClubInLeague(data.leagueId, data.cupChampionId))
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }

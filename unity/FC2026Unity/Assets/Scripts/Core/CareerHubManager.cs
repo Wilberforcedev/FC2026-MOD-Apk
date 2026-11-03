@@ -169,15 +169,30 @@ namespace FC2026.Core
                 smallStyle);
             y += lineHeight;
 
-            var fixture = CareerLeagueSystem.GetUserFixture(save);
-            var opponent = fixture.IsValid
-                ? WorldDatabase.GetClub(fixture.HomeClubId == save.managedClubId ? fixture.AwayClubId : fixture.HomeClubId)
-                : null;
+            var next = CareerLeagueSystem.GetNextFixture(save);
+            var opponent = next.IsValid ? WorldDatabase.GetClub(next.OpponentClubId) : null;
+            var competition = next.Kind == CareerFixtureKind.Cup
+                ? $"{CareerCupSystem.CompetitionName(save)} {CareerCupSystem.ShortRoundName(next.Round)}"
+                : "League";
             var fixtureLine = opponent == null
                 ? "No fixture scheduled."
-                : $"Next: {(fixture.HomeClubId == save.managedClubId ? "vs" : "at")} {opponent.Name}";
+                : $"Next: {competition}  •  {(next.UserIsHome ? "vs" : "at")} {opponent.Name}";
             GUI.Label(new Rect(x, y, width, lineHeight), fixtureLine, smallStyle);
             y += lineHeight;
+
+            if (panel.height >= 520f)
+            {
+                var cupState = save.cupRound > 0
+                    ? "Cup " + CareerCupSystem.ShortRoundName(save.cupRound)
+                    : !string.IsNullOrEmpty(save.cupChampionId) && save.cupChampionId == save.managedClubId
+                        ? "Cup WON"
+                        : "Cup out";
+                var trophyState = save.honours != null && save.honours.Length > 0
+                    ? $"Trophies {save.honours.Length}  •  {save.honours[0]}"
+                    : "No trophies yet";
+                GUI.Label(new Rect(x, y, width, lineHeight), $"{cupState}  •  {trophyState}", smallStyle);
+                y += lineHeight;
+            }
 
             GUI.Label(new Rect(x, y, width, lineHeight),
                 $"W {save.wins}   D {save.draws}   L {save.losses}  •  Budget {save.transferBudget:N0}",
@@ -187,7 +202,8 @@ namespace FC2026.Core
             var gap = 8f;
             var half = (width - gap) / 2f;
             var playHeight = Mathf.Clamp(panel.height * 0.115f, 38f, 60f);
-            if (GUI.Button(new Rect(x, y, width, playHeight), "PLAY NEXT MATCH", buttonStyle))
+            var playLabel = next.Kind == CareerFixtureKind.Cup && next.IsValid ? "PLAY CUP TIE" : "PLAY NEXT MATCH";
+            if (GUI.Button(new Rect(x, y, width, playHeight), playLabel, buttonStyle))
             {
                 enabled = false;
                 if (GetComponent<MatchManager3D>() == null)
@@ -586,9 +602,11 @@ namespace FC2026.Core
             showLeagueTable = false;
             showSquadManagement = false;
             confirmNewCareer = false;
-            notice = save != null
-                ? "Match result saved. Career updated."
-                : "Match ended. Browse the world to start a career.";
+            notice = save == null
+                ? "Match ended. Browse the world to start a career."
+                : save.matchweek == 1 && save.season > 1 && !string.IsNullOrEmpty(save.lastSeasonSummary)
+                    ? save.lastSeasonSummary
+                    : "Match result saved. Career updated.";
         }
 
         private bool MatchIsRunning()

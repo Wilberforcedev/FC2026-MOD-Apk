@@ -66,14 +66,17 @@ All clubs, players, cities, stadiums and kits in the Unity career are generated;
 - 16 clubs per league (1,536 clubs) and 18-player squads (27,648 players)
 - 30-matchweek double round-robin, generated deterministically from the world seed
 - every AI match in the managed league is simulated, so the table is complete each week
+- a 16-club national knockout cup with a seeded bracket and penalty shootouts
 
 The generator lives in `Assets/Scripts/World` and is plain C# (`WorldDatabase`, `WorldSimulation`) so it can be tested outside Unity. `WorldRandom` uses xorshift32 and FNV-1a instead of `System.Random` so every device produces the same world.
 
-Career saves use schema v4 (`CareerModels.cs`, `CareerSaveSystem.cs`). Only the managed league table, the selected league/club, the calendar and the manager's career totals are stored; everything else is regenerated. Saves from the earlier four-club Uganda prototype migrate automatically: the managed club maps into the generated Uganda top division, career totals/season/budget/tactics are kept, and the new league table starts at matchweek 1.
+Career saves use schema v5 (`CareerModels.cs`, `CareerSaveSystem.cs`). Only the managed league table, the selected league/club, the calendar, the cup run, trophies and the manager's career totals are stored; everything else is regenerated. Saves from the earlier four-club Uganda prototype and from schema v4 migrate automatically: the managed club maps into the generated Uganda top division when needed, career totals/season/budget/tactics are kept, and the new league table starts at matchweek 1. A v4 save migrated mid-season sits the current cup out; the next season enters normally.
 
 The hub (`CareerHubManager`) browses confederation → country → league → club, shows the next fixture and league position, and exposes formation, mentality and the generated squad. Launching a match uses the generated lineups, ratings (shooting, passing, pace), height/build, appearance data (skin tone, hair colour, face variant) and club/keeper kit colours.
 
-`CareerLeagueSystem.CompleteMatchweek` applies the user's result, simulates the other seven fixtures for that week, and rolls over to a new season after matchweek 30.
+`CareerLeagueSystem.GetNextFixture` drives the calendar. The league fixture is played first each week; on cup weeks (8, 16, 24, 30) the round of 16, quarter-final, semi-final and final follow it, so the final closes the season. `CareerLeagueSystem.CompleteNextFixture` applies the played result to the right competition, simulates the other league fixtures, and rolls over to a new season after the final. Season rollover writes league and cup honours, a season summary and the budget reward into the save.
+
+`CareerCupSystem` regenerates the cup bracket from the world seed and season, so only the user's results are persisted. Drawn ties are settled on a deterministic penalty shootout that is shown at full time and recorded with the result. Knockout ties are played in the same 3D match scene as league fixtures.
 
 ## Controls
 

@@ -4,7 +4,28 @@ namespace FC2026.Core
 {
     public static class CareerSchema
     {
-        public const int Version = 4;
+        public const int Version = 5;
+    }
+
+    public enum CareerFixtureKind
+    {
+        League,
+        Cup
+    }
+
+    /// <summary>
+    /// The single fixture shown on the hub dashboard. A cup tie follows the
+    /// league fixture of the same week, so it is surfaced only once the league
+    /// result has been applied.
+    /// </summary>
+    public sealed class CareerNextFixture
+    {
+        public CareerFixtureKind Kind;
+        public string OpponentClubId = string.Empty;
+        public bool UserIsHome;
+        public int Round;
+
+        public bool IsValid => !string.IsNullOrEmpty(OpponentClubId);
     }
 
     [Serializable]
@@ -48,5 +69,19 @@ namespace FC2026.Core
         public int wins;
         public int draws;
         public int losses;
+
+        // National cup. Round 1 is the round of 16; 0 means the user is out or
+        // the run is finished. Opponent ids double as the "round played" marker.
+        public int cupRound = 1;
+        public bool cupPending;
+        public string[] cupOpponentIds = new string[4];
+        public int[] cupUserGoals = new int[4];
+        public int[] cupOpponentGoals = new int[4];
+        public int[] cupUserPenalties = new int[4];
+        public int[] cupOpponentPenalties = new int[4];
+        public string cupChampionId = string.Empty;
+
+        public string[] honours = Array.Empty<string>();
+        public string lastSeasonSummary = string.Empty;
     }
 }

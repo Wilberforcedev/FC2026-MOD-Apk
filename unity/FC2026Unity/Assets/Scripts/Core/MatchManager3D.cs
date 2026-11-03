@@ -53,6 +53,12 @@ namespace FC2026.Core
         private string awayTeamName = "AWAY";
         private WorldClub homeClub;
         private WorldClub awayClub;
+        private CareerSaveData careerSave;
+        private CareerNextFixture nextFixture;
+        private bool cupTie;
+        private bool cupShootoutPending;
+        private CareerShootout cupShootout;
+        private string matchLabel = "LEAGUE";
 
         public static MatchManager3D Instance { get; private set; }
         public static bool IsLive => Instance != null && Instance.live;
@@ -71,6 +77,7 @@ namespace FC2026.Core
             Screen.autorotateToLandscapeRight = true;
 
             var career = CareerSaveSystem.Load();
+            careerSave = career;
             formationId = career != null ? career.formationId : "4-3-3";
             homeFormation = CareerFormationSystem.GetPositions(career != null ? career.formationId : null,
                 career != null ? career.tacticalStyle : null);
@@ -92,8 +99,12 @@ namespace FC2026.Core
             if (career == null)
                 return;
 
+            nextFixture = CareerLeagueSystem.GetNextFixture(career);
+            cupTie = nextFixture.Kind == CareerFixtureKind.Cup;
+            matchLabel = cupTie ? CareerCupSystem.ShortRoundName(nextFixture.Round) : "LEAGUE";
+
             homeClub = WorldDatabase.GetClub(career.managedClubId);
-            awayClub = WorldDatabase.GetClub(CareerLeagueSystem.GetOpponentClubId(career));
+            awayClub = WorldDatabase.GetClub(nextFixture.OpponentClubId);
             homeTeamName = homeClub != null ? homeClub.Name : "HOME";
             awayTeamName = awayClub != null ? awayClub.Name : "AWAY";
         }
@@ -238,6 +249,19 @@ namespace FC2026.Core
             halfTimePending = false;
             commentary = "Full time! The referee brings the match to an end.";
             goalBannerUntil = 0f;
+
+            if (!cupTie || homeScore != awayScore || careerSave == null)
+                return;
+
+            var tie = CareerCupSystem.GetUserTie(careerSave);
+            if (tie == null)
+                return;
+
+            cupShootout = CareerCupSystem.SimulateShootout(careerSave, tie, tie.Round);
+            cupShootoutPending = true;
+            commentary = cupShootout.UserWon
+                ? $"Penalties! {homeTeamName} win the shootout {cupShootout.UserScore}-{cupShootout.OpponentScore}."
+                : $"Penalties! {awayTeamName} win the shootout {cupShootout.OpponentScore}-{cupShootout.UserScore}.";
         }
 
         private void SwitchSides()
@@ -1167,7 +1191,7 @@ namespace FC2026.Core
             var boardRect = new Rect((Screen.width - boardWidth) * 0.5f, 10f, boardWidth, 84f);
             GUI.Box(boardRect, string.Empty);
             GUI.Label(new Rect(boardRect.x, boardRect.y + 2f, boardRect.width, 20f),
-                $"{homeTeamName.ToUpperInvariant()}   •   {awayTeamName.ToUpperInvariant()}", labelSmallStyle);
+                $"{matchLabel}   •   {homeTeamName.ToUpperInvariant()}   •   {awayTeamName.ToUpperInvariant()}", labelSmallStyle);
             GUI.Label(new Rect(boardRect.x, boardRect.y + 19f, boardRect.width, 38f), $"{homeScore}  —  {awayScore}", scoreStyle);
 
             var totalPossession = homePossession + awayPossession;
@@ -1214,9 +1238,14 @@ namespace FC2026.Core
                 fullTimeStyle ??= CreatePanelStyle();
                 var panel = new Rect(Screen.width * 0.18f, Screen.height * 0.28f, Screen.width * 0.64f, Screen.height * 0.42f);
                 GUI.Box(panel, string.Empty);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 22f, panel.width - 24f, 62f), "FULL TIME", fullTimeStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 22f, panel.width - 24f, 62f),
+                    cupShootoutPending ? "PENALTIES" : "FULL TIME", fullTimeStyle);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 92f, panel.width - 24f, 58f),
                     $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", scoreStyle);
+                if (cupShootoutPending)
+                    GUI.Label(new Rect(panel.x + 12f, panel.y + 146f, panel.width - 24f, 32f),
+                        $"SHOOTOUT  {cupShootout.UserScore} — {cupShootout.OpponentScore}  •  {(cupShootout.UserWon ? homeTeamName + " ADVANCE" : awayTeamName + " ADVANCE")}",
+                        labelSmallStyle);
                 if (GUI.Button(new Rect(panel.x + panel.width * 0.15f, panel.y + panel.height - 82f,
                     panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", buttonStyle))
                     CompleteCareerMatch();
@@ -1258,8 +1287,8 @@ namespace FC2026.Core
             {
                 // The managed club always plays the left/home side of this scene,
                 // so homeScore belongs to the user regardless of the fixture venue.
-                if (!CareerLeagueSystem.CompleteMatchweek(save, homeScore, awayScore))
-                    Debug.LogWarning("FC 2026: could not apply this match to the league table.");
+                if (!CareerLeagueSystem.CompleteNextFixture(save, homeScore, awayScore))
+                    Debug.LogWarning("FC 2026: could not apply this match to the career.");
                 else if (!CareerSaveSystem.Save(save))
                     Debug.LogWarning("FC 2026: match finished, but career result could not be saved.");
             }

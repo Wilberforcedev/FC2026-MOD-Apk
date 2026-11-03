@@ -56,14 +56,6 @@ namespace FC2026.Core
             return WorldDatabase.GetFixtureForClub(save.leagueId, save.managedClubId, save.matchweek);
         }
 
-        public static string GetOpponentClubId(CareerSaveData save)
-        {
-            var fixture = GetUserFixture(save);
-            if (!fixture.IsValid)
-                return string.Empty;
-            return fixture.HomeClubId == save.managedClubId ? fixture.AwayClubId : fixture.HomeClubId;
-        }
-
         public static bool IsClubInLeague(string leagueId, string clubId)
         {
             var club = WorldDatabase.GetClub(clubId);
@@ -195,16 +187,151 @@ namespace FC2026.Core
             else
                 save.draws++;
 
-            save.matchweek++;
-            if (save.matchweek > WorldDatabase.MatchweeksPerSeason)
+            // A cup tie follows the league fixture of the same week, so the
+            // calendar only advances once the cup round has been played.
+            var cupRound = CareerCupSystem.RoundForWeek(save.matchweek);
+            if (cupRound > 0 && save.cupRound == cupRound && CareerCupSystem.GetUserTie(save) != null)
             {
-                save.matchweek = 1;
-                save.season++;
-                save.transferBudget += SeasonBudgetReward;
-                ResetStandings(save);
+                save.cupPending = true;
+            }
+            else
+            {
+                AdvanceCalendar(save);
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// The fixture the hub should offer: a pending cup tie first, otherwise
+        /// the league fixture for the current matchweek.
+        /// </summary>
+        public static CareerNextFixture GetNextFixture(CareerSaveData save)
+        {
+            var next = new CareerNextFixture();
+            if (save == null)
+                return next;
+
+            if (save.cupPending)
+            {
+                var tie = CareerCupSystem.GetUserTie(save);
+                if (tie != null)
+                {
+                    next.Kind = CareerFixtureKind.Cup;
+                    next.OpponentClubId = tie.OpponentFor(save.managedClubId);
+                    next.UserIsHome = tie.HomeClubId == save.managedClubId;
+                    next.Round = tie.Round;
+                    return next;
+                }
+                save.cupPending = false;
+            }
+
+            var fixture = GetUserFixture(save);
+            if (!fixture.IsValid)
+                return next;
+
+            next.Kind = CareerFixtureKind.League;
+            next.UserIsHome = fixture.HomeClubId == save.managedClubId;
+            next.OpponentClubId = next.UserIsHome ? fixture.AwayClubId : fixture.HomeClubId;
+            next.Round = save.matchweek;
+            return next;
+        }
+
+        /// <summary>
+        /// Applies a played result. The user's club is always the left/home side
+        /// of the match scene, so the goals are oriented to the real fixture venue.
+        /// </summary>
+        public static bool CompleteNextFixture(CareerSaveData save, int userGoals, int opponentGoals)
+        {
+            if (save == null || userGoals < 0 || opponentGoals < 0)
+                return false;
+
+            if (save.cupPending)
+            {
+                if (!CareerCupSystem.RecordUserResult(save, userGoals, opponentGoals))
+                    return false;
+                AdvanceCalendar(save);
+                return true;
+            }
+
+            return CompleteMatchweek(save, userGoals, opponentGoals);
+        }
+
+        public static void AdvanceCalendar(CareerSaveData save)
+        {
+            if (save == null)
+                return;
+
+            save.cupPending = false;
+            save.matchweek++;
+            if (save.matchweek > WorldDatabase.MatchweeksPerSeason)
+                StartNewSeason(save);
+        }
+
+        public static void AddHonour(CareerSaveData save, string honour)
+        {
+            if (save == null || string.IsNullOrEmpty(honour))
+                return;
+
+            var existing = save.honours ?? Array.Empty<string>();
+            if (existing.Contains(honour))
+                return;
+
+            var honours = new string[Math.Min(existing.Length + 1, CareerCupSystem.MaxHonours)];
+            honours[0] = honour;
+            for (var i = 1; i < honours.Length; i++)
+                honours[i] = existing[i - 1];
+            save.honours = honours;
+        }
+
+        private static void StartNewSeason(CareerSaveData save)
+        {
+            var ranked = GetRankedStandings(save);
+            var championId = ranked.Length > 0 ? ranked[0].clubId : string.Empty;
+            var position = 0;
+            for (var i = 0; i < ranked.Length; i++)
+            {
+                if (ranked[i].clubId == save.managedClubId)
+                {
+                    position = i + 1;
+                    break;
+                }
+            }
+
+            if (championId == save.managedClubId)
+                AddHonour(save, $"{GetLeagueName(save)} {save.season}");
+
+            var cupChampionId = CareerCupSystem.ResolveChampion(save);
+            if (cupChampionId == save.managedClubId)
+                AddHonour(save, $"{CareerCupSystem.CompetitionName(save)} {save.season}");
+
+            var cupResult = string.IsNullOrEmpty(cupChampionId)
+                ? "cup unfinished"
+                : cupChampionId == save.managedClubId ? "cup winners" : "cup eliminated";
+            save.lastSeasonSummary = $"Season {save.season}: league {PositionLabel(position, ranked.Length)}, {cupResult}.";
+
+            save.season++;
+            save.matchweek = 1;
+            save.transferBudget += SeasonBudgetReward;
+            ResetStandings(save);
+            CareerCupSystem.ResetForSeason(save);
+        }
+
+        private static string PositionLabel(int position, int total)
+        {
+            if (position <= 0 || total <= 0)
+                return "unranked";
+
+            var suffix = position % 100 is 11 or 12 or 13
+                ? "th"
+                : (position % 10) switch
+                {
+                    1 => "st",
+                    2 => "nd",
+                    3 => "rd",
+                    _ => "th"
+                };
+            return position + suffix;
         }
 
         public static CareerClubStanding[] GetRankedStandings(CareerSaveData save)
