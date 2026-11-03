@@ -40,23 +40,29 @@ namespace FC2026.Gameplay
             float heightScale,
             float widthScale,
             bool goalkeeper,
-            bool ownerLikeness = false)
+            bool ownerLikeness = false,
+            int skinTone = -1,
+            int hairColor = -1,
+            int faceVariant = -1)
         {
             HeightScale = Mathf.Clamp(heightScale, 0.88f, 1.18f);
             WidthScale = Mathf.Clamp(widthScale, 0.82f, 1.18f);
             IsGoalkeeper = goalkeeper;
-            faceVariantIndex = (GetInstanceID() & int.MaxValue) % 3;
+            faceVariantIndex = faceVariant >= 0
+                ? faceVariant % 3
+                : (GetInstanceID() & int.MaxValue) % 3;
             useOwnerFace = ownerLikeness;
 
             var detailedShirt = CreateTexturedMaterial(shirt, GetKitWeaveTexture());
             var detailedShorts = CreateTexturedMaterial(shorts, GetKitWeaveTexture());
             var detailedSkin = CreateTexturedMaterial(skin, GetSkinGrainTexture());
             var detailedSocks = CreateTexturedMaterial(socks, GetKitWeaveTexture());
+            var detailedHair = CreateTexturedMaterial(hair, GetSkinGrainTexture());
+            if (hairColor >= 0)
+                detailedHair.color = HairColorFor(hairColor);
             detailedSkin.color = useOwnerFace
                 ? new Color(0.64f, 0.42f, 0.30f)
-                : faceVariantIndex == 1
-                    ? new Color(0.46f, 0.30f, 0.22f)
-                    : faceVariantIndex == 2 ? new Color(0.78f, 0.61f, 0.48f) : new Color(0.64f, 0.42f, 0.28f);
+                : SkinColorFor(skinTone >= 0 ? skinTone : faceVariantIndex);
 
             VisualRoot = CreateBone("Visual Rig", transform, Vector3.zero);
             Hips = CreateBone("Hips", VisualRoot, new Vector3(0f, 0.91f * HeightScale, 0f));
@@ -89,7 +95,7 @@ namespace FC2026.Gameplay
             CreatePart("Right Ear", PrimitiveType.Sphere, Head, new Vector3(0.145f, 0.005f, 0f), new Vector3(0.075f, 0.105f, 0.075f), detailedSkin);
             CreatePart("Left Ear Fold", PrimitiveType.Sphere, Head, new Vector3(-0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), detailedSkin);
             CreatePart("Right Ear Fold", PrimitiveType.Sphere, Head, new Vector3(0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), detailedSkin);
-            CreatePart("Hair", PrimitiveType.Sphere, Head, new Vector3(0f, 0.12f, -0.065f), new Vector3(0.31f, 0.14f, 0.30f), hair);
+            CreatePart("Hair", PrimitiveType.Sphere, Head, new Vector3(0f, 0.12f, -0.065f), new Vector3(0.31f, 0.14f, 0.30f), detailedHair);
             CreateTexturedFace();
 
             CreateLimb(LeftUpperArm, "Left Sleeve", 0.28f, 0.125f, detailedShirt);
@@ -188,6 +194,38 @@ namespace FC2026.Gameplay
             face.transform.SetParent(Head, false);
             face.AddComponent<MeshFilter>().sharedMesh = mesh;
             face.AddComponent<MeshRenderer>().sharedMaterial = faceMaterial;
+        }
+
+        private static Color SkinColorFor(int skinTone)
+        {
+            switch (Mathf.Clamp(skinTone, 0, 4))
+            {
+                case 0:
+                    return new Color(0.86f, 0.68f, 0.55f);
+                case 1:
+                    return new Color(0.76f, 0.56f, 0.42f);
+                case 2:
+                    return new Color(0.64f, 0.44f, 0.31f);
+                case 3:
+                    return new Color(0.45f, 0.29f, 0.20f);
+                default:
+                    return new Color(0.32f, 0.20f, 0.14f);
+            }
+        }
+
+        private static Color HairColorFor(int hairColor)
+        {
+            switch (Mathf.Clamp(hairColor, 0, 3))
+            {
+                case 0:
+                    return new Color(0.035f, 0.025f, 0.02f);
+                case 1:
+                    return new Color(0.13f, 0.08f, 0.05f);
+                case 2:
+                    return new Color(0.26f, 0.16f, 0.08f);
+                default:
+                    return new Color(0.62f, 0.48f, 0.24f);
+            }
         }
 
         private static Material CreateTexturedMaterial(Material source, Texture2D detailTexture)

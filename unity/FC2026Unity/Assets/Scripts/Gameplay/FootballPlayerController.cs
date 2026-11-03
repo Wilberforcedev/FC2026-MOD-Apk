@@ -34,6 +34,9 @@ namespace FC2026.Gameplay
         private float tackleCooldown;
         private float shootingStat = 0.6f;
         private float passingStat = 0.6f;
+        private int skinTone = -1;
+        private int hairColor = -1;
+        private int faceVariant = -1;
 
         public bool IsUserControlled { get; set; } = true;
         public int TeamDirection { get; set; } = 1;
@@ -72,7 +75,8 @@ namespace FC2026.Gameplay
             return nearest;
         }
 
-        public void Configure(PlayerRole role, Vector3 homePosition, int teamDirection, float shooting, float passing)
+        public void Configure(PlayerRole role, Vector3 homePosition, int teamDirection, float shooting, float passing,
+            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1)
         {
             Role = role;
             HomePosition = homePosition;
@@ -80,6 +84,9 @@ namespace FC2026.Gameplay
             TeamId = TeamDirection;
             shootingStat = Mathf.Clamp01(shooting);
             passingStat = Mathf.Clamp01(passing);
+            skinTone = playerSkinTone;
+            hairColor = playerHairColor;
+            faceVariant = playerFaceVariant;
             lastMoveDirection = new Vector3(0f, 0f, TeamDirection);
         }
 
@@ -127,7 +134,8 @@ namespace FC2026.Gameplay
         private void Start()
         {
             var styleSeed = (uint)gameObject.name.GetHashCode() / (float)uint.MaxValue;
-            motion = FootballVisualFactory.EnsureAnimatedRig(gameObject, IsGoalkeeper, styleSeed);
+            motion = FootballVisualFactory.EnsureAnimatedRig(gameObject, IsGoalkeeper, styleSeed,
+                false, skinTone, hairColor, faceVariant);
         }
 
         private void Update()

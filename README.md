@@ -50,7 +50,7 @@ npm run build
 
 ### Unity 3D prototype
 
-The 3D match foundation is documented in [`UNITY_3D.md`](UNITY_3D.md). It uses procedural humanoid players, Rigidbody ball physics, positional AI, goal detection, match scoring, broadcast camera and touch controls. The current implementation is a prototype; advanced animation, complete career migration, mobile rendering optimization, and release signing remain development work.
+The 3D match foundation is documented in [`UNITY_3D.md`](UNITY_3D.md). It uses procedural humanoid players, Rigidbody ball physics, positional AI, goal detection, match scoring, broadcast camera and touch controls. It also includes a deterministic fictional world of 96 national top divisions (1,536 clubs, 27,648 players) with league browsing, 30-matchweek seasons and save migration. The current implementation is a prototype; advanced animation, cups/transfers, mobile rendering optimization, and release signing remain development work.
 
 Open `unity/FC2026Unity` with Unity `6000.3.24f1`. Android builds require Android Build Support, Android SDK & NDK Tools, and OpenJDK. The Unity Editor build menu and command-line instructions are in [`UNITY_3D.md`](UNITY_3D.md).
 

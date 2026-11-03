@@ -1,48 +1,73 @@
 using System;
 using System.Linq;
+using FC2026.World;
 
 namespace FC2026.Core
 {
-    [Serializable]
-    public sealed class CareerClubStanding
-    {
-        public string clubId = string.Empty;
-        public int played;
-        public int wins;
-        public int draws;
-        public int losses;
-        public int goalsFor;
-        public int goalsAgainst;
-
-        public int GoalDifference => goalsFor - goalsAgainst;
-        public int Points => wins * 3 + draws;
-
-        public void Reset()
-        {
-            played = wins = draws = losses = goalsFor = goalsAgainst = 0;
-        }
-    }
-
     /// <summary>
-    /// Deterministic league-table calculations for the offline career prototype.
-    /// A win is worth three points, a draw one, and ranking breaks ties by goal
-    /// difference then goals scored. This class has no Unity scene dependencies.
+    /// League rules for the worldwide career. Standings only cover the managed
+    /// league; other fixtures in that league are simulated deterministically so
+    /// every club plays once per matchweek.
     /// </summary>
     public static class CareerLeagueSystem
     {
-        public static readonly string[] ClubIds =
-        {
-            "kampala_city", "villa", "express", "bright_stars"
-        };
+        private const int SeasonBudgetReward = 2500000;
 
-        public static readonly string[] ClubNames =
+        public static WorldLeague GetManagedLeague(CareerSaveData save)
         {
-            "Kampala City", "Villa FC", "Express FC", "Bright Stars"
-        };
+            return save == null ? null : WorldDatabase.GetLeague(save.leagueId);
+        }
 
-        public static CareerClubStanding[] CreateInitialStandings()
+        public static WorldClub GetManagedClub(CareerSaveData save)
         {
-            return ClubIds.Select(id => new CareerClubStanding { clubId = id }).ToArray();
+            return save == null ? null : WorldDatabase.GetClub(save.managedClubId);
+        }
+
+        public static int MatchweekCount(CareerSaveData save)
+        {
+            return save == null ? 0 : WorldDatabase.MatchweekCount(save.leagueId);
+        }
+
+        public static string GetLeagueName(CareerSaveData save)
+        {
+            var league = GetManagedLeague(save);
+            return league != null ? league.Name : "League";
+        }
+
+        public static string GetCountryName(CareerSaveData save)
+        {
+            var league = GetManagedLeague(save);
+            if (league == null)
+                return string.Empty;
+            var country = WorldDatabase.GetCountry(league.CountryId);
+            return country != null ? country.Name : string.Empty;
+        }
+
+        public static string GetClubName(string clubId)
+        {
+            var club = WorldDatabase.GetClub(clubId);
+            return club != null ? club.Name : "Unknown Club";
+        }
+
+        public static WorldFixture GetUserFixture(CareerSaveData save)
+        {
+            if (save == null)
+                return default;
+            return WorldDatabase.GetFixtureForClub(save.leagueId, save.managedClubId, save.matchweek);
+        }
+
+        public static string GetOpponentClubId(CareerSaveData save)
+        {
+            var fixture = GetUserFixture(save);
+            if (!fixture.IsValid)
+                return string.Empty;
+            return fixture.HomeClubId == save.managedClubId ? fixture.AwayClubId : fixture.HomeClubId;
+        }
+
+        public static bool IsClubInLeague(string leagueId, string clubId)
+        {
+            var club = WorldDatabase.GetClub(clubId);
+            return club != null && club.LeagueId == leagueId;
         }
 
         public static void EnsureStandings(CareerSaveData save)
@@ -50,36 +75,170 @@ namespace FC2026.Core
             if (save == null)
                 return;
 
-            var existing = save.standings ?? Array.Empty<CareerClubStanding>();
-            save.standings = ClubIds.Select(id =>
+            var league = WorldDatabase.GetLeague(save.leagueId);
+            if (league == null)
             {
-                var standing = existing.FirstOrDefault(item => item != null && item.clubId == id);
-                return standing ?? new CareerClubStanding { clubId = id };
-            }).ToArray();
-        }
+                save.leagueId = WorldDatabase.DefaultLeagueId;
+                league = WorldDatabase.GetLeague(save.leagueId);
+            }
+            if (league == null)
+            {
+                save.standings = Array.Empty<CareerClubStanding>();
+                return;
+            }
 
-        public static string GetOpponentClubId(string managedClubId, int matchweek)
-        {
-            var managedIndex = Array.IndexOf(ClubIds, managedClubId);
-            if (managedIndex < 0)
-                managedIndex = 0;
+            var clubs = WorldDatabase.GetLeagueClubs(league.Id);
+            if (clubs.Length == 0)
+            {
+                save.standings = Array.Empty<CareerClubStanding>();
+                return;
+            }
 
-            var offset = (Math.Max(1, matchweek) - 1) % (ClubIds.Length - 1) + 1;
-            return ClubIds[(managedIndex + offset) % ClubIds.Length];
+            save.matchweek = Clamp(save.matchweek, 1, WorldDatabase.MatchweeksPerSeason);
+            var existing = save.standings ?? Array.Empty<CareerClubStanding>();
+            var standings = new CareerClubStanding[clubs.Length];
+            for (var i = 0; i < clubs.Length; i++)
+            {
+                var clubId = clubs[i].Id;
+                CareerClubStanding row = null;
+                for (var j = 0; j < existing.Length; j++)
+                {
+                    if (existing[j] != null && existing[j].clubId == clubId)
+                    {
+                        row = existing[j];
+                        break;
+                    }
+                }
+                standings[i] = row ?? new CareerClubStanding { clubId = clubId };
+            }
+
+            save.standings = standings;
+            if (!IsClubInLeague(league.Id, save.managedClubId))
+                save.managedClubId = clubs[0].Id;
         }
 
         public static bool ApplyResult(CareerSaveData save, string homeClubId, string awayClubId,
             int homeGoals, int awayGoals)
         {
-            if (save == null || homeGoals < 0 || awayGoals < 0 ||
-                homeClubId == awayClubId ||
-                Array.IndexOf(ClubIds, homeClubId) < 0 ||
-                Array.IndexOf(ClubIds, awayClubId) < 0)
+            if (save == null || homeGoals < 0 || awayGoals < 0 || homeClubId == awayClubId)
+                return false;
+
+            var homeClub = WorldDatabase.GetClub(homeClubId);
+            var awayClub = WorldDatabase.GetClub(awayClubId);
+            if (homeClub == null || awayClub == null ||
+                homeClub.LeagueId != save.leagueId || awayClub.LeagueId != save.leagueId)
                 return false;
 
             EnsureStandings(save);
-            var home = save.standings.First(item => item.clubId == homeClubId);
-            var away = save.standings.First(item => item.clubId == awayClubId);
+            return TryApplyResult(save, homeClubId, awayClubId, homeGoals, awayGoals);
+        }
+
+        /// <summary>
+        /// Applies the user's result, simulates the rest of the matchweek,
+        /// advances the calendar and rolls the season over when needed.
+        /// The user's club is always the left/home side of the match scene.
+        /// </summary>
+        public static bool CompleteMatchweek(CareerSaveData save, int userGoals, int opponentGoals)
+        {
+            if (save == null || userGoals < 0 || opponentGoals < 0)
+                return false;
+
+            var league = WorldDatabase.GetLeague(save.leagueId);
+            if (league == null)
+                return false;
+
+            EnsureStandings(save);
+            var userFixture = GetUserFixture(save);
+            if (!userFixture.IsValid)
+                return false;
+
+            var userIsHome = userFixture.HomeClubId == save.managedClubId;
+            var fixtureHomeGoals = userIsHome ? userGoals : opponentGoals;
+            var fixtureAwayGoals = userIsHome ? opponentGoals : userGoals;
+
+            var fixtures = WorldDatabase.GetFixtures(league.Id);
+            var perWeek = WorldDatabase.ClubsPerLeague / 2;
+            var start = (save.matchweek - 1) * perWeek;
+            var seed = unchecked(save.worldSeed * 397 ^ save.season * 7919 ^ save.matchweek * 104729);
+
+            for (var i = start; i < start + perWeek && i < fixtures.Length; i++)
+            {
+                var fixture = fixtures[i];
+                var isUserFixture = fixture.HomeClubId == userFixture.HomeClubId &&
+                                    fixture.AwayClubId == userFixture.AwayClubId;
+                int homeGoals;
+                int awayGoals;
+                if (isUserFixture)
+                {
+                    homeGoals = fixtureHomeGoals;
+                    awayGoals = fixtureAwayGoals;
+                }
+                else
+                {
+                    var simulated = WorldSimulation.Simulate(
+                        WorldDatabase.GetClub(fixture.HomeClubId),
+                        WorldDatabase.GetClub(fixture.AwayClubId),
+                        seed);
+                    homeGoals = simulated.HomeGoals;
+                    awayGoals = simulated.AwayGoals;
+                }
+
+                if (!TryApplyResult(save, fixture.HomeClubId, fixture.AwayClubId, homeGoals, awayGoals))
+                    return false;
+            }
+
+            save.played++;
+            if (userGoals > opponentGoals)
+                save.wins++;
+            else if (userGoals < opponentGoals)
+                save.losses++;
+            else
+                save.draws++;
+
+            save.matchweek++;
+            if (save.matchweek > WorldDatabase.MatchweeksPerSeason)
+            {
+                save.matchweek = 1;
+                save.season++;
+                save.transferBudget += SeasonBudgetReward;
+                ResetStandings(save);
+            }
+
+            return true;
+        }
+
+        public static CareerClubStanding[] GetRankedStandings(CareerSaveData save)
+        {
+            EnsureStandings(save);
+            if (save == null || save.standings == null)
+                return Array.Empty<CareerClubStanding>();
+
+            return save.standings
+                .Where(item => item != null)
+                .OrderByDescending(item => item.Points)
+                .ThenByDescending(item => item.GoalDifference)
+                .ThenByDescending(item => item.goalsFor)
+                .ThenBy(item => GetClubName(item.clubId), StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        public static void ResetStandings(CareerSaveData save)
+        {
+            EnsureStandings(save);
+            if (save == null || save.standings == null)
+                return;
+
+            foreach (var standing in save.standings)
+                standing?.Reset();
+        }
+
+        private static bool TryApplyResult(CareerSaveData save, string homeClubId, string awayClubId,
+            int homeGoals, int awayGoals)
+        {
+            var home = FindStanding(save, homeClubId);
+            var away = FindStanding(save, awayClubId);
+            if (home == null || away == null)
+                return false;
 
             home.played++;
             away.played++;
@@ -107,34 +266,22 @@ namespace FC2026.Core
             return true;
         }
 
-        public static CareerClubStanding[] GetRankedStandings(CareerSaveData save)
+        private static CareerClubStanding FindStanding(CareerSaveData save, string clubId)
         {
-            EnsureStandings(save);
-            if (save == null)
-                return Array.Empty<CareerClubStanding>();
-
-            return save.standings
-                .OrderByDescending(item => item.Points)
-                .ThenByDescending(item => item.GoalDifference)
-                .ThenByDescending(item => item.goalsFor)
-                .ThenBy(item => Array.IndexOf(ClubIds, item.clubId))
-                .ToArray();
+            if (save.standings == null)
+                return null;
+            for (var i = 0; i < save.standings.Length; i++)
+            {
+                var standing = save.standings[i];
+                if (standing != null && standing.clubId == clubId)
+                    return standing;
+            }
+            return null;
         }
 
-        public static void ResetStandings(CareerSaveData save)
+        private static int Clamp(int value, int minimum, int maximum)
         {
-            if (save == null)
-                return;
-
-            EnsureStandings(save);
-            foreach (var standing in save.standings)
-                standing.Reset();
-        }
-
-        public static string GetClubName(string clubId)
-        {
-            var index = Array.IndexOf(ClubIds, clubId);
-            return index >= 0 ? ClubNames[index] : "Unknown Club";
+            return value < minimum ? minimum : value > maximum ? maximum : value;
         }
     }
 }

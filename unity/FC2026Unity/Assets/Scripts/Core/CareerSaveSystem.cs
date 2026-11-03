@@ -1,49 +1,31 @@
 using System;
 using System.Linq;
+using FC2026.World;
 using UnityEngine;
 
 namespace FC2026.Core
 {
     /// <summary>
-    /// Minimal, versioned career snapshot for the Unity 3D mobile game.
-    /// Keep this data-only so it can be connected to the career hub and season
-    /// manager without coupling save files to scene objects.
-    /// </summary>
-    [Serializable]
-    public sealed class CareerSaveData
-    {
-        public int schemaVersion = CareerSaveSystem.CurrentSchemaVersion;
-        public CareerClubStanding[] standings = Array.Empty<CareerClubStanding>();
-        public int season = 1;
-        public int matchweek = 1;
-        public string managedClubId = string.Empty;
-        public string formationId = "4-3-3";
-        public string tacticalStyle = "Balanced";
-        public int transferBudget = 15000000;
-        public int played;
-        public int wins;
-        public int draws;
-        public int losses;
-    }
-
-    /// <summary>
     /// Local, offline-first career persistence for Android and Editor builds.
-    /// Uses PlayerPrefs so the first career implementation needs no scene asset
-    /// or network service. Cloud sync can be added behind this API later.
+    /// Saves only the managed league table; every other club, player and
+    /// fixture is regenerated from the deterministic world database.
     /// </summary>
     public static class CareerSaveSystem
     {
-        public const int CurrentSchemaVersion = 3;
+        public const int CurrentSchemaVersion = CareerSchema.Version;
         private const string SaveKey = "fc2026.career.save.v1";
+
+        private static readonly string[] LegacyClubIds =
+        {
+            "kampala_city", "villa", "express", "bright_stars"
+        };
 
         public static bool Save(CareerSaveData data)
         {
             if (data == null)
                 return false;
 
-            CareerLeagueSystem.EnsureStandings(data);
-            data.formationId = CareerFormationSystem.NormalizeFormation(data.formationId);
-            data.tacticalStyle = CareerFormationSystem.NormalizeTacticalStyle(data.tacticalStyle);
+            Normalize(data);
             if (!IsValid(data))
                 return false;
 
@@ -75,24 +57,18 @@ namespace FC2026.Core
                 if (data == null)
                     return null;
 
-                // Migrate existing saves without discarding the player's career record.
-                if (data.schemaVersion == 1 || data.schemaVersion == 2)
-                {
-                    data.schemaVersion = CurrentSchemaVersion;
-                    CareerLeagueSystem.EnsureStandings(data);
-                    data.formationId = CareerFormationSystem.NormalizeFormation(data.formationId);
-                    data.tacticalStyle = CareerFormationSystem.NormalizeTacticalStyle(data.tacticalStyle);
-                    if (!Save(data))
-                        Debug.LogWarning("FC 2026: career save migration could not be persisted.");
-                }
+                var needsPersist = data.schemaVersion != CurrentSchemaVersion;
+                if (data.schemaVersion < CurrentSchemaVersion)
+                    Migrate(data);
                 else
-                {
-                    CareerLeagueSystem.EnsureStandings(data);
-                    data.formationId = CareerFormationSystem.NormalizeFormation(data.formationId);
-                    data.tacticalStyle = CareerFormationSystem.NormalizeTacticalStyle(data.tacticalStyle);
-                }
+                    Normalize(data);
 
-                return IsValid(data) ? data : null;
+                if (!IsValid(data))
+                    return null;
+
+                if (needsPersist && !Save(data))
+                    Debug.LogWarning("FC 2026: career save migration could not be persisted.");
+                return data;
             }
             catch (Exception exception)
             {
@@ -107,10 +83,46 @@ namespace FC2026.Core
             PlayerPrefs.Save();
         }
 
-        private static bool StandingIsValid(CareerClubStanding standing)
+        private static void Migrate(CareerSaveData data)
         {
+            // v1-v3 used four hardcoded Ugandan club ids. Map the managed club
+            // into the generated Uganda top division by its legacy order, keep
+            // the player's career record and start the new table fresh.
+            var legacyIndex = Array.IndexOf(LegacyClubIds, data.managedClubId);
+            data.schemaVersion = CurrentSchemaVersion;
+            data.worldSeed = data.worldSeed == 0 ? WorldDatabase.DefaultWorldSeed : data.worldSeed;
+            data.leagueId = WorldDatabase.DefaultLeagueId;
+            data.matchweek = 1;
+            data.standings = Array.Empty<CareerClubStanding>();
+
+            Normalize(data);
+
+            var clubs = WorldDatabase.GetLeagueClubs(data.leagueId);
+            if (clubs.Length > 0)
+                data.managedClubId = clubs[legacyIndex >= 0 && legacyIndex < clubs.Length ? legacyIndex : 0].Id;
+        }
+
+        private static void Normalize(CareerSaveData data)
+        {
+            data.schemaVersion = CurrentSchemaVersion;
+            data.worldSeed = data.worldSeed == 0 ? WorldDatabase.DefaultWorldSeed : data.worldSeed;
+            data.season = Math.Max(1, data.season);
+            data.transferBudget = Math.Max(0, data.transferBudget);
+            data.played = Math.Max(0, data.played);
+            data.wins = Math.Max(0, data.wins);
+            data.draws = Math.Max(0, data.draws);
+            data.losses = Math.Max(0, data.losses);
+            data.formationId = CareerFormationSystem.NormalizeFormation(data.formationId);
+            data.tacticalStyle = CareerFormationSystem.NormalizeTacticalStyle(data.tacticalStyle);
+            CareerLeagueSystem.EnsureStandings(data);
+        }
+
+        private static bool StandingIsValid(CareerClubStanding standing, string leagueId)
+        {
+            var club = standing == null ? null : WorldDatabase.GetClub(standing.clubId);
             return standing != null
-                && standing.clubId != null
+                && club != null
+                && club.LeagueId == leagueId
                 && standing.played >= 0
                 && standing.wins >= 0
                 && standing.draws >= 0
@@ -122,22 +134,32 @@ namespace FC2026.Core
 
         private static bool IsValid(CareerSaveData data)
         {
-            return data != null
-                && data.schemaVersion == CurrentSchemaVersion
-                && data.season >= 1
-                && data.matchweek >= 1
-                && data.transferBudget >= 0
-                && data.played >= 0
-                && data.wins >= 0
-                && data.draws >= 0
-                && data.losses >= 0
-                && data.wins + data.draws + data.losses <= data.played
-                && data.managedClubId != null
-                && CareerFormationSystem.IsValidFormation(data.formationId)
-                && CareerFormationSystem.IsValidTacticalStyle(data.tacticalStyle)
-                && data.standings != null
-                && data.standings.Length == CareerLeagueSystem.ClubIds.Length
-                && data.standings.All(StandingIsValid);
+            if (data == null
+                || data.schemaVersion != CurrentSchemaVersion
+                || data.season < 1
+                || data.matchweek < 1
+                || data.matchweek > WorldDatabase.MatchweeksPerSeason
+                || data.transferBudget < 0
+                || data.played < 0
+                || data.wins < 0
+                || data.draws < 0
+                || data.losses < 0
+                || data.wins + data.draws + data.losses > data.played
+                || string.IsNullOrEmpty(data.managedClubId)
+                || !CareerFormationSystem.IsValidFormation(data.formationId)
+                || !CareerFormationSystem.IsValidTacticalStyle(data.tacticalStyle)
+                || data.standings == null
+                || data.standings.Length != WorldDatabase.ClubsPerLeague
+                || !CareerLeagueSystem.IsClubInLeague(data.leagueId, data.managedClubId)
+                || data.standings.Any(item => !StandingIsValid(item, data.leagueId)))
+            {
+                return false;
+            }
+
+            return data.standings
+                .Select(item => item.clubId)
+                .Distinct(StringComparer.Ordinal)
+                .Count() == data.standings.Length;
         }
     }
 }

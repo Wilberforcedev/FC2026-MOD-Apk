@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using FC2026.Gameplay;
+using FC2026.World;
 
 namespace FC2026.Core
 {
@@ -49,6 +51,8 @@ namespace FC2026.Core
         private string formationId = "4-3-3";
         private string homeTeamName = "HOME";
         private string awayTeamName = "AWAY";
+        private WorldClub homeClub;
+        private WorldClub awayClub;
 
         public static MatchManager3D Instance { get; private set; }
         public static bool IsLive => Instance != null && Instance.live;
@@ -88,17 +92,10 @@ namespace FC2026.Core
             if (career == null)
                 return;
 
-            homeTeamName = ClubNameFor(career.managedClubId);
-            var opponentId = CareerLeagueSystem.GetOpponentClubId(career.managedClubId, career.matchweek);
-            awayTeamName = ClubNameFor(opponentId);
-        }
-
-        private static string ClubNameFor(string clubId)
-        {
-            var index = System.Array.IndexOf(CareerLeagueSystem.ClubIds, clubId);
-            return index >= 0 && index < CareerLeagueSystem.ClubNames.Length
-                ? CareerLeagueSystem.ClubNames[index]
-                : "FC 2026";
+            homeClub = WorldDatabase.GetClub(career.managedClubId);
+            awayClub = WorldDatabase.GetClub(CareerLeagueSystem.GetOpponentClubId(career));
+            homeTeamName = homeClub != null ? homeClub.Name : "HOME";
+            awayTeamName = awayClub != null ? awayClub.Name : "AWAY";
         }
 
         private IEnumerator StartMatch()
@@ -789,46 +786,126 @@ namespace FC2026.Core
 
         private void CreateTeams()
         {
-            var homeMaterial = CreateMaterial(new Color(0.96f, 0.96f, 0.99f), 0.3f);
-            var awayMaterial = CreateMaterial(new Color(0.07f, 0.28f, 0.72f), 0.32f);
-            var homeKeeperMaterial = CreateMaterial(new Color(0.95f, 0.65f, 0.08f), 0.3f);
-            var awayKeeperMaterial = CreateMaterial(new Color(0.88f, 0.17f, 0.22f), 0.3f);
-            var homeShorts = CreateMaterial(new Color(0.08f, 0.1f, 0.18f), 0.35f);
-            var awayShorts = CreateMaterial(new Color(0.03f, 0.08f, 0.2f), 0.35f);
+            var homePrimary = homeClub != null ? ToColor(homeClub.PrimaryColor) : new Color(0.96f, 0.96f, 0.99f);
+            var homeSecondary = homeClub != null ? ToColor(homeClub.SecondaryColor) : new Color(0.08f, 0.1f, 0.18f);
+            var awayPrimary = awayClub != null ? ToColor(awayClub.PrimaryColor) : new Color(0.07f, 0.28f, 0.72f);
+            var awaySecondary = awayClub != null ? ToColor(awayClub.SecondaryColor) : new Color(0.03f, 0.08f, 0.2f);
+            if (homeClub != null && awayClub != null && awayClub.PrimaryColor.DistanceTo(homeClub.PrimaryColor) < 0.4f)
+            {
+                awayPrimary = awayClub.SecondaryColor.DistanceTo(homeClub.PrimaryColor) >= 0.4f
+                    ? ToColor(awayClub.SecondaryColor)
+                    : homePrimary.grayscale > 0.5f
+                        ? new Color(0.07f, 0.12f, 0.26f)
+                        : new Color(0.96f, 0.96f, 0.99f);
+            }
+
+            var homeShirt = CreateMaterial(homePrimary, 0.3f);
+            var awayShirt = CreateMaterial(awayPrimary, 0.32f);
+            var homeKeeper = CreateMaterial(homeClub != null ? ToColor(homeClub.GoalkeeperColor) : new Color(0.95f, 0.65f, 0.08f), 0.3f);
+            var awayKeeper = CreateMaterial(awayClub != null ? ToColor(awayClub.GoalkeeperColor) : new Color(0.88f, 0.17f, 0.22f), 0.3f);
+            var homeShorts = CreateMaterial(homeSecondary, 0.35f);
+            var awayShorts = CreateMaterial(awaySecondary, 0.35f);
+
+            var homeLineup = BuildLineup(WorldDatabase.GetSquad(homeClub != null ? homeClub.Id : string.Empty));
+            var awayLineup = BuildLineup(WorldDatabase.GetSquad(awayClub != null ? awayClub.Id : string.Empty));
 
             for (var i = 0; i < homeFormation.Length; i++)
             {
-                var height = 0.94f + ((i * 7) % 11) * 0.012f;
-                if (i == 0) height = 1.10f;
-                if (i == 9) height = 1.04f;
-                var width = i is 2 or 3 or 9 ? 1.07f : 0.96f;
+                var player = homeLineup[i];
+                var role = RoleForIndex(i, formationId);
                 var isUser = i == 9;
-                var role = RoleForIndex(i);
-                var player = CreatePlayer($"Home Player {i + 1}", homeFormation[i], role == PlayerRole.Goalkeeper ? homeKeeperMaterial : homeMaterial,
-                    homeShorts, height, width, isUser, 1, role, ShootingFor(role, i), PassingFor(role, i));
+                var created = CreatePlayer(
+                    player != null ? player.Name : $"Home Player {i + 1}",
+                    homeFormation[i],
+                    role == PlayerRole.Goalkeeper ? homeKeeper : homeShirt,
+                    homeShorts,
+                    HeightScaleFor(player, i),
+                    WidthScaleFor(player, i),
+                    isUser,
+                    1,
+                    role,
+                    ShootingFor(player),
+                    PassingFor(player),
+                    SpeedFor(player),
+                    player != null ? player.SkinTone : -1,
+                    player != null ? player.HairColor : -1,
+                    player != null ? player.FaceVariant : -1);
                 if (isUser)
-                    userPlayer = player.GetComponent<FootballPlayerController>();
+                    userPlayer = created.GetComponent<FootballPlayerController>();
             }
 
             for (var i = 0; i < homeFormation.Length; i++)
             {
+                var player = awayLineup[i];
                 var mirrored = new Vector3(-homeFormation[i].x, 0f, -homeFormation[i].z);
-                var height = 0.95f + ((i * 5) % 9) * 0.014f;
-                if (i == 0) height = 1.08f;
-                if (i == 9) height = 1.12f;
-                var width = i is 0 or 2 or 3 or 9 ? 1.08f : 0.97f;
-                var role = RoleForIndex(i);
-                CreatePlayer($"Away Player {i + 1}", mirrored, role == PlayerRole.Goalkeeper ? awayKeeperMaterial : awayMaterial,
-                    awayShorts, height, width, false, -1, role, ShootingFor(role, i), PassingFor(role, i));
+                var role = RoleForIndex(i, formationId);
+                CreatePlayer(
+                    player != null ? player.Name : $"Away Player {i + 1}",
+                    mirrored,
+                    role == PlayerRole.Goalkeeper ? awayKeeper : awayShirt,
+                    awayShorts,
+                    HeightScaleFor(player, i + 11),
+                    WidthScaleFor(player, i + 11),
+                    false,
+                    -1,
+                    role,
+                    ShootingFor(player),
+                    PassingFor(player),
+                    SpeedFor(player),
+                    player != null ? player.SkinTone : -1,
+                    player != null ? player.HairColor : -1,
+                    player != null ? player.FaceVariant : -1);
             }
         }
 
-        private PlayerRole RoleForIndex(int index)
+        private WorldPlayer[] BuildLineup(WorldPlayer[] squad)
+        {
+            var lineup = new WorldPlayer[homeFormation.Length];
+            if (squad == null || squad.Length == 0)
+                return lineup;
+
+            var keepers = squad.Where(item => item != null && item.Position == PlayerPosition.Goalkeeper)
+                .OrderByDescending(item => item.Overall).ToArray();
+            var defenders = squad.Where(item => item != null && item.Position == PlayerPosition.Defender)
+                .OrderByDescending(item => item.Overall).ToArray();
+            var midfielders = squad.Where(item => item != null && item.Position == PlayerPosition.Midfielder)
+                .OrderByDescending(item => item.Overall).ToArray();
+            var forwards = squad.Where(item => item != null && item.Position == PlayerPosition.Forward)
+                .OrderByDescending(item => item.Overall).ToArray();
+
+            var keeperIndex = 0;
+            var defenderIndex = 0;
+            var midfielderIndex = 0;
+            var forwardIndex = 0;
+            for (var i = 0; i < lineup.Length; i++)
+            {
+                var role = RoleForIndex(i, formationId);
+                lineup[i] = role switch
+                {
+                    PlayerRole.Goalkeeper => NextPlayer(keepers, ref keeperIndex),
+                    PlayerRole.Defender => NextPlayer(defenders, ref defenderIndex),
+                    PlayerRole.Midfielder => NextPlayer(midfielders, ref midfielderIndex),
+                    _ => NextPlayer(forwards, ref forwardIndex)
+                };
+            }
+            return lineup;
+        }
+
+        private static WorldPlayer NextPlayer(WorldPlayer[] players, ref int index)
+        {
+            if (players.Length == 0)
+                return null;
+            var player = players[Mathf.Min(index, players.Length - 1)];
+            index++;
+            return player;
+        }
+
+        private static PlayerRole RoleForIndex(int index, string formation)
         {
             if (index == 0)
                 return PlayerRole.Goalkeeper;
 
-            return formationId switch
+            return formation switch
             {
                 "4-2-3-1" => index <= 4 ? PlayerRole.Defender : index <= 9 ? PlayerRole.Midfielder : PlayerRole.Forward,
                 "4-4-2" => index <= 4 ? PlayerRole.Defender : index <= 8 ? PlayerRole.Midfielder : PlayerRole.Forward,
@@ -837,31 +914,80 @@ namespace FC2026.Core
             };
         }
 
-        private static float ShootingFor(PlayerRole role, int index)
+        private static float Attribute01(int value)
         {
-            var baseValue = role switch
-            {
-                PlayerRole.Forward => 0.82f,
-                PlayerRole.Midfielder => 0.66f,
-                PlayerRole.Defender => 0.48f,
-                _ => 0.34f
-            };
-            return Mathf.Clamp01(baseValue + ((index * 13) % 9 - 4) * 0.012f);
+            return Mathf.Clamp01((value - 40f) / 54f);
         }
 
-        private static float PassingFor(PlayerRole role, int index)
+        private static float ShootingFor(WorldPlayer player)
         {
-            var baseValue = role switch
-            {
-                PlayerRole.Forward => 0.72f,
-                PlayerRole.Midfielder => 0.84f,
-                PlayerRole.Defender => 0.7f,
-                _ => 0.55f
-            };
-            return Mathf.Clamp01(baseValue + ((index * 7) % 7 - 3) * 0.012f);
+            return player == null ? 0.6f : Mathf.Lerp(0.32f, 0.95f, Attribute01(player.Shooting));
         }
 
-        private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts, float heightScale, float widthScale, bool user, int attackDirection, PlayerRole role, float shooting, float passing)
+        private static float PassingFor(WorldPlayer player)
+        {
+            return player == null ? 0.6f : Mathf.Lerp(0.32f, 0.95f, Attribute01(player.Passing));
+        }
+
+        private static float SpeedFor(WorldPlayer player)
+        {
+            return player == null ? 0.96f : 0.88f + Attribute01(player.Pace) * 0.26f;
+        }
+
+        private static float HeightScaleFor(WorldPlayer player, int index)
+        {
+            if (player != null)
+                return Mathf.Clamp(player.HeightCm / 182f, 0.88f, 1.18f);
+            return 0.95f + ((index * 7) % 11) * 0.012f;
+        }
+
+        private static float WidthScaleFor(WorldPlayer player, int index)
+        {
+            if (player != null)
+                return Mathf.Clamp(0.9f + Attribute01(player.Physical) * 0.24f, 0.82f, 1.18f);
+            return index is 2 or 3 or 9 ? 1.07f : 0.96f;
+        }
+
+        private static Color ToColor(WorldColor color)
+        {
+            return new Color(color.R, color.G, color.B);
+        }
+
+        private static Color SkinColorFor(int skinTone)
+        {
+            switch (Mathf.Clamp(skinTone, 0, 4))
+            {
+                case 0:
+                    return new Color(0.86f, 0.68f, 0.55f);
+                case 1:
+                    return new Color(0.76f, 0.56f, 0.42f);
+                case 2:
+                    return new Color(0.64f, 0.44f, 0.31f);
+                case 3:
+                    return new Color(0.45f, 0.29f, 0.20f);
+                default:
+                    return new Color(0.32f, 0.20f, 0.14f);
+            }
+        }
+
+        private static Color HairColorFor(int hairColor)
+        {
+            switch (Mathf.Clamp(hairColor, 0, 3))
+            {
+                case 0:
+                    return new Color(0.035f, 0.025f, 0.02f);
+                case 1:
+                    return new Color(0.13f, 0.08f, 0.05f);
+                case 2:
+                    return new Color(0.26f, 0.16f, 0.08f);
+                default:
+                    return new Color(0.62f, 0.48f, 0.24f);
+            }
+        }
+
+        private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts, float heightScale, float widthScale,
+            bool user, int attackDirection, PlayerRole role, float shooting, float passing, float speed,
+            int skinTone, int hairColor, int faceVariant)
         {
             var player = new GameObject(name);
             player.transform.SetParent(transform);
@@ -895,7 +1021,9 @@ namespace FC2026.Core
             lower.GetComponent<Renderer>().material = shorts;
             Destroy(lower.GetComponent<Collider>());
 
-            var skin = CreateMaterial(new Color(0.55f + (name.GetHashCode() & 3) * 0.07f, 0.34f, 0.22f), 0.38f);
+            var resolvedSkinTone = skinTone >= 0 ? skinTone : (name.GetHashCode() & int.MaxValue) % 3;
+            var resolvedHairColor = hairColor >= 0 ? hairColor : (name.GetHashCode() & int.MaxValue) % 4;
+            var skin = CreateMaterial(SkinColorFor(resolvedSkinTone), 0.38f);
             var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             head.name = "Head";
             head.transform.SetParent(player.transform);
@@ -909,15 +1037,16 @@ namespace FC2026.Core
             hair.transform.SetParent(head.transform);
             hair.transform.localPosition = new Vector3(0, 0.34f, -0.02f);
             hair.transform.localScale = new Vector3(1.02f, 0.45f, 1.02f);
-            hair.GetComponent<Renderer>().material = CreateMaterial(new Color(0.035f, 0.025f, 0.02f), 0.52f);
+            hair.GetComponent<Renderer>().material = CreateMaterial(HairColorFor(resolvedHairColor), 0.52f);
             Destroy(hair.GetComponent<Collider>());
 
             var controller = player.AddComponent<FootballPlayerController>();
-            controller.Configure(role, start, attackDirection, shooting, passing);
+            controller.Configure(role, start, attackDirection, shooting, passing,
+                resolvedSkinTone, resolvedHairColor, faceVariant);
             controller.SetUserControlled(user);
 
             var ai = player.AddComponent<SimpleFootballAI>();
-            ai.Configure(start, attackDirection, role, role == PlayerRole.Goalkeeper ? 0.9f : 0.92f + Random.value * 0.16f);
+            ai.Configure(start, attackDirection, role, role == PlayerRole.Goalkeeper ? 0.9f : speed);
             ai.enabled = !user;
 
             playerStarts.Add((player.transform, start));
@@ -1127,23 +1256,11 @@ namespace FC2026.Core
             var save = CareerSaveSystem.Load();
             if (save != null)
             {
-                var opponentClubId = CareerLeagueSystem.GetOpponentClubId(save.managedClubId, save.matchweek);
-                if (!CareerLeagueSystem.ApplyResult(save, save.managedClubId, opponentClubId, homeScore, awayScore))
-                    Debug.LogWarning("FC 2026: could not update the league table for this match.");
-
-                save.played++;
-                if (homeScore > awayScore) save.wins++;
-                else if (homeScore < awayScore) save.losses++;
-                else save.draws++;
-                save.matchweek++;
-                if (save.matchweek > 38)
-                {
-                    save.matchweek = 1;
-                    save.season++;
-                    save.transferBudget += 2500000;
-                    CareerLeagueSystem.ResetStandings(save);
-                }
-                if (!CareerSaveSystem.Save(save))
+                // The managed club always plays the left/home side of this scene,
+                // so homeScore belongs to the user regardless of the fixture venue.
+                if (!CareerLeagueSystem.CompleteMatchweek(save, homeScore, awayScore))
+                    Debug.LogWarning("FC 2026: could not apply this match to the league table.");
+                else if (!CareerSaveSystem.Save(save))
                     Debug.LogWarning("FC 2026: match finished, but career result could not be saved.");
             }
             // The hub and match manager share this root. Preserve it and remove only generated children.
