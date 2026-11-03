@@ -1,0 +1,120 @@
+name: Release Unity 3D Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "Android version name (e.g. 1.0.0). Required for a Play upload."
+        required: false
+        default: ""
+      version_code:
+        description: "Android version code. Must be higher than every previous Play upload."
+        required: false
+        default: ""
+      build_apk:
+        description: "Also build a signed APK next to the AAB."
+        required: false
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: unity-android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-release:
+    name: Signed Android release
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify release secrets
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          FC2026_KEYSTORE_BASE64: ${{ secrets.FC2026_KEYSTORE_BASE64 }}
+          FC2026_KEYSTORE_PASS: ${{ secrets.FC2026_KEYSTORE_PASS }}
+          FC2026_KEY_ALIAS: ${{ secrets.FC2026_KEY_ALIAS }}
+          FC2026_KEY_PASS: ${{ secrets.FC2026_KEY_PASS }}
+        run: |
+          missing=0
+          for name in UNITY_LICENSE FC2026_KEYSTORE_BASE64 FC2026_KEYSTORE_PASS FC2026_KEY_ALIAS FC2026_KEY_PASS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not configured. Release builds cannot be signed without it."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Resolve version
+        id: version
+        run: |
+          version="${{ github.event.inputs.version_name }}"
+          code="${{ github.event.inputs.version_code }}"
+          if [ -z "$version" ] && [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          if [ -z "$version" ]; then
+            version="1.0.0"
+          fi
+          if [ -z "$code" ]; then
+            code="$GITHUB_RUN_NUMBER"
+          fi
+          echo "name=$version" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Building FC 2026 $version ($code)"
+
+      - name: Build signed AAB
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          FC2026_VERSION_NAME: ${{ steps.version.outputs.name }}
+          FC2026_VERSION_CODE: ${{ steps.version.outputs.code }}
+          FC2026_KEYSTORE_BASE64: ${{ secrets.FC2026_KEYSTORE_BASE64 }}
+          FC2026_KEYSTORE_PASS: ${{ secrets.FC2026_KEYSTORE_PASS }}
+          FC2026_KEY_ALIAS: ${{ secrets.FC2026_KEY_ALIAS }}
+          FC2026_KEY_PASS: ${{ secrets.FC2026_KEY_PASS }}
+        with:
+          projectPath: unity/FC2026Unity
+          unityVersion: 6000.3.24f1
+          targetPlatform: Android
+          buildMethod: FC2026.EditorTools.AndroidBuilder.BuildAndroidReleaseAab
+
+      - name: Build signed APK
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_apk }}
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          FC2026_VERSION_NAME: ${{ steps.version.outputs.name }}
+          FC2026_VERSION_CODE: ${{ steps.version.outputs.code }}
+          FC2026_KEYSTORE_BASE64: ${{ secrets.FC2026_KEYSTORE_BASE64 }}
+          FC2026_KEYSTORE_PASS: ${{ secrets.FC2026_KEYSTORE_PASS }}
+          FC2026_KEY_ALIAS: ${{ secrets.FC2026_KEY_ALIAS }}
+          FC2026_KEY_PASS: ${{ secrets.FC2026_KEY_PASS }}
+        with:
+          projectPath: unity/FC2026Unity
+          unityVersion: 6000.3.24f1
+          targetPlatform: Android
+          buildMethod: FC2026.EditorTools.AndroidBuilder.BuildAndroidReleaseApk
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FC2026-Unity-3D-Android-Release-${{ steps.version.outputs.name }}
+          path: |
+            unity/FC2026Unity/Builds/Android/*.aab
+            unity/FC2026Unity/Builds/Android/*.apk
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true

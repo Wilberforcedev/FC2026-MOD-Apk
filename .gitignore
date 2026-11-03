@@ -28,3 +28,9 @@ coverage/
 *.mdb
 *.opendb
 *.VC.db
+
+# Android signing material must never be committed
+*.keystore
+*.jks
+*.p12
+keystore.properties
