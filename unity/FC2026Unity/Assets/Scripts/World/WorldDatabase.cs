@@ -291,6 +291,30 @@ namespace FC2026.World
             return players;
         }
 
+        /// <summary>
+        /// Resolves a player id such as "uga-00-p7" back to its generated squad.
+        /// Player ids are stable for a given world seed, which lets career saves
+        /// store transfers without duplicating the whole world.
+        /// </summary>
+        public static WorldPlayer GetPlayer(string playerId)
+        {
+            if (string.IsNullOrEmpty(playerId))
+                return null;
+
+            var marker = playerId.LastIndexOf("-p", StringComparison.Ordinal);
+            if (marker <= 0)
+                return null;
+            if (!int.TryParse(playerId.Substring(marker + 2), out var index) || index < 0)
+                return null;
+
+            var squad = GetSquad(playerId.Substring(0, marker));
+            if (index >= squad.Length)
+                return null;
+
+            var player = squad[index];
+            return player != null && player.Id == playerId ? player : null;
+        }
+
         public static WorldFixture[] GetFixtures(string leagueId)
         {
             var league = GetLeague(leagueId);

@@ -37,8 +37,12 @@ namespace FC2026.Core
         private float goalBannerUntil;
         private string goalBanner = string.Empty;
         private GUIStyle buttonStyle;
+        private GUIStyle primaryButtonStyle;
+        private GUIStyle flowButtonStyle;
+        private GUIStyle panelStyle;
         private GUIStyle labelSmallStyle;
         private Texture2D joystickDisc;
+        private Texture2D modalBackdrop;
         private float matchElapsed;
         private float nextCommentaryAt = 8f;
         private string commentary = "The referee gets us underway!";
@@ -830,8 +834,10 @@ namespace FC2026.Core
             var homeShorts = CreateMaterial(homeSecondary, 0.35f);
             var awayShorts = CreateMaterial(awaySecondary, 0.35f);
 
-            var homeLineup = BuildLineup(WorldDatabase.GetSquad(homeClub != null ? homeClub.Id : string.Empty));
-            var awayLineup = BuildLineup(WorldDatabase.GetSquad(awayClub != null ? awayClub.Id : string.Empty));
+            var homeLineup = BuildLineup(
+                CareerTransferSystem.GetSquad(careerSave, homeClub != null ? homeClub.Id : string.Empty));
+            var awayLineup = BuildLineup(
+                CareerTransferSystem.GetSquad(careerSave, awayClub != null ? awayClub.Id : string.Empty));
 
             for (var i = 0; i < homeFormation.Length; i++)
             {
@@ -1166,18 +1172,15 @@ namespace FC2026.Core
             goalStyle ??= new GUIStyle(scoreStyle)
             {
                 fontSize = Mathf.Clamp(Screen.height / 12, 38, 82),
-                normal = { textColor = new Color(1f, 0.83f, 0.12f) }
+                normal = { textColor = HubTheme.GoldTextColor }
             };
 
-            buttonStyle ??= new GUIStyle(GUI.skin.button)
-            {
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.105f, 62f, 88f) / 6f), 10, 16),
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = Color.white },
-                hover = { textColor = Color.white },
-                active = { textColor = Color.white }
-            };
+            var hudButtonFontSize = Mathf.Clamp(
+                Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.105f, 62f, 88f) / 6f), 10, 16);
+            buttonStyle ??= HubTheme.SecondaryButton(hudButtonFontSize);
+            primaryButtonStyle ??= HubTheme.PrimaryButton(hudButtonFontSize);
+            flowButtonStyle ??= HubTheme.PrimaryButton(Mathf.Clamp(Screen.height / 36, 14, 22));
+            panelStyle ??= HubTheme.Panel();
 
             labelSmallStyle ??= new GUIStyle(GUI.skin.label)
             {
@@ -1189,7 +1192,7 @@ namespace FC2026.Core
 
             var boardWidth = Mathf.Clamp(Screen.width * 0.46f, 320f, 640f);
             var boardRect = new Rect((Screen.width - boardWidth) * 0.5f, 10f, boardWidth, 84f);
-            GUI.Box(boardRect, string.Empty);
+            GUI.Box(boardRect, string.Empty, panelStyle);
             GUI.Label(new Rect(boardRect.x, boardRect.y + 2f, boardRect.width, 20f),
                 $"{matchLabel}   •   {homeTeamName.ToUpperInvariant()}   •   {awayTeamName.ToUpperInvariant()}", labelSmallStyle);
             GUI.Label(new Rect(boardRect.x, boardRect.y + 19f, boardRect.width, 38f), $"{homeScore}  —  {awayScore}", scoreStyle);
@@ -1202,7 +1205,10 @@ namespace FC2026.Core
                 labelSmallStyle);
 
             if (Application.isMobilePlatform)
-                DrawMobileControls();
+            {
+                if (!halfTimePending && !matchFinished)
+                    DrawMobileControls();
+            }
             else
                 GUI.Label(new Rect(18f, Screen.height - 48f, Screen.width - 36f, 36f),
                     "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch", helpStyle);
@@ -1210,7 +1216,7 @@ namespace FC2026.Core
             if (Time.time < goalBannerUntil)
                 GUI.Label(new Rect(0, Screen.height * 0.33f, Screen.width, 100f), goalBanner, goalStyle);
 
-            commentaryStyle ??= new GUIStyle(GUI.skin.box)
+            commentaryStyle ??= new GUIStyle(GUI.skin.label)
             {
                 alignment = TextAnchor.MiddleCenter,
                 fontSize = Mathf.Clamp(Screen.height / 48, 14, 24),
@@ -1218,18 +1224,26 @@ namespace FC2026.Core
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = Color.white }
             };
-            GUI.Box(new Rect(Screen.width * 0.12f, 100f, Screen.width * 0.76f, 42f), commentary, commentaryStyle);
+            var commentaryRect = new Rect(Screen.width * 0.12f, 100f, Screen.width * 0.76f, 42f);
+            GUI.Box(commentaryRect, string.Empty, panelStyle);
+            GUI.Label(commentaryRect, commentary, commentaryStyle);
+
+            if (halfTimePending || matchFinished)
+            {
+                modalBackdrop ??= HubTheme.SolidTexture(new Color(0.02f, 0.035f, 0.05f, 0.62f));
+                GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), modalBackdrop);
+            }
 
             if (halfTimePending)
             {
                 fullTimeStyle ??= CreatePanelStyle();
                 var panel = new Rect(Screen.width * 0.2f, Screen.height * 0.3f, Screen.width * 0.6f, Screen.height * 0.36f);
-                GUI.Box(panel, string.Empty);
+                GUI.Box(panel, string.Empty, panelStyle);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 20f, panel.width - 24f, 56f), "HALF TIME", fullTimeStyle);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 84f, panel.width - 24f, 52f),
                     $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", scoreStyle);
                 if (GUI.Button(new Rect(panel.x + panel.width * 0.16f, panel.y + panel.height - 76f,
-                    panel.width * 0.68f, 54f), "START SECOND HALF", buttonStyle))
+                    panel.width * 0.68f, 54f), "START SECOND HALF", flowButtonStyle))
                     BeginSecondHalf();
             }
 
@@ -1237,7 +1251,7 @@ namespace FC2026.Core
             {
                 fullTimeStyle ??= CreatePanelStyle();
                 var panel = new Rect(Screen.width * 0.18f, Screen.height * 0.28f, Screen.width * 0.64f, Screen.height * 0.42f);
-                GUI.Box(panel, string.Empty);
+                GUI.Box(panel, string.Empty, panelStyle);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 22f, panel.width - 24f, 62f),
                     cupShootoutPending ? "PENALTIES" : "FULL TIME", fullTimeStyle);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 92f, panel.width - 24f, 58f),
@@ -1247,7 +1261,7 @@ namespace FC2026.Core
                         $"SHOOTOUT  {cupShootout.UserScore} — {cupShootout.OpponentScore}  •  {(cupShootout.UserWon ? homeTeamName + " ADVANCE" : awayTeamName + " ADVANCE")}",
                         labelSmallStyle);
                 if (GUI.Button(new Rect(panel.x + panel.width * 0.15f, panel.y + panel.height - 82f,
-                    panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", buttonStyle))
+                    panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", flowButtonStyle))
                     CompleteCareerMatch();
             }
         }
@@ -1368,7 +1382,7 @@ namespace FC2026.Core
                 right - actionSize - column * (actionSize + gap),
                 bottom - actionSize - row * (actionSize + gap), actionSize, actionSize);
 
-            if (GUI.Button(ActionRect(0, 0), "SHOOT", buttonStyle))
+            if (GUI.Button(ActionRect(0, 0), "SHOOT", primaryButtonStyle))
                 userPlayer.QueueShot();
             if (GUI.Button(ActionRect(1, 0), "PASS", buttonStyle))
                 userPlayer.QueuePass();

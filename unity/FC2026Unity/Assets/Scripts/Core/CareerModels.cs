@@ -4,7 +4,7 @@ namespace FC2026.Core
 {
     public static class CareerSchema
     {
-        public const int Version = 5;
+        public const int Version = 6;
     }
 
     public enum CareerFixtureKind
@@ -49,6 +49,27 @@ namespace FC2026.Core
     }
 
     /// <summary>
+    /// One completed transfer. Only the most recent move per player is kept, so
+    /// squads can be rebuilt by applying these moves to the generated world.
+    /// An empty club id means the player is a free agent.
+    /// </summary>
+    [Serializable]
+    public sealed class CareerPlayerMove
+    {
+        public string playerId = string.Empty;
+        public string clubId = string.Empty;
+        public int season;
+        public int fee;
+    }
+
+    [Serializable]
+    public sealed class CareerContract
+    {
+        public string playerId = string.Empty;
+        public int expirySeason;
+    }
+
+    /// <summary>
     /// Data-only career snapshot. Keep this independent from Unity so the world
     /// and league rules can be compiled and tested outside the editor.
     /// </summary>
@@ -80,6 +101,11 @@ namespace FC2026.Core
         public int[] cupUserPenalties = new int[4];
         public int[] cupOpponentPenalties = new int[4];
         public string cupChampionId = string.Empty;
+
+        // Transfers and contracts. Moves are stored newest-last and compacted
+        // to one entry per player; contracts only cover the managed squad.
+        public CareerPlayerMove[] playerMoves = Array.Empty<CareerPlayerMove>();
+        public CareerContract[] contracts = Array.Empty<CareerContract>();
 
         public string[] honours = Array.Empty<string>();
         public string lastSeasonSummary = string.Empty;

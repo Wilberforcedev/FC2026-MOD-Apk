@@ -81,6 +81,7 @@ namespace FC2026.Core
         {
             PlayerPrefs.DeleteKey(SaveKey);
             PlayerPrefs.Save();
+            CareerTransferSystem.Invalidate();
         }
 
         private static void Migrate(CareerSaveData data)
@@ -104,10 +105,14 @@ namespace FC2026.Core
                 var clubs = WorldDatabase.GetLeagueClubs(data.leagueId);
                 if (clubs.Length > 0)
                     data.managedClubId = clubs[legacyIndex >= 0 && legacyIndex < clubs.Length ? legacyIndex : 0].Id;
+
+                // Rebuild contracts against the remapped club.
+                Normalize(data);
                 return;
             }
 
-            // v4 raised the cup state; Normalize fills the new fields.
+            // v4 added the cup, v6 added transfers and contracts. Normalize
+            // fills the new fields and generates default contract end dates.
             Normalize(data);
         }
 
@@ -125,6 +130,7 @@ namespace FC2026.Core
             data.tacticalStyle = CareerFormationSystem.NormalizeTacticalStyle(data.tacticalStyle);
             CareerLeagueSystem.EnsureStandings(data);
             CareerCupSystem.Normalize(data);
+            CareerTransferSystem.Normalize(data);
         }
 
         private static bool StandingIsValid(CareerClubStanding standing, string leagueId)
@@ -162,7 +168,8 @@ namespace FC2026.Core
                 || data.standings.Length != WorldDatabase.ClubsPerLeague
                 || !CareerLeagueSystem.IsClubInLeague(data.leagueId, data.managedClubId)
                 || data.standings.Any(item => !StandingIsValid(item, data.leagueId))
-                || !CupDataIsValid(data))
+                || !CupDataIsValid(data)
+                || !CareerTransferSystem.DataIsValid(data))
             {
                 return false;
             }

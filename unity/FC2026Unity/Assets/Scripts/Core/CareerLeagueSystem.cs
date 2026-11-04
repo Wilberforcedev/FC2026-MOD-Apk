@@ -310,6 +310,8 @@ namespace FC2026.Core
                 : cupChampionId == save.managedClubId ? "cup winners" : "cup eliminated";
             save.lastSeasonSummary = $"Season {save.season}: league {PositionLabel(position, ranked.Length)}, {cupResult}.";
 
+            CareerTransferSystem.ProcessSeasonChange(save);
+
             save.season++;
             save.matchweek = 1;
             save.transferBudget += SeasonBudgetReward;
