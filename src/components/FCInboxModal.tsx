@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   X,
   Mail,
@@ -70,11 +70,11 @@ export const FCInboxModal: React.FC<FCInboxModalProps> = ({
   onUpdateCareer,
   onClose,
 }) => {
-  // Map 'social' to 'news' if user opened to view season news feed
-  const [activeTab, setActiveTab] = useState<'news' | 'inbox' | 'social'>(() => {
-    if (initialTab === 'social' || initialTab === 'news') return 'news';
-    return 'inbox';
-  });
+  const [activeTab, setActiveTab] = useState<'news' | 'inbox' | 'social'>(initialTab);
+
+  useEffect(() => {
+    if (isOpen) setActiveTab(initialTab);
+  }, [isOpen, initialTab]);
 
   // News Filtering & Selection state
   const [selectedNewsId, setSelectedNewsId] = useState<string>('');
