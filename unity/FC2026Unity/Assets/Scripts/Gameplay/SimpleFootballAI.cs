@@ -207,7 +207,13 @@ namespace FC2026.Gameplay
             {
                 var mark = NearestOpponent(anchor, out var markDistance);
                 if (mark != null && markDistance < 11f)
-                    target = Vector3.Lerp(anchor, Flat(mark.transform.position), 0.45f);
+                {
+                    // Stay between the opponent and our own goal instead of
+                    // running directly toward the opponent and opening space behind.
+                    var goalSideMark = Flat(mark.transform.position) +
+                                       new Vector3(0f, 0f, -attackDirection * 2.2f);
+                    target = Vector3.Lerp(target, goalSideMark, 0.34f);
+                }
             }
 
             target.z = Mathf.Clamp(target.z, -49f, 49f);
