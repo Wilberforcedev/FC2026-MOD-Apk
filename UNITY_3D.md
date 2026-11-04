@@ -1,12 +1,12 @@
 # FC 2026 — Unity 3D Android Version
 
-The repository now contains a separate true-3D Unity version at:
+The active football match build is the true-3D Unity version at:
 
 ```text
 unity/FC2026Unity
 ```
 
-The existing React/Canvas game remains in the repository as a reference while systems are migrated into Unity.
+The React/Canvas browser prototype and its Capacitor APK route have been retired. Unity is now the gameplay implementation.
 
 ## Unity version
 
@@ -220,4 +220,4 @@ The Unity version will progressively take over these systems from the existing p
 9. URP mobile rendering profiles and Android optimization
 10. signed release APK/AAB — build scripts and CI done; on-device QA remains
 
-The React version should not be deleted until its career/tournament/player data has been migrated and validated in Unity.
+The React/Canvas browser prototype has been retired. Unity 3D is the active match build; keep retained career and team systems in the Unity project.
