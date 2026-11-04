@@ -136,25 +136,38 @@ namespace FC2026.Gameplay
             if (actionTimer > 0f)
                 return;
 
-            var pressured = opponentDistance < 2.7f;
-            if (distanceToGoal < 23f && (pressured || Random.value < 0.5f))
+            var pressured = opponentDistance < 3.2f;
+            var clearShootingLane = opponentDistance > 2.4f;
+            var closeRange = distanceToGoal < 18f;
+            var longRangeOpportunity = distanceToGoal < 27f && opponentDistance > 5.5f;
+            var shotChance = Mathf.Lerp(0.28f, 0.72f, controller.ShootingStat);
+            var passPreference = Mathf.Lerp(0.62f, 0.82f, controller.PassingStat);
+
+            // When a defender is close, prefer releasing the ball instead of
+            // taking a rushed shot. Passing skill influences that choice.
+            if (pressured && Random.value < passPreference)
             {
-                actionTimer = Random.Range(0.45f, 0.85f);
+                actionTimer = Random.Range(0.35f, 0.65f);
+                if (controller.AttemptPass(Random.value < 0.25f))
+                    return;
+            }
+
+            // Take routine close chances, but only attempt longer shots when
+            // there is room and the player's shooting skill supports it.
+            if (clearShootingLane &&
+                (closeRange || (longRangeOpportunity && Random.value < shotChance)))
+            {
+                actionTimer = Random.Range(0.45f, 0.8f);
                 if (controller.AttemptShot(false, Random.value < 0.22f))
                     return;
             }
 
-            if (pressured || distanceToGoal > 36f || Random.value < 0.4f)
+            var shouldPass = pressured || distanceToGoal > 34f ||
+                             Random.value < Mathf.Lerp(0.22f, 0.42f, controller.PassingStat);
+            if (shouldPass)
             {
-                actionTimer = Random.Range(0.4f, 0.8f);
+                actionTimer = Random.Range(0.4f, 0.75f);
                 if (controller.AttemptPass(Random.value < 0.24f))
-                    return;
-            }
-
-            if (distanceToGoal < 31f)
-            {
-                actionTimer = Random.Range(0.5f, 0.95f);
-                if (controller.AttemptShot(false, Random.value < 0.3f))
                     return;
             }
         }
@@ -194,7 +207,13 @@ namespace FC2026.Gameplay
             {
                 var mark = NearestOpponent(anchor, out var markDistance);
                 if (mark != null && markDistance < 11f)
-                    target = Vector3.Lerp(anchor, Flat(mark.transform.position), 0.45f);
+                {
+                    // Stay between the opponent and our own goal instead of
+                    // running directly toward the opponent and opening space behind.
+                    var goalSideMark = Flat(mark.transform.position) +
+                                       new Vector3(0f, 0f, -attackDirection * 2.2f);
+                    target = Vector3.Lerp(target, goalSideMark, 0.34f);
+                }
             }
 
             target.z = Mathf.Clamp(target.z, -49f, 49f);
