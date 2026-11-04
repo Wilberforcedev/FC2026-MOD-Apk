@@ -106,10 +106,14 @@ namespace FC2026.Gameplay
             if (desired.sqrMagnitude > maxDribbleSpeed * maxDribbleSpeed)
                 desired = desired.normalized * maxDribbleSpeed;
 
+            var currentHorizontal = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
+            var turnResponse = ownerVelocity.magnitude > 7f ? 22f : 32f;
+            var controlledHorizontal = Vector3.MoveTowards(
+                currentHorizontal, desired, turnResponse * Time.fixedDeltaTime);
             var vertical = Mathf.Min(body.linearVelocity.y, 0f);
-            body.linearVelocity = new Vector3(desired.x, vertical, desired.z);
+            body.linearVelocity = new Vector3(controlledHorizontal.x, vertical, controlledHorizontal.z);
 
-            var travel = new Vector3(desired.x, 0f, desired.z);
+            var travel = controlledHorizontal;
             body.angularVelocity = travel.sqrMagnitude > 0.04f
                 ? Vector3.Cross(Vector3.up, travel) * (3.2f / 0.11f) * 0.35f
                 : Vector3.zero;
