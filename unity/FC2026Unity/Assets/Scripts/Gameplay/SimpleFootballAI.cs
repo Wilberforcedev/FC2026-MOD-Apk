@@ -109,6 +109,13 @@ namespace FC2026.Gameplay
                 return;
             }
 
+            if (owner != null && owner.TeamDirection != attackDirection &&
+                role != PlayerRole.Defender && IsSecondClosestToBall(ballFlat))
+            {
+                CoverPassingLane(ballFlat);
+                return;
+            }
+
             UpdateDefensiveShape(ballFlat);
         }
 
@@ -182,9 +189,37 @@ namespace FC2026.Gameplay
                 _ => 0f
             };
 
-            var target = anchor + new Vector3(0f, 0f, attackDirection * push);
-            target.x += Mathf.Sin(Time.time * 0.42f + decisionOffset) * (role == PlayerRole.Midfielder ? 2.6f : 1.4f);
-            target.x = Mathf.Lerp(target.x, ballFlat.x, 0.2f);
+            var ballProgress = Mathf.InverseLerp(-48f, 38f, ballFlat.z * attackDirection);
+            var runDepth = Mathf.Lerp(0.65f, 1.05f, ballProgress);
+            var target = anchor + new Vector3(0f, 0f, attackDirection * push * runDepth);
+
+            // Keep teammates in useful lanes: wide players hold the far side,
+            // while central attackers can drift into the channel away from the ball.
+            var ballSide = Mathf.Clamp(ballFlat.x / 24f, -1f, 1f);
+            var homeSide = Mathf.Abs(anchor.x) > 7f
+                ? Mathf.Sign(anchor.x)
+                : Mathf.Abs(ballSide) > 0.1f
+                    ? -Mathf.Sign(ballSide)
+                    : decisionOffset < 5f ? -1f : 1f;
+            var laneWidth = role switch
+            {
+                PlayerRole.Forward => 2f,
+                PlayerRole.Midfielder => 3.8f,
+                PlayerRole.Defender => 1.4f,
+                _ => 0f
+            };
+            var laneShift = homeSide * Mathf.Abs(ballSide) * laneWidth;
+            var ballSupport = role == PlayerRole.Midfielder ? 0.14f : 0.08f;
+            target.x = Mathf.Lerp(anchor.x + laneShift, ballFlat.x, ballSupport);
+            target.x += Mathf.Sin(Time.time * 0.42f + decisionOffset) *
+                        (role == PlayerRole.Midfielder ? 1.8f : 1.2f);
+
+            if (role == PlayerRole.Forward)
+                target.z = Mathf.Lerp(target.z, ballFlat.z + attackDirection * 8f, 0.28f);
+            else if (role == PlayerRole.Midfielder)
+                target.z = Mathf.Lerp(target.z, ballFlat.z + attackDirection * 3.5f, 0.12f);
+
+            target.x = Mathf.Clamp(target.x, -27f, 27f);
             target.z = Mathf.Clamp(target.z, -48f, 48f);
 
             // Leave room for the ball carrier and make a supporting angle.
@@ -324,6 +359,41 @@ namespace FC2026.Gameplay
                     return false;
             }
             return true;
+        }
+
+        private bool IsSecondClosestToBall(Vector3 ballFlat)
+        {
+            var myDistance = (Flat(transform.position) - ballFlat).sqrMagnitude;
+            var nearestDistance = float.MaxValue;
+            var secondNearestDistance = float.MaxValue;
+
+            foreach (var mate in FootballPlayerController.All)
+            {
+                if (mate == null || mate.TeamDirection != attackDirection || mate.IsGoalkeeper)
+                    continue;
+
+                var distance = (Flat(mate.transform.position) - ballFlat).sqrMagnitude;
+                if (distance < nearestDistance)
+                {
+                    secondNearestDistance = nearestDistance;
+                    nearestDistance = distance;
+                }
+                else if (distance < secondNearestDistance)
+                {
+                    secondNearestDistance = distance;
+                }
+            }
+
+            return Mathf.Abs(myDistance - secondNearestDistance) < 0.08f;
+        }
+
+        private void CoverPassingLane(Vector3 ballFlat)
+        {
+            var target = new Vector3(
+                Mathf.Clamp(Mathf.Lerp(ballFlat.x, 0f, 0.35f), -18f, 18f),
+                0f,
+                Mathf.Clamp(ballFlat.z - attackDirection * 4.5f, -49f, 49f));
+            MoveTowards(AvoidCrowding(target), moveSpeed * 0.9f, 18f);
         }
 
         private FootballPlayerController NearestOpponent(Vector3 position, out float distance)
