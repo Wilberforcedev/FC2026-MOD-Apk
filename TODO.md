@@ -1,7 +1,16 @@
-# FC 2026 UI outcomes
+# Unity gameplay improvement backlog
 
-## Kit Room route
+## Match feel
 
-- [x] Add a functional FC26-inspired Kit Room screen that reuses existing team and kit data, shows a large selected-item preview, renders collectible kit cards, supports search/filtering, cycles previous/next items, toggles a rotated preview, activates owned items, reports locked-item feedback, and preserves the shared cyan-focus/controller-rail language.
-- [x] Add a home-hub entry point and route manifest entry without removing existing game modes.
-- [ ] Validate against a live mobile viewport after the first preview review.
+- [x] Make CPU attackers consider nearby pressure, open shooting space, and player passing/shooting skill.
+- [x] Keep defending players closer to a goal-side position while preserving their starting shape.
+- [x] Add acceleration to carried-ball movement so the ball responds less like it is attached to the player.
+- [ ] Tune the new decisions and ball response through in-game play on desktop and Android.
+- [ ] Improve off-ball support runs and create more varied attacking width.
+- [ ] Improve goalkeeper positioning and shot-reaction decisions.
+- [ ] Add contextual player movement and animation for turning, sprinting, passing, and shooting.
+
+## Mobile quality
+
+- [ ] Profile the active Unity scene on a mid-range Android device.
+- [ ] Tune rendering and input responsiveness after the first on-device review.
