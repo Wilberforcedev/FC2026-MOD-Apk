@@ -96,13 +96,13 @@ namespace FC2026.Gameplay
 
             // Keep the ball glued to the ball carrier's leading foot. The spring
             // lets it roll slightly ahead when sprinting instead of teleporting.
+            var ownerVelocity = owner.Body != null ? owner.Body.linearVelocity : Vector3.zero;
             var ownerSpeed = new Vector2(ownerVelocity.x, ownerVelocity.z).magnitude;
             var stride = Mathf.Lerp(DribbleDistance, 1.02f, Mathf.InverseLerp(0f, 9.5f, ownerSpeed));
             var target = owner.transform.position + owner.transform.forward * stride;
             target.y = GroundY;
             var toTarget = target - transform.position;
             toTarget.y = 0f;
-            var ownerVelocity = owner.Body != null ? owner.Body.linearVelocity : Vector3.zero;
             var desired = new Vector3(ownerVelocity.x, 0f, ownerVelocity.z) + toTarget * 5.8f;
             var maxDribbleSpeed = Mathf.Max(8.2f, ownerSpeed + 1.7f);
             if (desired.sqrMagnitude > maxDribbleSpeed * maxDribbleSpeed)
