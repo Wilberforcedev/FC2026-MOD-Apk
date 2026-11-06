@@ -1,7 +1,5 @@
-Warning: truncated output (original token count: 12499)
-Total output lines: 1025
-
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using FC2026.World;
 using UnityEngine;
@@ -40,6 +38,7 @@ namespace FC2026.Core
         private GUIStyle dashboardTitleStyle;
         private GUIStyle dashboardBodyStyle;
         private GUIStyle dashboardActionStyle;
+        private GUIStyle dashboardBadgeStyle;
         private GUIStyle dashboardTopBarStyle;
         private GUIStyle tileCyanStyle;
         private GUIStyle tileBlueStyle;
@@ -51,8 +50,13 @@ namespace FC2026.Core
         private Texture2D tableRowTexture;
         private Texture2D tableAltRowTexture;
         private Texture2D tableHighlightTexture;
+        private readonly Dictionary<string, Texture2D> clubCrests = new Dictionary<string, Texture2D>();
+        private int styleScreenWidth = -1;
+        private int styleScreenHeight = -1;
         private string notice = "Browse the world and choose a club to begin.";
         private bool showLeagueTable;
+        private bool showCupCampaign;
+        private bool showHonours;
         private bool showSquadManagement;
         private bool showTransfers;
         private bool transfersShowSquad;
@@ -70,12 +74,26 @@ namespace FC2026.Core
         private Vector2 countryScroll;
         private Vector2 clubScroll;
         private Vector2 leagueTableScroll;
+        private Vector2 honoursScroll;
 
         private void Awake()
         {
+            Screen.orientation = ScreenOrientation.LandscapeLeft;
+            Screen.autorotateToPortrait = false;
+            Screen.autorotateToPortraitUpsideDown = false;
+            Screen.autorotateToLandscapeLeft = true;
+            Screen.autorotateToLandscapeRight = true;
             save = CareerSaveSystem.Load();
             if (save != null)
                 notice = "Career loaded. Resume or browse for a new club.";
+        }
+
+        private void OnDestroy()
+        {
+            foreach (var crest in clubCrests.Values)
+                if (crest != null)
+                    Destroy(crest);
+            clubCrests.Clear();
         }
 
         private void OnGUI()
@@ -85,10 +103,12 @@ namespace FC2026.Core
 
             InitStyles();
 
-            var panelWidth = Mathf.Min(Screen.width - 24f, 1360f);
-            var panelHeight = Mathf.Min(Screen.height - 24f, 820f);
-            var panel = new Rect((Screen.width - panelWidth) / 2f,
-                (Screen.height - panelHeight) / 2f, panelWidth, panelHeight);
+            var safeArea = Screen.safeArea;
+            var safeRect = new Rect(safeArea.x, Screen.height - safeArea.yMax, safeArea.width, safeArea.height);
+            var panelWidth = Mathf.Min(safeRect.width - 24f, 1360f);
+            var panelHeight = Mathf.Min(safeRect.height - 24f, 820f);
+            var panel = new Rect(safeRect.center.x - panelWidth * 0.5f,
+                safeRect.center.y - panelHeight * 0.5f, panelWidth, panelHeight);
             GUI.Box(panel, string.Empty, panelStyle);
 
             if (confirmNewCareer)
@@ -101,6 +121,16 @@ namespace FC2026.Core
                 DrawLeagueTable(panel);
                 return;
             }
+            if (showCupCampaign)
+            {
+                DrawCupCampaign(panel);
+                return;
+            }
+            if (showHonours)
+            {
+                DrawHonours(panel);
+                return;
+            }
             if (showSquadManagement)
             {
                 DrawSquadManagement(panel);
@@ -111,17 +141,33 @@ namespace FC2026.Core
                 DrawTransfers(panel);
                 return;
             }
-            if (showClubBrowser || save == null)
+            if (showClubBrowser)
             {
                 DrawClubBrowser(panel);
                 return;
             }
 
-            DrawDashboardTiles(panel);
+            if (save == null)
+                DrawWelcomeDashboard(panel);
+            else
+                DrawDashboardTiles(panel);
         }
 
         private void InitStyles()
         {
+            if (styleScreenWidth != Screen.width || styleScreenHeight != Screen.height)
+            {
+                styleScreenWidth = Screen.width;
+                styleScreenHeight = Screen.height;
+                titleStyle = headingStyle = bodyStyle = smallStyle = null;
+                buttonStyle = primaryButtonStyle = accentButtonStyle = dangerButtonStyle = null;
+                highlightStyle = rowStyle = selectedRowStyle = panelStyle = null;
+                tableHeaderStyle = tableHeaderNameStyle = tableNameStyle = null;
+                dashboardEyebrowStyle = dashboardTitleStyle = dashboardBodyStyle = null;
+                dashboardActionStyle = dashboardBadgeStyle = dashboardTopBarStyle = null;
+                tileCyanStyle = tileBlueStyle = tileRedStyle = null;
+                tileGoldStyle = tileGreenStyle = tileSlateStyle = null;
+            }
             titleStyle ??= new GUIStyle(GUI.skin.label)
             {
                 fontSize = Mathf.Clamp(Screen.height / 18, 26, 50),
@@ -211,6 +257,13 @@ namespace FC2026.Core
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = new Color(0.7f, 0.95f, 1f) }
             };
+            dashboardBadgeStyle ??= new GUIStyle(smallStyle)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = Mathf.Clamp(Screen.height / 58, 12, 20),
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = Color.white }
+            };
             dashboardTopBarStyle ??= HubTheme.BuildButton(12,
                 new Color32(0x10, 0x17, 0x21, 0xFF),
                 new Color32(0x10, 0x17, 0x21, 0xFF),
@@ -232,6 +285,43 @@ namespace FC2026.Core
             style.padding = new RectOffset(14, 14, 12, 10);
             style.wordWrap = true;
             return style;
+        }
+
+        private void DrawWelcomeDashboard(Rect panel)
+        {
+            var headerHeight = Mathf.Clamp(panel.height * 0.1f, 42f, 64f);
+            var header = new Rect(panel.x + 10f, panel.y + 10f, panel.width - 20f, headerHeight);
+            GUI.Box(header, GUIContent.none, dashboardTopBarStyle);
+            GUI.Label(new Rect(header.x + 14f, header.y + 1f, header.width * 0.27f, header.height - 2f),
+                "FC 2026", titleStyle);
+            GUI.Label(new Rect(header.x + header.width * 0.3f, header.y + 3f, header.width * 0.62f,
+                header.height - 6f), "GLOBAL FOOTBALL  /  CAREER MODE", dashboardEyebrowStyle);
+
+            var area = new Rect(panel.x + 14f, header.yMax + 12f, panel.width - 28f,
+                panel.yMax - header.yMax - 26f);
+            var gap = Mathf.Clamp(panel.width * 0.01f, 7f, 14f);
+            var heroWidth = area.width * 0.58f;
+            var sideWidth = area.width - heroWidth - gap;
+            var browse = new Action(OpenWorldBrowser);
+            DrawDashboardTile(new Rect(area.x, area.y, heroWidth, area.height), "YOUR NEXT SEASON",
+                "Choose your club", "Pick a country and build a team. Your league, transfers and cup campaign begin when you take charge.",
+                "START CAREER  ›", tileCyanStyle, new Color(0.15f, 0.88f, 0.98f), browse);
+            var sideGap = gap;
+            var sideHeight = (area.height - sideGap) * 0.5f;
+            DrawDashboardTile(new Rect(area.x + heroWidth + gap, area.y, sideWidth, sideHeight),
+                "WORLD LEAGUES", "96 countries", "1,536 clubs across six confederations.",
+                "BROWSE WORLD  ›", tileBlueStyle, new Color(0.35f, 0.72f, 1f), browse);
+            DrawDashboardTile(new Rect(area.x + heroWidth + gap, area.y + sideHeight + sideGap,
+                sideWidth, sideHeight), "MATCHDAY", "Build your squad", "Your 3D match awaits after you choose a club.",
+                "CAREER STARTS HERE", tileSlateStyle, new Color(0.7f, 0.78f, 0.86f), null);
+        }
+
+        private void OpenWorldBrowser()
+        {
+            browserCountryId = string.Empty;
+            countryScroll = Vector2.zero;
+            clubScroll = Vector2.zero;
+            showClubBrowser = true;
         }
 
         private void DrawDashboardTiles(Rect panel)
@@ -283,8 +373,8 @@ namespace FC2026.Core
                 if (GetComponent<MatchManager3D>() == null)
                     gameObject.AddComponent<MatchManager3D>();
             });
-            var browse = new Action(() => { browserCountryId = string.Empty; showClubBrowser = true; });
-            var compact = panel.height < 470f;
+            var browse = new Action(OpenWorldBrowser);
+            var compact = panel.height < 470f || panel.width < 860f;
 
             if (compact)
             {
@@ -293,10 +383,10 @@ namespace FC2026.Core
                 var heroW = area.width * 0.62f;
                 DrawDashboardTile(new Rect(area.x, area.y, heroW, heroH), "CAREER  •  SEASON " + save.season.ToString("00"),
                     club.Name, $"{league.Name}  •  WEEK {save.matchweek}/{WorldDatabase.MatchweeksPerSeason}\nPOSITION {position}/{table.Length}  •  {(standing == null ? 0 : standing.Points)} PTS",
-                    "PLAY MATCH  ›", tileCyanStyle, new Color(0.15f, 0.88f, 0.98f), play);
+                    "PLAY MATCH  ›", tileCyanStyle, new Color(0.15f, 0.88f, 0.98f), play, club);
                 DrawDashboardTile(new Rect(area.x + heroW + gap, area.y, area.width - heroW - gap, heroH),
                     "NEXT FIXTURE", next, $"{(fixture.UserIsHome ? "HOME" : "AWAY")}  •  {(standing == null ? 0 : standing.played)} PLAYED",
-                    "OPEN FIXTURE  ›", tileBlueStyle, new Color(0.35f, 0.72f, 1f), play);
+                    "PLAY MATCH  ›", tileBlueStyle, new Color(0.35f, 0.72f, 1f), play, opponent);
                 var w = (area.width - gap * 3f) / 4f;
                 var y = area.y + heroH + gap;
                 DrawDashboardTile(new Rect(area.x, y, w, actionH), "TEAM", "SQUAD", save.formationId, "OPEN  ›", tileGreenStyle, new Color(0.36f, 0.92f, 0.54f), () => showSquadManagement = true);
@@ -313,12 +403,13 @@ namespace FC2026.Core
             var small = (area.width - wide - gap * 2f) / 2f;
             DrawDashboardTile(new Rect(area.x, area.y, wide, h1), "CAREER  •  SEASON " + save.season.ToString("00"),
                 club.Name, $"{league.Name}  •  {country?.Name ?? club.CountryId}\nWEEK {save.matchweek}/{WorldDatabase.MatchweeksPerSeason}  •  POSITION {position}/{table.Length}",
-                "CONTINUE CAREER  ›", tileCyanStyle, new Color(0.15f, 0.88f, 0.98f), play);
+                "PLAY NEXT MATCH  ›", tileCyanStyle, new Color(0.15f, 0.88f, 0.98f), play, club);
             DrawDashboardTile(new Rect(area.x + wide + gap, area.y, small, h1), "NEXT FIXTURE", next,
                 opponent == null ? "No upcoming fixture." : $"{(fixture.UserIsHome ? "HOME" : "AWAY")}  •  {(standing == null ? 0 : standing.played)} PLAYED",
-                "PLAY MATCH  ›", tileBlueStyle, new Color(0.35f, 0.72f, 1f), play);
+                "PLAY MATCH  ›", tileBlueStyle, new Color(0.35f, 0.72f, 1f), play, opponent);
             DrawDashboardTile(new Rect(area.x + wide + gap + small + gap, area.y, small, h1), "NATIONAL CUP", cup,
-                "Your cup run and season honours.", "CUP CAMPAIGN", tileRedStyle, new Color(1f, 0.33f, 0.38f), null);
+                "Your cup run and season honours.", "OPEN CUP  ›", tileRedStyle, new Color(1f, 0.33f, 0.38f),
+                () => showCupCampaign = true);
 
             var y2 = area.y + h1 + gap;
             var third = (area.width - gap * 2f) / 3f;
@@ -334,10 +425,14 @@ namespace FC2026.Core
             var y3 = y2 + h2 + gap;
             var foot = (area.width - gap * 3f) / 4f;
             DrawDashboardTile(new Rect(area.x, y3, foot, h3), "MY CLUB", club.Name, country?.Name ?? club.CountryId,
-                "OPEN SQUAD  ›", tileSlateStyle, new Color(0.7f, 0.78f, 0.86f), () => showSquadManagement = true);
+                "OPEN SQUAD  ›", tileSlateStyle, new Color(0.7f, 0.78f, 0.86f), () => showSquadManagement = true, club);
             DrawDashboardTile(new Rect(area.x + foot + gap, y3, foot, h3), "HONOURS", save.honours != null && save.honours.Length > 0 ? save.honours[0] : "Your story starts here",
-                $"{(save.honours == null ? 0 : save.honours.Length)} TROPHIES WON", "SEASON RECORD",
-                tileGoldStyle, new Color(1f, 0.77f, 0.25f), null);
+                $"{(save.honours == null ? 0 : save.honours.Length)} TROPHIES WON", "VIEW RECORD  ›",
+                tileGoldStyle, new Color(1f, 0.77f, 0.25f), () =>
+                {
+                    honoursScroll = Vector2.zero;
+                    showHonours = true;
+                });
             DrawDashboardTile(new Rect(area.x + (foot + gap) * 2f, y3, foot, h3), "WORLD CLUBS", "Choose your challenge",
                 "96 COUNTRIES  •  1,536 CLUBS", "BROWSE WORLD  ›", tileRedStyle, new Color(1f, 0.33f, 0.38f), browse);
             DrawDashboardTile(new Rect(area.x + (foot + gap) * 3f, y3, foot, h3), "SEASON FORM",
@@ -346,7 +441,7 @@ namespace FC2026.Core
         }
 
         private void DrawDashboardTile(Rect rect, string eyebrow, string title, string body,
-            string actionLabel, GUIStyle style, Color accent, Action onClick)
+            string actionLabel, GUIStyle style, Color accent, Action onClick, WorldClub badgeClub = null)
         {
             if (onClick == null)
                 GUI.Box(rect, GUIContent.none, style);
@@ -358,22 +453,356 @@ namespace FC2026.Core
             GUI.color = Color.white;
             var inset = Mathf.Clamp(rect.width * 0.045f, 10f, 22f);
             var labelHeight = Mathf.Clamp(rect.height * 0.2f, 16f, 26f);
+            var badgeSize = badgeClub == null ? 0f : Mathf.Min(76f, rect.height * 0.42f, rect.width * 0.22f);
+            var contentWidth = rect.width - inset * 2f - (badgeSize > 0f ? badgeSize + inset * 0.5f : 0f);
+            if (badgeClub != null && badgeSize > 0f)
+                DrawDashboardBadge(new Rect(rect.xMax - inset - badgeSize, rect.y + inset,
+                    badgeSize, badgeSize), badgeClub);
             if (rect.height < 112f)
             {
                 GUI.Label(new Rect(rect.x + inset, rect.y + inset * 0.65f,
-                    rect.width - inset * 2f, labelHeight), eyebrow, dashboardEyebrowStyle);
+                    contentWidth, labelHeight), eyebrow, dashboardEyebrowStyle);
                 GUI.Label(new Rect(rect.x + inset, rect.y + inset * 0.65f + labelHeight,
-                    rect.width - inset * 2f, Mathf.Max(22f, rect.height - labelHeight - inset)),
+                    contentWidth, Mathf.Max(22f, rect.height - labelHeight - inset)),
                     title, dashboardTitleStyle);
                 return;
             }
-            GUI.Label(new Rect(rect.x + inset, rect.y + inset * 0.7f, rect.width - inset * 2f, labelHeight), eyebrow, dashboardEyebrowStyle);
+            GUI.Label(new Rect(rect.x + inset, rect.y + inset * 0.7f, contentWidth, labelHeight), eyebrow, dashboardEyebrowStyle);
             var titleY = rect.y + inset * 0.7f + labelHeight + 3f;
             var titleHeight = Mathf.Clamp(rect.height * 0.38f, 28f, 66f);
-            GUI.Label(new Rect(rect.x + inset, titleY, rect.width - inset * 2f, titleHeight), title, dashboardTitleStyle);
+            GUI.Label(new Rect(rect.x + inset, titleY, contentWidth, titleHeight), title, dashboardTitleStyle);
             var bodyY = titleY + titleHeight + 1f;
             var actionHeight = Mathf.Clamp(rect.height * 0.22f, 18f, 30f);
-            GUI.Label(new Rect(rect.x + inset, bodyY, rect.widt…2499 tokens truncated…    (squad.Length + 1) * rowHeight + 8f;
+            GUI.Label(new Rect(rect.x + inset, bodyY, contentWidth,
+                Mathf.Max(18f, rect.yMax - bodyY - actionHeight - inset * 0.55f)), body, dashboardBodyStyle);
+            GUI.Label(new Rect(rect.x + inset, rect.yMax - actionHeight - inset * 0.45f,
+                contentWidth, actionHeight), actionLabel, dashboardActionStyle);
+        }
+
+        private void DrawDashboardBadge(Rect rect, WorldClub club)
+        {
+            if (club == null)
+                return;
+
+            if (!clubCrests.TryGetValue(club.Id, out var crest) || crest == null)
+            {
+                if (clubCrests.Count >= 8)
+                {
+                    var oldestId = clubCrests.Keys.First();
+                    Destroy(clubCrests[oldestId]);
+                    clubCrests.Remove(oldestId);
+                }
+                crest = CreateClubCrest(club);
+                clubCrests[club.Id] = crest;
+            }
+
+            GUI.DrawTexture(rect, crest, ScaleMode.StretchToFill, true);
+            GUI.Label(rect, ClubInitials(club.ShortName ?? club.Name), dashboardBadgeStyle);
+        }
+
+        private static Texture2D CreateClubCrest(WorldClub club)
+        {
+            const int size = 80;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "Generated Club Crest " + club.Id,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            var primary = new Color(club.PrimaryColor.R, club.PrimaryColor.G, club.PrimaryColor.B, 1f);
+            var secondary = new Color(club.SecondaryColor.R, club.SecondaryColor.G, club.SecondaryColor.B, 1f);
+            var pixels = new Color[size * size];
+            for (var y = 0; y < size; y++)
+            {
+                var vertical = y / (float)(size - 1);
+                var halfWidth = vertical < 0.5f ? Mathf.Lerp(0.025f, 0.44f, vertical * 2f) : 0.44f;
+                for (var x = 0; x < size; x++)
+                {
+                    var horizontal = Mathf.Abs((x / (float)(size - 1)) - 0.5f);
+                    var index = y * size + x;
+                    if (horizontal > halfWidth)
+                    {
+                        pixels[index] = Color.clear;
+                        continue;
+                    }
+
+                    var edge = horizontal > halfWidth - 0.045f || vertical < 0.035f || vertical > 0.96f;
+                    var stripe = horizontal < 0.1f || (horizontal > 0.23f && horizontal < 0.29f);
+                    pixels[index] = edge ? new Color(0.92f, 0.95f, 1f, 1f) : stripe ? secondary : primary;
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            return texture;
+        }
+
+        private static string ClubInitials(string clubName)
+        {
+            if (string.IsNullOrWhiteSpace(clubName))
+                return "FC";
+            var words = clubName.Split(new[] { ' ', '-', '.' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 1)
+                return words[0].Substring(0, Mathf.Min(2, words[0].Length)).ToUpperInvariant();
+            return (words[0][0].ToString() + words[1][0]).ToUpperInvariant();
+        }
+
+        private static string OrdinalSuffix(int value)
+        {
+            if (value % 100 >= 11 && value % 100 <= 13)
+                return "TH";
+            switch (value % 10)
+            {
+                case 1: return "ST";
+                case 2: return "ND";
+                case 3: return "RD";
+                default: return "TH";
+            }
+        }
+
+        private void DrawClubBrowser(Rect panel)
+        {
+            var x = panel.x + 22f;
+            var width = panel.width - 44f;
+            var y = panel.y + 16f;
+
+            GUI.Label(new Rect(x, y, width, 50f), "BROWSE WORLD", headingStyle);
+            y += 50f;
+
+            var country = WorldDatabase.GetCountry(browserCountryId);
+            var league = country == null ? null : WorldDatabase.GetLeagueForCountry(country.Id);
+            var footerHeight = Mathf.Clamp(panel.height * 0.09f, 44f, 60f);
+            var footerY = panel.y + panel.height - footerHeight - 14f;
+
+            if (league == null)
+            {
+                DrawCountryPicker(panel, x, width, ref y, footerY, footerHeight);
+                return;
+            }
+
+            GUI.Label(new Rect(x, y, width, 36f), $"{country.Name}  •  {league.Name}", bodyStyle);
+            y += 42f;
+
+            var clubs = WorldDatabase.GetLeagueClubs(league.Id);
+            var gap = 8f;
+            var columns = 2;
+            var buttonWidth = (width - gap) / columns;
+            var buttonHeight = Mathf.Clamp(panel.height * 0.085f, 42f, 62f);
+            var contentHeight = Mathf.Ceil(clubs.Length / (float)columns) * (buttonHeight + gap);
+            var viewHeight = footerY - y - 8f;
+            clubScroll = GUI.BeginScrollView(new Rect(x, y, width, viewHeight), clubScroll,
+                new Rect(0f, 0f, width - 22f, contentHeight));
+            for (var i = 0; i < clubs.Length; i++)
+            {
+                var column = i % columns;
+                var row = i / columns;
+                var rect = new Rect(column * (buttonWidth + gap), row * (buttonHeight + gap),
+                    buttonWidth, buttonHeight);
+                var label = $"{clubs[i].Name}   ·   STR {clubs[i].Strength}";
+                if (GUI.Button(rect, label, buttonStyle))
+                {
+                    if (save == null)
+                        StartCareer(clubs[i].Id);
+                    else
+                    {
+                        pendingClubId = clubs[i].Id;
+                        confirmNewCareer = true;
+                    }
+                }
+            }
+            GUI.EndScrollView();
+
+            if (save == null)
+            {
+                var half = (width - 8f) * 0.5f;
+                if (GUI.Button(new Rect(x, footerY, half, footerHeight), "COUNTRIES", buttonStyle))
+                {
+                    browserCountryId = string.Empty;
+                    notice = "Choose another country.";
+                }
+                if (GUI.Button(new Rect(x + half + 8f, footerY, half, footerHeight), "HOME", buttonStyle))
+                {
+                    showClubBrowser = false;
+                    browserCountryId = string.Empty;
+                }
+            }
+            else
+            {
+                if (GUI.Button(new Rect(x, footerY, footerHeight * 2.4f, footerHeight), "BACK", buttonStyle))
+                {
+                    browserCountryId = string.Empty;
+                    notice = "Choose another country.";
+                }
+                if (GUI.Button(new Rect(x + footerHeight * 2.6f, footerY,
+                    width - footerHeight * 2.6f, footerHeight), "CANCEL & RESUME CAREER", buttonStyle))
+                {
+                    showClubBrowser = false;
+                    notice = "Returned to your career.";
+                }
+            }
+        }
+
+        private void DrawCountryPicker(Rect panel, float x, float width, ref float y,
+            float footerY, float footerHeight)
+        {
+            var tabGap = 6f;
+            var tabWidth = (width - tabGap * (Confederations.Length - 1)) / Confederations.Length;
+            var tabHeight = Mathf.Clamp(panel.height * 0.065f, 32f, 46f);
+            for (var i = 0; i < Confederations.Length; i++)
+            {
+                var confederation = Confederations[i];
+                var selected = browserConfederation == confederation;
+                var label = (selected ? "* " : string.Empty) + confederation;
+                if (GUI.Button(new Rect(x + i * (tabWidth + tabGap), y, tabWidth, tabHeight), label,
+                    selected ? accentButtonStyle : buttonStyle))
+                {
+                    browserConfederation = confederation;
+                    countryScroll = Vector2.zero;
+                }
+            }
+            y += tabHeight + 10f;
+
+            var countries = WorldDatabase.GetCountries()
+                .Where(item => item.Confederation == browserConfederation)
+                .ToArray();
+            var gap = 8f;
+            var columns = 4;
+            var buttonWidth = (width - gap * (columns - 1)) / columns;
+            var buttonHeight = Mathf.Clamp(panel.height * 0.06f, 32f, 44f);
+            var contentHeight = Mathf.Ceil(countries.Length / (float)columns) * (buttonHeight + gap);
+            var viewHeight = footerY - y - 8f;
+            countryScroll = GUI.BeginScrollView(new Rect(x, y, width, viewHeight), countryScroll,
+                new Rect(0f, 0f, width - 22f, contentHeight));
+            for (var i = 0; i < countries.Length; i++)
+            {
+                var column = i % columns;
+                var row = i / columns;
+                var rect = new Rect(column * (buttonWidth + gap), row * (buttonHeight + gap),
+                    buttonWidth, buttonHeight);
+                if (GUI.Button(rect, countries[i].Name, buttonStyle))
+                {
+                    browserCountryId = countries[i].Id;
+                    clubScroll = Vector2.zero;
+                    notice = "Choose a club from " + countries[i].Name + ".";
+                }
+            }
+            GUI.EndScrollView();
+
+            if (save == null)
+            {
+                var half = (width - 8f) * 0.5f;
+                GUI.Label(new Rect(x, footerY, half, footerHeight), "Top divisions  •  96 countries", smallStyle);
+                if (GUI.Button(new Rect(x + half + 8f, footerY, half, footerHeight), "BACK TO HOME", buttonStyle))
+                    showClubBrowser = false;
+            }
+            else
+            {
+                GUI.Label(new Rect(x, footerY, width * 0.5f, footerHeight),
+                    "Top divisions only  •  96 countries", smallStyle);
+                if (GUI.Button(new Rect(x + width * 0.5f, footerY, width * 0.5f, footerHeight),
+                    "CANCEL & RESUME CAREER", buttonStyle))
+                {
+                    showClubBrowser = false;
+                    notice = "Returned to your career.";
+                }
+            }
+        }
+
+        private void DrawNewCareerConfirmation(Rect panel)
+        {
+            var club = WorldDatabase.GetClub(pendingClubId);
+            if (club == null)
+            {
+                confirmNewCareer = false;
+                return;
+            }
+
+            var x = panel.x + 30f;
+            var width = panel.width - 60f;
+            var y = panel.y + 40f;
+            GUI.Label(new Rect(x, y, width, 50f), "START NEW CAREER?", headingStyle);
+            y += 66f;
+            var league = WorldDatabase.GetLeague(club.LeagueId);
+            var country = league == null ? null : WorldDatabase.GetCountry(league.CountryId);
+            var leagueLabel = league == null
+                ? club.LeagueId
+                : country == null ? league.Name : $"{league.Name}  •  {country.Name}";
+            GUI.Label(new Rect(x, y, width, 96f),
+                $"{club.Name}\n{leagueLabel}\n\nThis replaces your current career save.", bodyStyle);
+            y += 120f;
+
+            var height = Mathf.Clamp(panel.height * 0.1f, 48f, 66f);
+            var gap = 10f;
+            var half = (width - gap) / 2f;
+            if (GUI.Button(new Rect(x, y, half, height), "REPLACE CAREER", dangerButtonStyle))
+            {
+                confirmNewCareer = false;
+                StartCareer(club.Id);
+            }
+            if (GUI.Button(new Rect(x + half + gap, y, half, height), "CANCEL", buttonStyle))
+            {
+                confirmNewCareer = false;
+                pendingClubId = string.Empty;
+            }
+        }
+
+        private void StartCareer(string clubId)
+        {
+            var club = WorldDatabase.GetClub(clubId);
+            if (club == null)
+            {
+                notice = "That club could not be loaded.";
+                return;
+            }
+
+            var previous = save;
+            save = new CareerSaveData
+            {
+                worldSeed = WorldDatabase.DefaultWorldSeed,
+                leagueId = club.LeagueId,
+                managedClubId = club.Id,
+                season = 1,
+                matchweek = 1,
+                transferBudget = InitialBudget,
+                formationId = CareerFormationSystem.FormationIds[0],
+                tacticalStyle = CareerFormationSystem.TacticalStyles[0]
+            };
+
+            if (!CareerSaveSystem.Save(save))
+            {
+                save = previous;
+                notice = "Could not save the new career. Please try again.";
+                return;
+            }
+
+            pendingClubId = string.Empty;
+            showClubBrowser = false;
+            confirmNewCareer = false;
+            showTransfers = false;
+            marketCache = null;
+            pendingTransferPlayerId = string.Empty;
+            pendingTransferAction = string.Empty;
+            selectedTransferPlayerId = string.Empty;
+            notice = "Career started: " + club.Name + ".";
+        }
+
+        private void DrawSquadManagement(Rect panel)
+        {
+            var x = panel.x + 24f;
+            var width = panel.width - 48f;
+            GUI.Label(new Rect(x, panel.y + 10f, width, 42f), "SQUAD & TACTICS", headingStyle);
+
+            var gap = 6f;
+            var footerHeight = Mathf.Clamp(panel.height * 0.09f, 40f, 58f);
+            var footerY = panel.y + panel.height - footerHeight - 12f;
+            var contentTop = panel.y + 56f;
+            var viewHeight = footerY - contentTop - 8f;
+            var innerWidth = width - 22f;
+            var buttonHeight = Mathf.Clamp(panel.height * 0.08f, 34f, 52f);
+            var rowHeight = Mathf.Clamp(panel.height * 0.04f, 20f, 28f);
+            var squad = CareerTransferSystem.GetSquad(save, save.managedClubId);
+            var contentHeight = 24f + buttonHeight + 12f + 24f + buttonHeight + 14f + 24f +
+                                (squad.Length + 1) * rowHeight + 8f;
 
             squadScroll = GUI.BeginScrollView(new Rect(x, contentTop, width, viewHeight), squadScroll,
                 new Rect(0f, 0f, innerWidth, contentHeight));
@@ -751,11 +1180,110 @@ namespace FC2026.Core
                 showLeagueTable = false;
         }
 
+        private void DrawCupCampaign(Rect panel)
+        {
+            var x = panel.x + 24f;
+            var width = panel.width - 48f;
+            var name = CareerCupSystem.CompetitionName(save);
+            GUI.Label(new Rect(x, panel.y + 10f, width, 42f), name.ToUpperInvariant(), headingStyle);
+
+            var played = CareerCupSystem.PlayedRounds(save);
+            var tie = CareerCupSystem.GetUserTie(save);
+            var status = save.cupChampionId == save.managedClubId
+                ? "CHAMPIONS"
+                : save.cupRound > 0
+                    ? $"NEXT: {CareerCupSystem.RoundName(save.cupRound)}  •  MATCHWEEK {CareerCupSystem.WeekForRound(save.cupRound)}"
+                    : played > 0 ? "CUP RUN COMPLETE" : "NOT QUALIFIED FOR THIS SEASON";
+            GUI.Label(new Rect(x, panel.y + 54f, width, 34f), status, bodyStyle);
+
+            var footerHeight = Mathf.Clamp(panel.height * 0.09f, 42f, 60f);
+            var footerY = panel.yMax - footerHeight - 12f;
+            var rowHeight = Mathf.Clamp(panel.height * 0.105f, 48f, 76f);
+            var gap = 8f;
+            for (var round = 1; round <= CareerCupSystem.Rounds; round++)
+            {
+                var index = round - 1;
+                var y = panel.y + 96f + index * (rowHeight + gap);
+                if (y + rowHeight > footerY - 4f)
+                    break;
+
+                var opponentId = save.cupOpponentIds != null && index < save.cupOpponentIds.Length
+                    ? save.cupOpponentIds[index] : string.Empty;
+                var opponent = WorldDatabase.GetClub(opponentId);
+                string detail;
+                if (opponent != null)
+                {
+                    var score = $"{save.cupUserGoals[index]}  -  {save.cupOpponentGoals[index]}";
+                    var pens = save.cupUserPenalties != null && save.cupOpponentPenalties != null &&
+                               index < save.cupUserPenalties.Length && index < save.cupOpponentPenalties.Length &&
+                               (save.cupUserPenalties[index] > 0 || save.cupOpponentPenalties[index] > 0)
+                        ? $"  (PEN {save.cupUserPenalties[index]} - {save.cupOpponentPenalties[index]})" : string.Empty;
+                    detail = $"{opponent.Name}   •   {score}{pens}";
+                }
+                else if (tie != null && tie.Round == round)
+                {
+                    var nextOpponent = WorldDatabase.GetClub(tie.OpponentFor(save.managedClubId));
+                    detail = nextOpponent == null ? "Fixture pending" : "vs " + nextOpponent.Name;
+                }
+                else if (save.cupRound == 0 && played > 0 && round > played)
+                    detail = "Eliminated before this round";
+                else
+                    detail = "Not played yet";
+
+                GUI.Box(new Rect(x, y, width, rowHeight), GUIContent.none,
+                    round <= played ? selectedRowStyle : rowStyle);
+                GUI.Label(new Rect(x + 12f, y, width * 0.3f, rowHeight),
+                    CareerCupSystem.RoundName(round), tableHeaderStyle);
+                GUI.Label(new Rect(x + width * 0.32f, y, width * 0.66f, rowHeight), detail, tableNameStyle);
+            }
+
+            if (GUI.Button(new Rect(x, footerY, width, footerHeight), "BACK TO CAREER", buttonStyle))
+                showCupCampaign = false;
+        }
+
+        private void DrawHonours(Rect panel)
+        {
+            var x = panel.x + 24f;
+            var width = panel.width - 48f;
+            GUI.Label(new Rect(x, panel.y + 10f, width, 42f), "CLUB HONOURS", headingStyle);
+            var honours = save.honours ?? Array.Empty<string>();
+            var footerHeight = Mathf.Clamp(panel.height * 0.09f, 42f, 60f);
+            var footerY = panel.yMax - footerHeight - 12f;
+            var rowHeight = Mathf.Clamp(panel.height * 0.075f, 34f, 54f);
+            var contentHeight = Mathf.Max(rowHeight, honours.Length * (rowHeight + 6f));
+            var viewY = panel.y + 58f;
+            var viewHeight = footerY - viewY - 6f;
+            var innerWidth = width - 22f;
+            honoursScroll = GUI.BeginScrollView(new Rect(x, viewY, width, viewHeight), honoursScroll,
+                new Rect(0f, 0f, innerWidth, contentHeight));
+
+            if (honours.Length == 0)
+                GUI.Label(new Rect(0f, 0f, innerWidth, rowHeight * 2f),
+                    "No trophies recorded yet. Keep playing to build your club history.", bodyStyle);
+            else
+            {
+                for (var i = 0; i < honours.Length; i++)
+                {
+                    var y = i * (rowHeight + 6f);
+                    GUI.DrawTexture(new Rect(0f, y, innerWidth, rowHeight),
+                        i % 2 == 0 ? tableHighlightTexture : tableAltRowTexture);
+                    GUI.Label(new Rect(12f, y, innerWidth - 24f, rowHeight),
+                        $"{i + 1:00}   {honours[i]}", tableNameStyle);
+                }
+            }
+            GUI.EndScrollView();
+
+            if (GUI.Button(new Rect(x, footerY, width, footerHeight), "BACK TO CAREER", buttonStyle))
+                showHonours = false;
+        }
+
         public void RefreshCareer()
         {
             save = CareerSaveSystem.Load();
             showClubBrowser = false;
             showLeagueTable = false;
+            showCupCampaign = false;
+            showHonours = false;
             showSquadManagement = false;
             showTransfers = false;
             confirmNewCareer = false;
