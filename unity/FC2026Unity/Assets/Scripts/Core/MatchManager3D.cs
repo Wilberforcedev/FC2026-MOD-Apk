@@ -866,7 +866,9 @@ namespace FC2026.Core
                     DefendingFor(player),
                     player != null ? player.SkinTone : -1,
                     player != null ? player.HairColor : -1,
-                    player != null ? player.FaceVariant : -1);
+                    player != null ? player.FaceVariant : -1,
+                    player != null ? player.HairStyle : i % 6,
+                    player != null ? player.ShirtNumber : i + 1);
                 if (isUser)
                     userPlayer = created.GetComponent<FootballPlayerController>();
             }
@@ -892,7 +894,9 @@ namespace FC2026.Core
                     DefendingFor(player),
                     player != null ? player.SkinTone : -1,
                     player != null ? player.HairColor : -1,
-                    player != null ? player.FaceVariant : -1);
+                    player != null ? player.FaceVariant : -1,
+                    player != null ? player.HairStyle : i % 6,
+                    player != null ? player.ShirtNumber : i + 1);
             }
         }
 
@@ -1030,7 +1034,7 @@ namespace FC2026.Core
 
         private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts, float heightScale, float widthScale,
             bool user, int attackDirection, PlayerRole role, float shooting, float passing, float speed, float defending,
-            int skinTone, int hairColor, int faceVariant)
+            int skinTone, int hairColor, int faceVariant, int hairStyle, int jerseyNumber)
         {
             var player = new GameObject(name);
             player.transform.SetParent(transform);
@@ -1085,7 +1089,7 @@ namespace FC2026.Core
 
             var controller = player.AddComponent<FootballPlayerController>();
             controller.Configure(role, start, attackDirection, shooting, passing,
-                resolvedSkinTone, resolvedHairColor, faceVariant, defending);
+                resolvedSkinTone, resolvedHairColor, faceVariant, defending, hairStyle, jerseyNumber);
             controller.SetUserControlled(user);
 
             var ai = player.AddComponent<SimpleFootballAI>();
