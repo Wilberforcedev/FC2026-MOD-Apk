@@ -11,6 +11,12 @@ namespace FC2026.Core
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Boot()
         {
+            Screen.orientation = ScreenOrientation.LandscapeLeft;
+            Screen.autorotateToPortrait = false;
+            Screen.autorotateToPortraitUpsideDown = false;
+            Screen.autorotateToLandscapeLeft = true;
+            Screen.autorotateToLandscapeRight = true;
+
             if (Object.FindFirstObjectByType<CareerHubManager>() != null ||
                 Object.FindFirstObjectByType<MatchManager3D>() != null)
                 return;

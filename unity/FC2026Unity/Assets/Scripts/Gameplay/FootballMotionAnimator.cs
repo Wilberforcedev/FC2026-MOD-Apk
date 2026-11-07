@@ -22,8 +22,11 @@ namespace FC2026.Gameplay
         private float cadence = 1f;
         private float strideScale = 1f;
         private float forwardLean = 1f;
+        private float currentTurnLean;
+        private float turnLeanVelocity;
         private int celebrationStyle;
         private bool kickWithLeftFoot;
+        private bool tackleWithLeftFoot;
         private bool goalkeeper;
 
         public bool IsCelebrating => celebrationTimer > 0f;
@@ -64,6 +67,9 @@ namespace FC2026.Gameplay
             var horizontalVelocity = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
             var speed = horizontalVelocity.magnitude;
             var speed01 = Mathf.Clamp01(speed / 9.5f);
+            var localVelocity = transform.InverseTransformDirection(horizontalVelocity);
+            var targetTurnLean = Mathf.Clamp(localVelocity.x / Mathf.Max(2f, speed), -1f, 1f);
+            currentTurnLean = Mathf.SmoothDamp(currentTurnLean, targetTurnLean, ref turnLeanVelocity, 0.1f);
             locomotionPhase += Time.deltaTime * Mathf.Lerp(2.2f, 10.4f, speed01) * cadence;
 
             ApplyBasePose(speed01);
@@ -77,7 +83,7 @@ namespace FC2026.Gameplay
             else if (kickTimer > 0f)
                 ApplyKick();
             else
-                ApplyLocomotion(speed01);
+                ApplyLocomotion(speed01, currentTurnLean);
         }
 
         private void ApplyBasePose(float speed01)
@@ -103,7 +109,7 @@ namespace FC2026.Gameplay
             rig.RightFoot.localRotation = Quaternion.identity;
         }
 
-        private void ApplyLocomotion(float speed01)
+        private void ApplyLocomotion(float speed01, float turnLean)
         {
             if (speed01 < 0.035f)
             {
@@ -122,6 +128,8 @@ namespace FC2026.Gameplay
             rig.RightUpperLeg.localRotation = Quaternion.Euler(opposite * stride, 0f, 0f);
             rig.LeftLowerLeg.localRotation = Quaternion.Euler(knee, 0f, 0f);
             rig.RightLowerLeg.localRotation = Quaternion.Euler(otherKnee, 0f, 0f);
+            rig.LeftFoot.localRotation = Quaternion.Euler(Mathf.Max(0f, cycle) * stride * 0.38f, 0f, 0f);
+            rig.RightFoot.localRotation = Quaternion.Euler(Mathf.Max(0f, opposite) * stride * 0.38f, 0f, 0f);
 
             rig.LeftUpperArm.localRotation = Quaternion.Euler(opposite * arm, 0f, 5f);
             rig.RightUpperArm.localRotation = Quaternion.Euler(cycle * arm, 0f, -5f);
@@ -129,26 +137,31 @@ namespace FC2026.Gameplay
             rig.RightLowerArm.localRotation = Quaternion.Euler(-18f - Mathf.Abs(opposite) * 12f, 0f, 0f);
 
             rig.Hips.localRotation = Quaternion.Euler(0f, cycle * 4.5f * speed01, 0f);
-            rig.Chest.localRotation = Quaternion.Euler(-Mathf.Lerp(2f, 11f, speed01) * forwardLean, -cycle * 4f, 0f);
+            rig.Chest.localRotation = Quaternion.Euler(
+                -Mathf.Lerp(2f, 11f, speed01) * forwardLean,
+                -cycle * 4f + turnLean * 3f,
+                -turnLean * 10f * speed01);
             rig.Head.localRotation = Quaternion.Euler(Mathf.Lerp(1f, 5f, speed01), cycle * 1.5f, 0f);
         }
 
         private void ApplyKick()
         {
             var t = 1f - kickTimer / KickDuration;
-            var windup = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.38f));
-            var strike = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.32f) / 0.42f));
-            var recovery = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.72f) / 0.28f));
-            var angle = Mathf.Lerp(0f, -38f * kickIntensity, windup);
-            angle = Mathf.Lerp(angle, 72f * kickIntensity, strike);
+            // Kick() releases the ball immediately, so this pose begins at contact
+            // and follows through instead of showing a backswing after ball release.
+            var followThrough = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.56f));
+            var recovery = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.7f) / 0.3f));
+            var angle = Mathf.Lerp(38f, 76f, followThrough) * kickIntensity;
             angle = Mathf.Lerp(angle, 6f, recovery);
 
             var kickingUpper = kickWithLeftFoot ? rig.LeftUpperLeg : rig.RightUpperLeg;
             var kickingLower = kickWithLeftFoot ? rig.LeftLowerLeg : rig.RightLowerLeg;
             var supportUpper = kickWithLeftFoot ? rig.RightUpperLeg : rig.LeftUpperLeg;
+            var kickingFoot = kickWithLeftFoot ? rig.LeftFoot : rig.RightFoot;
 
             kickingUpper.localRotation = Quaternion.Euler(angle, 0f, 0f);
-            kickingLower.localRotation = Quaternion.Euler(Mathf.Lerp(35f, -12f, strike), 0f, 0f);
+            kickingLower.localRotation = Quaternion.Euler(Mathf.Lerp(18f, -12f, followThrough), 0f, 0f);
+            kickingFoot.localRotation = Quaternion.Euler(Mathf.Lerp(-18f, 24f, followThrough), 0f, 0f);
             supportUpper.localRotation = Quaternion.Euler(-9f, 0f, 0f);
             rig.Chest.localRotation = Quaternion.Euler(-12f * kickIntensity, kickWithLeftFoot ? -16f : 16f, kickWithLeftFoot ? 7f : -7f);
             rig.LeftUpperArm.localRotation = Quaternion.Euler(-22f, 0f, 24f);
@@ -161,9 +174,12 @@ namespace FC2026.Gameplay
             var extension = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI);
             rig.VisualRoot.localPosition = new Vector3(0f, -0.24f * extension, 0.15f * extension);
             rig.Chest.localRotation = Quaternion.Euler(28f * extension, 0f, 0f);
-            rig.RightUpperLeg.localRotation = Quaternion.Euler(74f * extension, 0f, 0f);
-            rig.RightLowerLeg.localRotation = Quaternion.Euler(-18f * extension, 0f, 0f);
-            rig.LeftUpperLeg.localRotation = Quaternion.Euler(-22f * extension, 0f, 0f);
+            var tacklingUpper = tackleWithLeftFoot ? rig.LeftUpperLeg : rig.RightUpperLeg;
+            var tacklingLower = tackleWithLeftFoot ? rig.LeftLowerLeg : rig.RightLowerLeg;
+            var supportUpper = tackleWithLeftFoot ? rig.RightUpperLeg : rig.LeftUpperLeg;
+            tacklingUpper.localRotation = Quaternion.Euler(74f * extension, 0f, 0f);
+            tacklingLower.localRotation = Quaternion.Euler(-18f * extension, 0f, 0f);
+            supportUpper.localRotation = Quaternion.Euler(-22f * extension, 0f, 0f);
             rig.LeftUpperArm.localRotation = Quaternion.Euler(-18f, 0f, 42f * extension);
             rig.RightUpperArm.localRotation = Quaternion.Euler(22f, 0f, -42f * extension);
         }
@@ -236,10 +252,13 @@ namespace FC2026.Gameplay
             kickTimer = KickDuration;
         }
 
-        public void TriggerTackle()
+        public void TriggerTackle(bool leftFoot = false)
         {
             if (!goalkeeper)
+            {
+                tackleWithLeftFoot = leftFoot;
                 tackleTimer = TackleDuration;
+            }
         }
 
         public void TriggerCelebration(int style = -1)

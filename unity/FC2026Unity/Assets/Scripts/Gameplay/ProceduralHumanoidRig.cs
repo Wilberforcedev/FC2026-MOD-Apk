@@ -43,7 +43,9 @@ namespace FC2026.Gameplay
             bool ownerLikeness = false,
             int skinTone = -1,
             int hairColor = -1,
-            int faceVariant = -1)
+            int faceVariant = -1,
+            int hairStyle = -1,
+            int jerseyNumber = 0)
         {
             HeightScale = Mathf.Clamp(heightScale, 0.88f, 1.18f);
             WidthScale = Mathf.Clamp(widthScale, 0.82f, 1.18f);
@@ -95,8 +97,9 @@ namespace FC2026.Gameplay
             CreatePart("Right Ear", PrimitiveType.Sphere, Head, new Vector3(0.145f, 0.005f, 0f), new Vector3(0.075f, 0.105f, 0.075f), detailedSkin);
             CreatePart("Left Ear Fold", PrimitiveType.Sphere, Head, new Vector3(-0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), detailedSkin);
             CreatePart("Right Ear Fold", PrimitiveType.Sphere, Head, new Vector3(0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), detailedSkin);
-            CreatePart("Hair", PrimitiveType.Sphere, Head, new Vector3(0f, 0.12f, -0.065f), new Vector3(0.31f, 0.14f, 0.30f), detailedHair);
-            CreateTexturedFace();
+            CreateHair(detailedHair, hairStyle);
+            CreateTexturedFace(detailedSkin, detailedHair);
+            CreateJerseyNumbers(shirt, jerseyNumber);
 
             CreateLimb(LeftUpperArm, "Left Sleeve", 0.28f, 0.125f, detailedShirt);
             CreateLimb(LeftLowerArm, "Left Forearm", 0.28f, 0.092f, detailedSkin);
@@ -125,12 +128,86 @@ namespace FC2026.Gameplay
             }
         }
 
-        private void CreateTexturedFace()
+        private void CreateHair(Material material, int style)
+        {
+            var selected = style >= 0 ? style % 6 : (GetInstanceID() & int.MaxValue) % 6;
+            switch (selected)
+            {
+                case 1: // close crop
+                    CreatePart("Close Crop", PrimitiveType.Sphere, Head,
+                        new Vector3(0f, 0.13f, -0.045f), new Vector3(0.28f, 0.09f, 0.27f), material);
+                    break;
+                case 2: // rounded curls
+                    CreatePart("Curly Hair", PrimitiveType.Sphere, Head,
+                        new Vector3(0f, 0.13f, -0.055f), new Vector3(0.34f, 0.18f, 0.33f), material);
+                    break;
+                case 3: // swept top
+                    var swept = CreatePart("Swept Hair", PrimitiveType.Sphere, Head,
+                        new Vector3(0.035f, 0.14f, -0.055f), new Vector3(0.32f, 0.13f, 0.29f), material);
+                    swept.transform.localRotation = Quaternion.Euler(0f, 0f, -12f);
+                    break;
+                case 4: // short tied-back style
+                    CreatePart("Tied Back Hair", PrimitiveType.Sphere, Head,
+                        new Vector3(0f, 0.12f, -0.07f), new Vector3(0.30f, 0.13f, 0.29f), material);
+                    CreatePart("Hair Tie", PrimitiveType.Sphere, Head,
+                        new Vector3(0f, -0.035f, -0.22f), new Vector3(0.12f, 0.17f, 0.12f), material);
+                    break;
+                case 5: // shaved
+                    CreatePart("Shaved Hair", PrimitiveType.Sphere, Head,
+                        new Vector3(0f, 0.145f, -0.045f), new Vector3(0.27f, 0.065f, 0.25f), material);
+                    break;
+                default: // classic short
+                    CreatePart("Short Hair", PrimitiveType.Sphere, Head,
+                        new Vector3(0f, 0.12f, -0.065f), new Vector3(0.31f, 0.14f, 0.30f), material);
+                    break;
+            }
+        }
+
+        private void CreateJerseyNumbers(Material shirt, int jerseyNumber)
+        {
+            if (jerseyNumber <= 0)
+                return;
+
+            var ink = shirt != null && shirt.color.grayscale > 0.56f
+                ? new Color(0.055f, 0.065f, 0.085f)
+                : new Color(0.96f, 0.96f, 0.92f);
+            CreateJerseyNumber("Back Shirt Number", jerseyNumber, new Vector3(0f, 0.12f, -0.169f),
+                Quaternion.Euler(0f, 180f, 0f), ink);
+        }
+
+        private void CreateJerseyNumber(string objectName, int jerseyNumber, Vector3 position,
+            Quaternion rotation, Color color)
+        {
+            var numberObject = new GameObject(objectName);
+            numberObject.transform.SetParent(Spine, false);
+            numberObject.transform.localPosition = position;
+            numberObject.transform.localRotation = rotation;
+
+            var number = numberObject.AddComponent<TextMesh>();
+            number.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (number.font == null)
+                number.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            number.text = jerseyNumber.ToString();
+            number.anchor = TextAnchor.MiddleCenter;
+            number.alignment = TextAlignment.Center;
+            number.fontSize = 80;
+            number.characterSize = 0.105f;
+            number.color = color;
+
+            var renderer = numberObject.GetComponent<MeshRenderer>();
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+
+        private void CreateTexturedFace(Material skin, Material hair)
         {
             var resourcePath = useOwnerFace ? "PlayerFaces/owner_face" : "PlayerFaces/face_0" + (faceVariantIndex + 1);
             var faceTexture = Resources.Load<Texture2D>(resourcePath);
             if (faceTexture == null)
+            {
+                CreateFallbackFace(skin, hair);
                 return;
+            }
 
             const int rings = 18;
             const int sides = 40;
@@ -193,7 +270,47 @@ namespace FC2026.Gameplay
             var face = new GameObject("Photographic Face Texture");
             face.transform.SetParent(Head, false);
             face.AddComponent<MeshFilter>().sharedMesh = mesh;
-            face.AddComponent<MeshRenderer>().sharedMaterial = faceMaterial;
+            var faceRenderer = face.AddComponent<MeshRenderer>();
+            faceRenderer.sharedMaterial = faceMaterial;
+            faceRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            faceRenderer.receiveShadows = false;
+        }
+
+        private void CreateFallbackFace(Material skin, Material hair)
+        {
+            CreatePart("Fallback Face Surface", PrimitiveType.Sphere, Head,
+                new Vector3(0f, 0f, 0.235f), new Vector3(0.4f, 0.58f, 0.08f), skin);
+            var dark = new Material(skin)
+            {
+                name = "Procedural Face Details",
+                mainTexture = null,
+                color = new Color(0.055f, 0.038f, 0.03f)
+            };
+            var nose = new Material(skin)
+            {
+                name = "Procedural Nose Detail",
+                mainTexture = null,
+                color = Color.Lerp(skin.color, Color.white, 0.1f)
+            };
+            var mouth = new Material(skin)
+            {
+                name = "Procedural Mouth Detail",
+                mainTexture = null,
+                color = new Color(0.27f, 0.1f, 0.09f)
+            };
+
+            CreatePart("Left Eye", PrimitiveType.Sphere, Head,
+                new Vector3(-0.082f, 0.048f, 0.28f), new Vector3(0.052f, 0.026f, 0.018f), dark);
+            CreatePart("Right Eye", PrimitiveType.Sphere, Head,
+                new Vector3(0.082f, 0.048f, 0.28f), new Vector3(0.052f, 0.026f, 0.018f), dark);
+            CreatePart("Left Brow", PrimitiveType.Cube, Head,
+                new Vector3(-0.082f, 0.092f, 0.278f), new Vector3(0.09f, 0.018f, 0.018f), hair);
+            CreatePart("Right Brow", PrimitiveType.Cube, Head,
+                new Vector3(0.082f, 0.092f, 0.278f), new Vector3(0.09f, 0.018f, 0.018f), hair);
+            CreatePart("Nose", PrimitiveType.Sphere, Head,
+                new Vector3(0f, -0.005f, 0.295f), new Vector3(0.045f, 0.07f, 0.04f), nose);
+            CreatePart("Mouth", PrimitiveType.Capsule, Head,
+                new Vector3(0f, -0.105f, 0.278f), new Vector3(0.072f, 0.013f, 0.012f), mouth);
         }
 
         private static Color SkinColorFor(int skinTone)
@@ -345,7 +462,9 @@ namespace FC2026.Gameplay
             var torso = new GameObject(name);
             torso.transform.SetParent(parent, false);
             torso.AddComponent<MeshFilter>().sharedMesh = mesh;
-            torso.AddComponent<MeshRenderer>().sharedMaterial = material;
+            var torsoRenderer = torso.AddComponent<MeshRenderer>();
+            torsoRenderer.sharedMaterial = material;
+            torsoRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
         }
 
         private void CreateLimb(Transform parent, string name, float length, float radius, Material material)
@@ -377,7 +496,10 @@ namespace FC2026.Gameplay
             part.transform.localPosition = localPosition;
             part.transform.localRotation = Quaternion.identity;
             part.transform.localScale = localScale;
-            part.GetComponent<Renderer>().sharedMaterial = material;
+            var renderer = part.GetComponent<Renderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
 
             var collider = part.GetComponent<Collider>();
             if (collider != null)
