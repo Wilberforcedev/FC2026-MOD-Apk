@@ -693,13 +693,19 @@ namespace FC2026.Core
         private void CreateStadiumShell()
         {
             var concrete = CreateMaterial(new Color(0.055f, 0.075f, 0.11f), 0.55f);
-            var crowdBlue = StadiumPresentation.CreateCrowdMaterial(new Color(0.12f, 0.3f, 0.6f), new Color(0.92f, 0.92f, 0.95f));
-            var crowdGold = StadiumPresentation.CreateCrowdMaterial(new Color(0.75f, 0.45f, 0.06f), new Color(0.92f, 0.9f, 0.82f));
+            var homePrimary = homeClub != null ? ToColor(homeClub.PrimaryColor) : new Color(0.12f, 0.3f, 0.6f);
+            var homeSecondary = homeClub != null ? ToColor(homeClub.SecondaryColor) : new Color(0.92f, 0.92f, 0.95f);
+            var awayPrimary = awayClub != null ? ToColor(awayClub.PrimaryColor) : new Color(0.75f, 0.18f, 0.2f);
+            var awaySecondary = awayClub != null ? ToColor(awayClub.SecondaryColor) : new Color(0.92f, 0.9f, 0.82f);
+            if (Mathf.Abs(homePrimary.grayscale - awayPrimary.grayscale) < 0.18f)
+                awayPrimary = homePrimary.grayscale > 0.5f ? new Color(0.08f, 0.12f, 0.21f) : new Color(0.96f, 0.96f, 0.98f);
+            var homeCrowd = StadiumPresentation.CreateCrowdMaterial(homePrimary, homeSecondary);
+            var awayCrowd = StadiumPresentation.CreateCrowdMaterial(awayPrimary, awaySecondary);
 
-            CreateStand("West Stand", new Vector3(-47f, 6f, 0), new Vector3(20f, 12f, 118f), concrete, crowdBlue);
-            CreateStand("East Stand", new Vector3(47f, 6f, 0), new Vector3(20f, 12f, 118f), concrete, crowdGold);
-            CreateStand("North Stand", new Vector3(0, 6f, 66f), new Vector3(76f, 12f, 20f), concrete, crowdBlue);
-            CreateStand("South Stand", new Vector3(0, 6f, -66f), new Vector3(76f, 12f, 20f), concrete, crowdGold);
+            CreateStand("West Stand", new Vector3(-47f, 6f, 0), new Vector3(20f, 12f, 118f), concrete, homeCrowd);
+            CreateStand("East Stand", new Vector3(47f, 6f, 0), new Vector3(20f, 12f, 118f), concrete, awayCrowd);
+            CreateStand("North Stand", new Vector3(0, 6f, 66f), new Vector3(76f, 12f, 20f), concrete, homeCrowd);
+            CreateStand("South Stand", new Vector3(0, 6f, -66f), new Vector3(76f, 12f, 20f), concrete, awayCrowd);
 
             var canopy = CreateMaterial(new Color(0.025f, 0.04f, 0.065f), 0.62f);
             CreateStadiumBlock("West Canopy", new Vector3(-47f, 17.6f, 0f), new Vector3(21f, 0.8f, 120f), canopy);
@@ -707,7 +713,7 @@ namespace FC2026.Core
             CreateStadiumBlock("North Canopy", new Vector3(0f, 17.6f, 66f), new Vector3(78f, 0.8f, 21f), canopy);
             CreateStadiumBlock("South Canopy", new Vector3(0f, 17.6f, -66f), new Vector3(78f, 0.8f, 21f), canopy);
 
-            var fascia = StadiumPresentation.CreateAdBoardMaterial(new Color(0.12f, 0.68f, 0.9f));
+            var fascia = StadiumPresentation.CreateAdBoardMaterial(homePrimary);
             CreateStadiumBlock("West LED Fascia", new Vector3(-36.7f, 1.15f, 0f), new Vector3(0.35f, 0.7f, 104f), fascia);
             CreateStadiumBlock("East LED Fascia", new Vector3(36.7f, 1.15f, 0f), new Vector3(0.35f, 0.7f, 104f), fascia);
             CreateStadiumBlock("North LED Fascia", new Vector3(0f, 1.15f, 52.2f), new Vector3(66f, 0.7f, 0.35f), fascia);
@@ -857,6 +863,7 @@ namespace FC2026.Core
                     ShootingFor(player),
                     PassingFor(player),
                     SpeedFor(player),
+                    DefendingFor(player),
                     player != null ? player.SkinTone : -1,
                     player != null ? player.HairColor : -1,
                     player != null ? player.FaceVariant : -1);
@@ -882,6 +889,7 @@ namespace FC2026.Core
                     ShootingFor(player),
                     PassingFor(player),
                     SpeedFor(player),
+                    DefendingFor(player),
                     player != null ? player.SkinTone : -1,
                     player != null ? player.HairColor : -1,
                     player != null ? player.FaceVariant : -1);
@@ -959,6 +967,11 @@ namespace FC2026.Core
             return player == null ? 0.6f : Mathf.Lerp(0.32f, 0.95f, Attribute01(player.Passing));
         }
 
+        private static float DefendingFor(WorldPlayer player)
+        {
+            return player == null ? 0.6f : Mathf.Lerp(0.32f, 0.95f, Attribute01(player.Defending));
+        }
+
         private static float SpeedFor(WorldPlayer player)
         {
             return player == null ? 0.96f : 0.88f + Attribute01(player.Pace) * 0.26f;
@@ -1016,7 +1029,7 @@ namespace FC2026.Core
         }
 
         private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts, float heightScale, float widthScale,
-            bool user, int attackDirection, PlayerRole role, float shooting, float passing, float speed,
+            bool user, int attackDirection, PlayerRole role, float shooting, float passing, float speed, float defending,
             int skinTone, int hairColor, int faceVariant)
         {
             var player = new GameObject(name);
@@ -1072,7 +1085,7 @@ namespace FC2026.Core
 
             var controller = player.AddComponent<FootballPlayerController>();
             controller.Configure(role, start, attackDirection, shooting, passing,
-                resolvedSkinTone, resolvedHairColor, faceVariant);
+                resolvedSkinTone, resolvedHairColor, faceVariant, defending);
             controller.SetUserControlled(user);
 
             var ai = player.AddComponent<SimpleFootballAI>();
