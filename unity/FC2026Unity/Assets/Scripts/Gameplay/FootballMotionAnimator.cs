@@ -26,6 +26,7 @@ namespace FC2026.Gameplay
         private float turnLeanVelocity;
         private int celebrationStyle;
         private bool kickWithLeftFoot;
+        private bool tackleWithLeftFoot;
         private bool goalkeeper;
 
         public bool IsCelebrating => celebrationTimer > 0f;
@@ -173,9 +174,12 @@ namespace FC2026.Gameplay
             var extension = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI);
             rig.VisualRoot.localPosition = new Vector3(0f, -0.24f * extension, 0.15f * extension);
             rig.Chest.localRotation = Quaternion.Euler(28f * extension, 0f, 0f);
-            rig.RightUpperLeg.localRotation = Quaternion.Euler(74f * extension, 0f, 0f);
-            rig.RightLowerLeg.localRotation = Quaternion.Euler(-18f * extension, 0f, 0f);
-            rig.LeftUpperLeg.localRotation = Quaternion.Euler(-22f * extension, 0f, 0f);
+            var tacklingUpper = tackleWithLeftFoot ? rig.LeftUpperLeg : rig.RightUpperLeg;
+            var tacklingLower = tackleWithLeftFoot ? rig.LeftLowerLeg : rig.RightLowerLeg;
+            var supportUpper = tackleWithLeftFoot ? rig.RightUpperLeg : rig.LeftUpperLeg;
+            tacklingUpper.localRotation = Quaternion.Euler(74f * extension, 0f, 0f);
+            tacklingLower.localRotation = Quaternion.Euler(-18f * extension, 0f, 0f);
+            supportUpper.localRotation = Quaternion.Euler(-22f * extension, 0f, 0f);
             rig.LeftUpperArm.localRotation = Quaternion.Euler(-18f, 0f, 42f * extension);
             rig.RightUpperArm.localRotation = Quaternion.Euler(22f, 0f, -42f * extension);
         }
@@ -248,10 +252,13 @@ namespace FC2026.Gameplay
             kickTimer = KickDuration;
         }
 
-        public void TriggerTackle()
+        public void TriggerTackle(bool leftFoot = false)
         {
             if (!goalkeeper)
+            {
+                tackleWithLeftFoot = leftFoot;
                 tackleTimer = TackleDuration;
+            }
         }
 
         public void TriggerCelebration(int style = -1)
