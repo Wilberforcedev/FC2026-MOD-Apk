@@ -34,9 +34,12 @@ namespace FC2026.Gameplay
         private float tackleCooldown;
         private float shootingStat = 0.6f;
         private float passingStat = 0.6f;
+        private float defendingStat = 0.6f;
         private int skinTone = -1;
         private int hairColor = -1;
         private int faceVariant = -1;
+        private int hairStyle = -1;
+        private int jerseyNumber;
 
         public bool IsUserControlled { get; set; } = true;
         public int TeamDirection { get; set; } = 1;
@@ -76,7 +79,8 @@ namespace FC2026.Gameplay
         }
 
         public void Configure(PlayerRole role, Vector3 homePosition, int teamDirection, float shooting, float passing,
-            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1)
+            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1,
+            float defending = 0.6f, int playerHairStyle = -1, int playerJerseyNumber = 0)
         {
             Role = role;
             HomePosition = homePosition;
@@ -84,9 +88,12 @@ namespace FC2026.Gameplay
             TeamId = TeamDirection;
             shootingStat = Mathf.Clamp01(shooting);
             passingStat = Mathf.Clamp01(passing);
+            defendingStat = Mathf.Clamp01(defending);
             skinTone = playerSkinTone;
             hairColor = playerHairColor;
             faceVariant = playerFaceVariant;
+            hairStyle = playerHairStyle;
+            jerseyNumber = playerJerseyNumber;
             lastMoveDirection = new Vector3(0f, 0f, TeamDirection);
         }
 
@@ -135,7 +142,7 @@ namespace FC2026.Gameplay
         {
             var styleSeed = (uint)gameObject.name.GetHashCode() / (float)uint.MaxValue;
             motion = FootballVisualFactory.EnsureAnimatedRig(gameObject, IsGoalkeeper, styleSeed,
-                false, skinTone, hairColor, faceVariant);
+                false, skinTone, hairColor, faceVariant, hairStyle, jerseyNumber);
         }
 
         private void Update()
@@ -341,11 +348,12 @@ namespace FC2026.Gameplay
                 return false;
 
             tackleCooldown = 0.58f;
-            motion?.TriggerTackle();
+            var ball = BallController.Instance;
+            var tackleWithLeftFoot = ball != null && transform.InverseTransformPoint(ball.Position).x < 0f;
+            motion?.TriggerTackle(tackleWithLeftFoot);
             var direction = lastMoveDirection.sqrMagnitude > 0.01f ? lastMoveDirection.normalized : transform.forward;
             body.AddForce(direction * 2.1f, ForceMode.VelocityChange);
 
-            var ball = BallController.Instance;
             if (ball == null)
                 return false;
 
@@ -366,7 +374,9 @@ namespace FC2026.Gameplay
                 return false;
 
             var defenderBonus = Role == PlayerRole.Defender ? 0.12f : Role == PlayerRole.Midfielder ? 0.05f : 0f;
-            var chance = Mathf.Lerp(0.36f, 0.78f, stamina) + defenderBonus;
+            var skillBonus = (defendingStat - 0.6f) * 0.22f;
+            var chance = Mathf.Clamp(Mathf.Lerp(0.36f, 0.78f, stamina) + defenderBonus + skillBonus,
+                0.25f, 0.9f);
             if (Random.value > chance)
                 return false;
 

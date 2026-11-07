@@ -7,7 +7,7 @@ namespace FC2026.Gameplay
     {
         private const float GroundY = 0.115f;
         private const float MaxSpeed = 38f;
-        private const float DribbleDistance = 0.72f;
+        private const float DribbleDistance = 0.78f;
         private const float ReclaimDelay = 0.24f;
 
         [SerializeField] private float magnusCoefficient = 0.026f;
@@ -96,18 +96,20 @@ namespace FC2026.Gameplay
 
             // Keep the ball glued to the ball carrier's leading foot. The spring
             // lets it roll slightly ahead when sprinting instead of teleporting.
-            var target = owner.transform.position + owner.transform.forward * DribbleDistance;
+            var ownerVelocity = owner.Body != null ? owner.Body.linearVelocity : Vector3.zero;
+            var ownerSpeed = new Vector2(ownerVelocity.x, ownerVelocity.z).magnitude;
+            var stride = Mathf.Lerp(DribbleDistance, 1.02f, Mathf.InverseLerp(0f, 9.5f, ownerSpeed));
+            var target = owner.transform.position + owner.transform.forward * stride;
             target.y = GroundY;
             var toTarget = target - transform.position;
             toTarget.y = 0f;
-            var ownerVelocity = owner.Body != null ? owner.Body.linearVelocity : Vector3.zero;
-            var desired = new Vector3(ownerVelocity.x, 0f, ownerVelocity.z) + toTarget * 7.5f;
-            var maxDribbleSpeed = Mathf.Max(9f, new Vector2(ownerVelocity.x, ownerVelocity.z).magnitude + 2.5f);
+            var desired = new Vector3(ownerVelocity.x, 0f, ownerVelocity.z) + toTarget * 5.8f;
+            var maxDribbleSpeed = Mathf.Max(8.2f, ownerSpeed + 1.7f);
             if (desired.sqrMagnitude > maxDribbleSpeed * maxDribbleSpeed)
                 desired = desired.normalized * maxDribbleSpeed;
 
             var currentHorizontal = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
-            var turnResponse = ownerVelocity.magnitude > 7f ? 22f : 32f;
+            var turnResponse = ownerSpeed > 7f ? 15f : 24f;
             var controlledHorizontal = Vector3.MoveTowards(
                 currentHorizontal, desired, turnResponse * Time.fixedDeltaTime);
             var vertical = Mathf.Min(body.linearVelocity.y, 0f);
