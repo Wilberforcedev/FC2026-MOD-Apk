@@ -22,6 +22,8 @@ namespace FC2026.Gameplay
         private float cadence = 1f;
         private float strideScale = 1f;
         private float forwardLean = 1f;
+        private float currentTurnLean;
+        private float turnLeanVelocity;
         private int celebrationStyle;
         private bool kickWithLeftFoot;
         private bool goalkeeper;
@@ -64,6 +66,9 @@ namespace FC2026.Gameplay
             var horizontalVelocity = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
             var speed = horizontalVelocity.magnitude;
             var speed01 = Mathf.Clamp01(speed / 9.5f);
+            var localVelocity = transform.InverseTransformDirection(horizontalVelocity);
+            var targetTurnLean = Mathf.Clamp(localVelocity.x / Mathf.Max(2f, speed), -1f, 1f);
+            currentTurnLean = Mathf.SmoothDamp(currentTurnLean, targetTurnLean, ref turnLeanVelocity, 0.1f);
             locomotionPhase += Time.deltaTime * Mathf.Lerp(2.2f, 10.4f, speed01) * cadence;
 
             ApplyBasePose(speed01);
@@ -77,7 +82,7 @@ namespace FC2026.Gameplay
             else if (kickTimer > 0f)
                 ApplyKick();
             else
-                ApplyLocomotion(speed01);
+                ApplyLocomotion(speed01, currentTurnLean);
         }
 
         private void ApplyBasePose(float speed01)
@@ -103,7 +108,7 @@ namespace FC2026.Gameplay
             rig.RightFoot.localRotation = Quaternion.identity;
         }
 
-        private void ApplyLocomotion(float speed01)
+        private void ApplyLocomotion(float speed01, float turnLean)
         {
             if (speed01 < 0.035f)
             {
@@ -131,7 +136,10 @@ namespace FC2026.Gameplay
             rig.RightLowerArm.localRotation = Quaternion.Euler(-18f - Mathf.Abs(opposite) * 12f, 0f, 0f);
 
             rig.Hips.localRotation = Quaternion.Euler(0f, cycle * 4.5f * speed01, 0f);
-            rig.Chest.localRotation = Quaternion.Euler(-Mathf.Lerp(2f, 11f, speed01) * forwardLean, -cycle * 4f, 0f);
+            rig.Chest.localRotation = Quaternion.Euler(
+                -Mathf.Lerp(2f, 11f, speed01) * forwardLean,
+                -cycle * 4f + turnLean * 3f,
+                -turnLean * 10f * speed01);
             rig.Head.localRotation = Quaternion.Euler(Mathf.Lerp(1f, 5f, speed01), cycle * 1.5f, 0f);
         }
 
