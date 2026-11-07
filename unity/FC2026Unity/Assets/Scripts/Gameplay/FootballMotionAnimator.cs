@@ -122,6 +122,8 @@ namespace FC2026.Gameplay
             rig.RightUpperLeg.localRotation = Quaternion.Euler(opposite * stride, 0f, 0f);
             rig.LeftLowerLeg.localRotation = Quaternion.Euler(knee, 0f, 0f);
             rig.RightLowerLeg.localRotation = Quaternion.Euler(otherKnee, 0f, 0f);
+            rig.LeftFoot.localRotation = Quaternion.Euler(Mathf.Max(0f, cycle) * stride * 0.38f, 0f, 0f);
+            rig.RightFoot.localRotation = Quaternion.Euler(Mathf.Max(0f, opposite) * stride * 0.38f, 0f, 0f);
 
             rig.LeftUpperArm.localRotation = Quaternion.Euler(opposite * arm, 0f, 5f);
             rig.RightUpperArm.localRotation = Quaternion.Euler(cycle * arm, 0f, -5f);
@@ -136,19 +138,21 @@ namespace FC2026.Gameplay
         private void ApplyKick()
         {
             var t = 1f - kickTimer / KickDuration;
-            var windup = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.38f));
-            var strike = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.32f) / 0.42f));
-            var recovery = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.72f) / 0.28f));
-            var angle = Mathf.Lerp(0f, -38f * kickIntensity, windup);
-            angle = Mathf.Lerp(angle, 72f * kickIntensity, strike);
+            // Kick() releases the ball immediately, so this pose begins at contact
+            // and follows through instead of showing a backswing after ball release.
+            var followThrough = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.56f));
+            var recovery = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.7f) / 0.3f));
+            var angle = Mathf.Lerp(38f, 76f, followThrough) * kickIntensity;
             angle = Mathf.Lerp(angle, 6f, recovery);
 
             var kickingUpper = kickWithLeftFoot ? rig.LeftUpperLeg : rig.RightUpperLeg;
             var kickingLower = kickWithLeftFoot ? rig.LeftLowerLeg : rig.RightLowerLeg;
             var supportUpper = kickWithLeftFoot ? rig.RightUpperLeg : rig.LeftUpperLeg;
+            var kickingFoot = kickWithLeftFoot ? rig.LeftFoot : rig.RightFoot;
 
             kickingUpper.localRotation = Quaternion.Euler(angle, 0f, 0f);
-            kickingLower.localRotation = Quaternion.Euler(Mathf.Lerp(35f, -12f, strike), 0f, 0f);
+            kickingLower.localRotation = Quaternion.Euler(Mathf.Lerp(18f, -12f, followThrough), 0f, 0f);
+            kickingFoot.localRotation = Quaternion.Euler(Mathf.Lerp(-18f, 24f, followThrough), 0f, 0f);
             supportUpper.localRotation = Quaternion.Euler(-9f, 0f, 0f);
             rig.Chest.localRotation = Quaternion.Euler(-12f * kickIntensity, kickWithLeftFoot ? -16f : 16f, kickWithLeftFoot ? 7f : -7f);
             rig.LeftUpperArm.localRotation = Quaternion.Euler(-22f, 0f, 24f);
