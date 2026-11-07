@@ -96,7 +96,7 @@ namespace FC2026.Gameplay
             CreatePart("Left Ear Fold", PrimitiveType.Sphere, Head, new Vector3(-0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), detailedSkin);
             CreatePart("Right Ear Fold", PrimitiveType.Sphere, Head, new Vector3(0.15f, 0.01f, 0.058f), new Vector3(0.035f, 0.063f, 0.018f), detailedSkin);
             CreatePart("Hair", PrimitiveType.Sphere, Head, new Vector3(0f, 0.12f, -0.065f), new Vector3(0.31f, 0.14f, 0.30f), detailedHair);
-            CreateTexturedFace();
+            CreateTexturedFace(detailedSkin, detailedHair);
 
             CreateLimb(LeftUpperArm, "Left Sleeve", 0.28f, 0.125f, detailedShirt);
             CreateLimb(LeftLowerArm, "Left Forearm", 0.28f, 0.092f, detailedSkin);
@@ -125,12 +125,15 @@ namespace FC2026.Gameplay
             }
         }
 
-        private void CreateTexturedFace()
+        private void CreateTexturedFace(Material skin, Material hair)
         {
             var resourcePath = useOwnerFace ? "PlayerFaces/owner_face" : "PlayerFaces/face_0" + (faceVariantIndex + 1);
             var faceTexture = Resources.Load<Texture2D>(resourcePath);
             if (faceTexture == null)
+            {
+                CreateFallbackFace(skin, hair);
                 return;
+            }
 
             const int rings = 18;
             const int sides = 40;
@@ -193,7 +196,47 @@ namespace FC2026.Gameplay
             var face = new GameObject("Photographic Face Texture");
             face.transform.SetParent(Head, false);
             face.AddComponent<MeshFilter>().sharedMesh = mesh;
-            face.AddComponent<MeshRenderer>().sharedMaterial = faceMaterial;
+            var faceRenderer = face.AddComponent<MeshRenderer>();
+            faceRenderer.sharedMaterial = faceMaterial;
+            faceRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            faceRenderer.receiveShadows = false;
+        }
+
+        private void CreateFallbackFace(Material skin, Material hair)
+        {
+            CreatePart("Fallback Face Surface", PrimitiveType.Sphere, Head,
+                new Vector3(0f, 0f, 0.235f), new Vector3(0.4f, 0.58f, 0.08f), skin);
+            var dark = new Material(skin)
+            {
+                name = "Procedural Face Details",
+                mainTexture = null,
+                color = new Color(0.055f, 0.038f, 0.03f)
+            };
+            var nose = new Material(skin)
+            {
+                name = "Procedural Nose Detail",
+                mainTexture = null,
+                color = Color.Lerp(skin.color, Color.white, 0.1f)
+            };
+            var mouth = new Material(skin)
+            {
+                name = "Procedural Mouth Detail",
+                mainTexture = null,
+                color = new Color(0.27f, 0.1f, 0.09f)
+            };
+
+            CreatePart("Left Eye", PrimitiveType.Sphere, Head,
+                new Vector3(-0.082f, 0.048f, 0.28f), new Vector3(0.052f, 0.026f, 0.018f), dark);
+            CreatePart("Right Eye", PrimitiveType.Sphere, Head,
+                new Vector3(0.082f, 0.048f, 0.28f), new Vector3(0.052f, 0.026f, 0.018f), dark);
+            CreatePart("Left Brow", PrimitiveType.Cube, Head,
+                new Vector3(-0.082f, 0.092f, 0.278f), new Vector3(0.09f, 0.018f, 0.018f), hair);
+            CreatePart("Right Brow", PrimitiveType.Cube, Head,
+                new Vector3(0.082f, 0.092f, 0.278f), new Vector3(0.09f, 0.018f, 0.018f), hair);
+            CreatePart("Nose", PrimitiveType.Sphere, Head,
+                new Vector3(0f, -0.005f, 0.295f), new Vector3(0.045f, 0.07f, 0.04f), nose);
+            CreatePart("Mouth", PrimitiveType.Capsule, Head,
+                new Vector3(0f, -0.105f, 0.278f), new Vector3(0.072f, 0.013f, 0.012f), mouth);
         }
 
         private static Color SkinColorFor(int skinTone)
@@ -345,7 +388,9 @@ namespace FC2026.Gameplay
             var torso = new GameObject(name);
             torso.transform.SetParent(parent, false);
             torso.AddComponent<MeshFilter>().sharedMesh = mesh;
-            torso.AddComponent<MeshRenderer>().sharedMaterial = material;
+            var torsoRenderer = torso.AddComponent<MeshRenderer>();
+            torsoRenderer.sharedMaterial = material;
+            torsoRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
         }
 
         private void CreateLimb(Transform parent, string name, float length, float radius, Material material)
@@ -377,7 +422,10 @@ namespace FC2026.Gameplay
             part.transform.localPosition = localPosition;
             part.transform.localRotation = Quaternion.identity;
             part.transform.localScale = localScale;
-            part.GetComponent<Renderer>().sharedMaterial = material;
+            var renderer = part.GetComponent<Renderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
 
             var collider = part.GetComponent<Collider>();
             if (collider != null)
