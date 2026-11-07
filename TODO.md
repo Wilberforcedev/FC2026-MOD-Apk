@@ -7,7 +7,7 @@
 - [x] Add acceleration to carried-ball movement so the ball responds less like it is attached to the player.
 - [ ] Tune the new decisions and ball response through in-game play on desktop and Android.
 - [x] Improve off-ball support runs, attacking width, and coordinated pressing.
-- [ ] Improve goalkeeper positioning and shot-reaction decisions.
+- [x] Improve goalkeeper positioning and shot-reaction decisions with goal-side alignment and predicted shot-plane interception.
 - [ ] Add contextual player movement and animation for turning, sprinting, passing, and shooting.
 
 ## Mobile quality
