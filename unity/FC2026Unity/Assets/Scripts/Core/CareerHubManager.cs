@@ -60,7 +60,10 @@ namespace FC2026.Core
         private bool showSquadManagement;
         private bool showTransfers;
         private bool transfersShowSquad;
+        private int transferPositionFilter;
         private TransferTarget[] marketCache;
+        private TransferTarget[] filteredMarketCache;
+        private WorldPlayer[] filteredSquadCache;
         private string selectedTransferPlayerId = string.Empty;
         private string pendingTransferPlayerId = string.Empty;
         private string pendingTransferAction = string.Empty;
@@ -780,6 +783,8 @@ namespace FC2026.Core
             confirmNewCareer = false;
             showTransfers = false;
             marketCache = null;
+            filteredMarketCache = null;
+            filteredSquadCache = null;
             pendingTransferPlayerId = string.Empty;
             pendingTransferAction = string.Empty;
             selectedTransferPlayerId = string.Empty;
@@ -897,6 +902,7 @@ namespace FC2026.Core
         {
             showTransfers = true;
             transfersShowSquad = false;
+            transferPositionFilter = 0;
             marketCache = null;
             selectedTransferPlayerId = string.Empty;
             pendingTransferPlayerId = string.Empty;
@@ -948,7 +954,20 @@ namespace FC2026.Core
                 transferScroll = Vector2.zero;
             }
 
-            var listTop = tabY + tabHeight + 8f;
+            var filterY = tabY + tabHeight + 7f;
+            var filterHeight = Mathf.Clamp(panel.height * 0.055f, 30f, 40f);
+            var filterGap = 5f;
+            var filterWidth = (width - filterGap * 4f) / 5f;
+            var filterLabels = new[] { "ALL", "GK", "DEF", "MID", "FWD" };
+            for (var i = 0; i < filterLabels.Length; i++)
+            {
+                var selected = transferPositionFilter == i;
+                if (GUI.Button(new Rect(x + i * (filterWidth + filterGap), filterY, filterWidth, filterHeight),
+                    filterLabels[i], selected ? accentButtonStyle : buttonStyle))
+                    SetTransferPositionFilter(i);
+            }
+
+            var listTop = filterY + filterHeight + 24f;
             var footerHeight = Mathf.Clamp(panel.height * 0.09f, 40f, 58f);
             var footerY = panel.y + panel.height - footerHeight - 12f;
             var noticeHeight = Mathf.Clamp(panel.height * 0.045f, 20f, 28f);
@@ -962,8 +981,16 @@ namespace FC2026.Core
             var wageBill = CareerTransferSystem.WageBill(save);
             var wageCeiling = CareerTransferSystem.WageBudget(club);
             marketCache ??= CareerTransferSystem.GetMarket(save);
-            var market = transfersShowSquad ? Array.Empty<TransferTarget>() : marketCache;
-            var count = transfersShowSquad ? squad.Length : market.Length;
+            var visibleSquad = filteredSquadCache ??= squad
+                .Where(player => player != null && (transferPositionFilter == 0 ||
+                    (int)player.Position == transferPositionFilter - 1))
+                .ToArray();
+            var market = transfersShowSquad
+                ? Array.Empty<TransferTarget>()
+                : (filteredMarketCache ??= marketCache.Where(target => transferPositionFilter == 0 ||
+                    (int)target.Player.Position == transferPositionFilter - 1).ToArray());
+            var count = transfersShowSquad ? visibleSquad.Length : market.Length;
+            GUI.Label(new Rect(x, listTop - 18f, width, 18f), $"{count} PLAYERS", dashboardEyebrowStyle);
             transferScroll = GUI.BeginScrollView(new Rect(x, listTop, width, viewHeight), transferScroll,
                 new Rect(0f, 0f, innerWidth, count * rowHeight + 4f));
 
@@ -972,7 +999,7 @@ namespace FC2026.Core
                 var rect = new Rect(0f, i * rowHeight, innerWidth, rowHeight - 2f);
                 if (transfersShowSquad)
                 {
-                    var player = squad[i];
+                    var player = visibleSquad[i];
                     var selected = player.Id == selectedTransferPlayerId;
                     var expiry = CareerTransferSystem.ContractExpiry(save, player.Id);
                     var label = $"{(selected ? "> " : string.Empty)}{player.Name}  •  {PositionLabel(player.Position)} {player.Overall}" +
@@ -1027,6 +1054,20 @@ namespace FC2026.Core
                 pendingTransferPlayerId = string.Empty;
                 pendingTransferAction = string.Empty;
             }
+        }
+
+        private void SetTransferPositionFilter(int filter)
+        {
+            if (transferPositionFilter == filter)
+                return;
+
+            transferPositionFilter = filter;
+            transferScroll = Vector2.zero;
+            filteredMarketCache = null;
+            filteredSquadCache = null;
+            selectedTransferPlayerId = string.Empty;
+            pendingTransferPlayerId = string.Empty;
+            pendingTransferAction = string.Empty;
         }
 
         private void DrawSquadTransferActions(float x, float width, float y, float height, WorldPlayer[] squad)
@@ -1099,6 +1140,8 @@ namespace FC2026.Core
             if (success)
             {
                 marketCache = null;
+                filteredMarketCache = null;
+                filteredSquadCache = null;
                 if (!CareerSaveSystem.Save(save))
                     message += " The change could not be saved.";
                 else if (action == "SELL" || action == "RELEASE")
