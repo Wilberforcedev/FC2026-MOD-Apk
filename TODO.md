@@ -8,7 +8,7 @@
 - [ ] Tune the new decisions and ball response through in-game play on desktop and Android.
 - [x] Improve off-ball support runs, attacking width, and coordinated pressing.
 - [x] Improve goalkeeper positioning and shot-reaction decisions with goal-side alignment and predicted shot-plane interception.
-- [ ] Add contextual player movement and animation for turning, sprinting, passing, and shooting.
+- [x] Add contextual movement animation for turns and ball-carrying, with sprinting, passing, and shooting actions.
 
 ## Mobile quality
 
