@@ -12,6 +12,8 @@ namespace FC2026.Gameplay
 
         private Rigidbody body;
         private ProceduralHumanoidRig rig;
+        private FootballPlayerController playerController;
+        private float turnLean;
         private float locomotionPhase;
         private float kickTimer;
         private float tackleTimer;
@@ -33,6 +35,7 @@ namespace FC2026.Gameplay
         {
             body = GetComponent<Rigidbody>();
             rig = GetComponent<ProceduralHumanoidRig>();
+            playerController = GetComponent<FootballPlayerController>();
         }
 
         public void Configure(bool isGoalkeeper, float styleSeed = 0.5f)
@@ -64,6 +67,8 @@ namespace FC2026.Gameplay
             var horizontalVelocity = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
             var speed = horizontalVelocity.magnitude;
             var speed01 = Mathf.Clamp01(speed / 9.5f);
+            var localVelocity = transform.InverseTransformDirection(horizontalVelocity);
+            turnLean = Mathf.Clamp(localVelocity.x / Mathf.Max(3.5f, speed), -1f, 1f);
             locomotionPhase += Time.deltaTime * Mathf.Lerp(2.2f, 10.4f, speed01) * cadence;
 
             ApplyBasePose(speed01);
@@ -77,7 +82,7 @@ namespace FC2026.Gameplay
             else if (kickTimer > 0f)
                 ApplyKick();
             else
-                ApplyLocomotion(speed01);
+                ApplyLocomotion(speed01, turnLean, playerController != null && playerController.HasBall);
         }
 
         private void ApplyBasePose(float speed01)
@@ -103,7 +108,7 @@ namespace FC2026.Gameplay
             rig.RightFoot.localRotation = Quaternion.identity;
         }
 
-        private void ApplyLocomotion(float speed01)
+        private void ApplyLocomotion(float speed01, float lateralLean, bool carryingBall)
         {
             if (speed01 < 0.035f)
             {
@@ -114,23 +119,27 @@ namespace FC2026.Gameplay
             var cycle = Mathf.Sin(locomotionPhase);
             var opposite = Mathf.Sin(locomotionPhase + Mathf.PI);
             var stride = Mathf.Lerp(16f, 45f, speed01) * strideScale;
-            var arm = Mathf.Lerp(12f, 38f, speed01);
+            var arm = Mathf.Lerp(12f, 38f, speed01) * (carryingBall ? 0.78f : 1f);
             var knee = Mathf.Max(0f, -cycle) * Mathf.Lerp(9f, 42f, speed01);
             var otherKnee = Mathf.Max(0f, -opposite) * Mathf.Lerp(9f, 42f, speed01);
+            var turnAngle = lateralLean * Mathf.Lerp(3f, 13f, speed01);
+            var armSpread = carryingBall ? 12f : 5f;
 
+            rig.VisualRoot.localRotation = Quaternion.Euler(0f, 0f, -turnAngle * 0.32f);
             rig.LeftUpperLeg.localRotation = Quaternion.Euler(cycle * stride, 0f, 0f);
             rig.RightUpperLeg.localRotation = Quaternion.Euler(opposite * stride, 0f, 0f);
             rig.LeftLowerLeg.localRotation = Quaternion.Euler(knee, 0f, 0f);
             rig.RightLowerLeg.localRotation = Quaternion.Euler(otherKnee, 0f, 0f);
 
-            rig.LeftUpperArm.localRotation = Quaternion.Euler(opposite * arm, 0f, 5f);
-            rig.RightUpperArm.localRotation = Quaternion.Euler(cycle * arm, 0f, -5f);
+            rig.LeftUpperArm.localRotation = Quaternion.Euler(opposite * arm, 0f, armSpread);
+            rig.RightUpperArm.localRotation = Quaternion.Euler(cycle * arm, 0f, -armSpread);
             rig.LeftLowerArm.localRotation = Quaternion.Euler(-18f - Mathf.Abs(cycle) * 12f, 0f, 0f);
             rig.RightLowerArm.localRotation = Quaternion.Euler(-18f - Mathf.Abs(opposite) * 12f, 0f, 0f);
 
-            rig.Hips.localRotation = Quaternion.Euler(0f, cycle * 4.5f * speed01, 0f);
-            rig.Chest.localRotation = Quaternion.Euler(-Mathf.Lerp(2f, 11f, speed01) * forwardLean, -cycle * 4f, 0f);
-            rig.Head.localRotation = Quaternion.Euler(Mathf.Lerp(1f, 5f, speed01), cycle * 1.5f, 0f);
+            rig.Hips.localRotation = Quaternion.Euler(0f, cycle * 4.5f * speed01, -turnAngle * 0.24f);
+            rig.Chest.localRotation = Quaternion.Euler(-Mathf.Lerp(2f, 11f, speed01) * forwardLean, -cycle * 4f,
+                -turnAngle * (carryingBall ? 0.9f : 0.72f));
+            rig.Head.localRotation = Quaternion.Euler(Mathf.Lerp(1f, 5f, speed01), cycle * 1.5f, -turnAngle * 0.28f);
         }
 
         private void ApplyKick()
