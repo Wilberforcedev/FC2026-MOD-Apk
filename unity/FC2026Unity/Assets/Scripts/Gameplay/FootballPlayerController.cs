@@ -34,6 +34,7 @@ namespace FC2026.Gameplay
         private float tackleCooldown;
         private float shootingStat = 0.6f;
         private float passingStat = 0.6f;
+        private float defendingStat = 0.6f;
         private int skinTone = -1;
         private int hairColor = -1;
         private int faceVariant = -1;
@@ -76,7 +77,8 @@ namespace FC2026.Gameplay
         }
 
         public void Configure(PlayerRole role, Vector3 homePosition, int teamDirection, float shooting, float passing,
-            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1)
+            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1,
+            float defending = 0.6f)
         {
             Role = role;
             HomePosition = homePosition;
@@ -84,6 +86,7 @@ namespace FC2026.Gameplay
             TeamId = TeamDirection;
             shootingStat = Mathf.Clamp01(shooting);
             passingStat = Mathf.Clamp01(passing);
+            defendingStat = Mathf.Clamp01(defending);
             skinTone = playerSkinTone;
             hairColor = playerHairColor;
             faceVariant = playerFaceVariant;
@@ -366,7 +369,9 @@ namespace FC2026.Gameplay
                 return false;
 
             var defenderBonus = Role == PlayerRole.Defender ? 0.12f : Role == PlayerRole.Midfielder ? 0.05f : 0f;
-            var chance = Mathf.Lerp(0.36f, 0.78f, stamina) + defenderBonus;
+            var skillBonus = (defendingStat - 0.6f) * 0.22f;
+            var chance = Mathf.Clamp(Mathf.Lerp(0.36f, 0.78f, stamina) + defenderBonus + skillBonus,
+                0.25f, 0.9f);
             if (Random.value > chance)
                 return false;
 
