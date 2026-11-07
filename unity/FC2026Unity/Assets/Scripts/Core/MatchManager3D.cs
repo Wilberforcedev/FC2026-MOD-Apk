@@ -24,6 +24,7 @@ namespace FC2026.Core
         private int homeScore;
         private int awayScore;
         private bool resetting;
+        private bool paused;
         private bool live;
         private bool halfTimePending;
         private int half;
@@ -94,6 +95,8 @@ namespace FC2026.Core
 
         private void OnDestroy()
         {
+            if (paused)
+                Time.timeScale = 1f;
             if (Instance == this)
                 Instance = null;
         }
@@ -122,6 +125,17 @@ namespace FC2026.Core
         private void Update()
         {
             if (matchFinished)
+                return;
+
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P))
+            {
+                if (paused)
+                    ResumeMatch();
+                else if (live)
+                    PauseMatch();
+            }
+
+            if (paused)
                 return;
 
             if (userPlayer == null || !userPlayer.IsUserControlled)
@@ -157,6 +171,26 @@ namespace FC2026.Core
             {
                 HandleOutOfPlay(position);
             }
+        }
+
+        private void PauseMatch()
+        {
+            if (!live || paused)
+                return;
+
+            paused = true;
+            live = false;
+            Time.timeScale = 0f;
+        }
+
+        private void ResumeMatch()
+        {
+            if (!paused)
+                return;
+
+            paused = false;
+            live = true;
+            Time.timeScale = 1f;
         }
 
         private void FindUserPlayer()
@@ -1206,12 +1240,17 @@ namespace FC2026.Core
 
             if (Application.isMobilePlatform)
             {
-                if (!halfTimePending && !matchFinished)
+                if (live && !halfTimePending && !matchFinished)
+                {
+                    var pauseRect = new Rect(Screen.width - 118f, 18f, 102f, 44f);
+                    if (GUI.Button(pauseRect, "PAUSE", buttonStyle))
+                        PauseMatch();
                     DrawMobileControls();
+                }
             }
             else
                 GUI.Label(new Rect(18f, Screen.height - 48f, Screen.width - 36f, 36f),
-                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch", helpStyle);
+                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch   •   P / Esc: pause", helpStyle);
 
             if (Time.time < goalBannerUntil)
                 GUI.Label(new Rect(0, Screen.height * 0.33f, Screen.width, 100f), goalBanner, goalStyle);
@@ -1228,10 +1267,27 @@ namespace FC2026.Core
             GUI.Box(commentaryRect, string.Empty, panelStyle);
             GUI.Label(commentaryRect, commentary, commentaryStyle);
 
-            if (halfTimePending || matchFinished)
+            if (paused || halfTimePending || matchFinished)
             {
-                modalBackdrop ??= HubTheme.SolidTexture(new Color(0.02f, 0.035f, 0.05f, 0.62f));
+                modalBackdrop ??= HubTheme.SolidTexture(new Color(0.02f, 0.035f, 0.05f, 0.72f));
                 GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), modalBackdrop);
+            }
+
+            if (paused)
+            {
+                fullTimeStyle ??= CreatePanelStyle();
+                var panelWidth = Mathf.Min(Screen.width * 0.7f, 500f);
+                var panelHeight = Mathf.Clamp(Screen.height * 0.38f, 180f, 240f);
+                var panel = new Rect((Screen.width - panelWidth) * 0.5f, (Screen.height - panelHeight) * 0.5f,
+                    panelWidth, panelHeight);
+                GUI.Box(panel, string.Empty, panelStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 20f, panel.width - 24f, 58f), "MATCH PAUSED", fullTimeStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 80f, panel.width - 24f, 42f),
+                    $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", scoreStyle);
+                var resumeRect = new Rect(panel.x + panel.width * 0.16f, panel.y + panel.height - 70f,
+                    panel.width * 0.68f, 50f);
+                if (GUI.Button(resumeRect, "RESUME MATCH", flowButtonStyle))
+                    ResumeMatch();
             }
 
             if (halfTimePending)
