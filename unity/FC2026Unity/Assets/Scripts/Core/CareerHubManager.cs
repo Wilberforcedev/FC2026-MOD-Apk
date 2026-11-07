@@ -15,6 +15,7 @@ namespace FC2026.Core
     public sealed class CareerHubManager : MonoBehaviour
     {
         private static readonly string[] Confederations = { "UEFA", "CONMEBOL", "CONCACAF", "CAF", "AFC", "OFC" };
+        private static readonly string[] TransferPositionFilters = { "ALL", "GK", "DEF", "MID", "FWD" };
         private const int InitialBudget = 15000000;
         private const float DisabledRowAlpha = 0.4f;
 
@@ -805,9 +806,10 @@ namespace FC2026.Core
             var innerWidth = width - 22f;
             var buttonHeight = Mathf.Clamp(panel.height * 0.08f, 34f, 52f);
             var rowHeight = Mathf.Clamp(panel.height * 0.04f, 20f, 28f);
+            var previewHeight = Mathf.Clamp(panel.height * 0.22f, 120f, 180f);
             var squad = CareerTransferSystem.GetSquad(save, save.managedClubId);
             var contentHeight = 24f + buttonHeight + 12f + 24f + buttonHeight + 14f + 24f +
-                                (squad.Length + 1) * rowHeight + 8f;
+                                24f + previewHeight + 12f + (squad.Length + 1) * rowHeight + 8f;
 
             squadScroll = GUI.BeginScrollView(new Rect(x, contentTop, width, viewHeight), squadScroll,
                 new Rect(0f, 0f, innerWidth, contentHeight));
@@ -850,6 +852,12 @@ namespace FC2026.Core
                 }
             }
             cy += buttonHeight + 14f;
+
+            GUI.Label(new Rect(0f, cy, innerWidth, 22f), "FORMATION MAP  •  ATTACKING DIRECTION ↑", smallStyle);
+            cy += 24f;
+            var previewWidth = Mathf.Min(innerWidth * 0.5f, previewHeight * 0.72f);
+            DrawFormationPreview(new Rect((innerWidth - previewWidth) * 0.5f, cy, previewWidth, previewHeight));
+            cy += previewHeight + 12f;
 
             GUI.Label(new Rect(0f, cy, innerWidth, 22f), $"SQUAD  •  {squad.Length} PLAYERS", smallStyle);
             cy += 24f;
@@ -898,12 +906,59 @@ namespace FC2026.Core
             }
         }
 
+        private void DrawFormationPreview(Rect rect)
+        {
+            var padding = 4f;
+            var pitch = new Rect(rect.x + padding, rect.y + padding, rect.width - padding * 2f,
+                rect.height - padding * 2f);
+            var previousColor = GUI.color;
+            GUI.color = new Color(0.05f, 0.23f, 0.15f, 1f);
+            GUI.DrawTexture(pitch, Texture2D.whiteTexture);
+
+            GUI.color = new Color(0.74f, 0.88f, 0.79f, 0.72f);
+            const float lineWidth = 1.2f;
+            GUI.DrawTexture(new Rect(pitch.x, pitch.y, pitch.width, lineWidth), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(pitch.x, pitch.yMax - lineWidth, pitch.width, lineWidth), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(pitch.x, pitch.y, lineWidth, pitch.height), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(pitch.xMax - lineWidth, pitch.y, lineWidth, pitch.height), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(pitch.x, pitch.center.y - 0.6f, pitch.width, 1.2f), Texture2D.whiteTexture);
+
+            var boxWidth = pitch.width * 0.62f;
+            var boxHeight = pitch.height * 0.16f;
+            var boxX = pitch.center.x - boxWidth * 0.5f;
+            GUI.DrawTexture(new Rect(boxX, pitch.y, boxWidth, lineWidth), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(boxX, pitch.y, lineWidth, boxHeight), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(boxX + boxWidth - lineWidth, pitch.y, lineWidth, boxHeight), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(boxX, pitch.yMax - boxHeight, boxWidth, lineWidth), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(boxX, pitch.yMax - boxHeight, lineWidth, boxHeight), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(boxX + boxWidth - lineWidth, pitch.yMax - boxHeight, lineWidth, boxHeight), Texture2D.whiteTexture);
+
+            var positions = CareerFormationSystem.GetPositions(save.formationId, save.tacticalStyle);
+            var markerWidth = Mathf.Clamp(pitch.width * 0.2f, 17f, 22f);
+            var markerHeight = Mathf.Clamp(pitch.height * 0.1f, 15f, 20f);
+            GUI.color = Color.white;
+            for (var i = 0; i < positions.Length; i++)
+            {
+                var position = positions[i];
+                var centerX = pitch.x + (position.x + 35f) / 70f * pitch.width;
+                var centerY = pitch.yMax - (position.z + 52.5f) / 105f * pitch.height;
+                var marker = new Rect(centerX - markerWidth * 0.5f, centerY - markerHeight * 0.5f,
+                    markerWidth, markerHeight);
+                GUI.Box(marker, GUIContent.none, primaryButtonStyle);
+                GUI.Label(marker, (i + 1).ToString(), dashboardBadgeStyle);
+            }
+
+            GUI.color = previousColor;
+        }
+
         private void OpenTransfers()
         {
             showTransfers = true;
             transfersShowSquad = false;
             transferPositionFilter = 0;
             marketCache = null;
+            filteredMarketCache = null;
+            filteredSquadCache = null;
             selectedTransferPlayerId = string.Empty;
             pendingTransferPlayerId = string.Empty;
             pendingTransferAction = string.Empty;
@@ -958,12 +1013,11 @@ namespace FC2026.Core
             var filterHeight = Mathf.Clamp(panel.height * 0.055f, 30f, 40f);
             var filterGap = 5f;
             var filterWidth = (width - filterGap * 4f) / 5f;
-            var filterLabels = new[] { "ALL", "GK", "DEF", "MID", "FWD" };
-            for (var i = 0; i < filterLabels.Length; i++)
+            for (var i = 0; i < TransferPositionFilters.Length; i++)
             {
                 var selected = transferPositionFilter == i;
                 if (GUI.Button(new Rect(x + i * (filterWidth + filterGap), filterY, filterWidth, filterHeight),
-                    filterLabels[i], selected ? accentButtonStyle : buttonStyle))
+                    TransferPositionFilters[i], selected ? accentButtonStyle : buttonStyle))
                     SetTransferPositionFilter(i);
             }
 
@@ -1331,6 +1385,8 @@ namespace FC2026.Core
             showTransfers = false;
             confirmNewCareer = false;
             marketCache = null;
+            filteredMarketCache = null;
+            filteredSquadCache = null;
             pendingTransferPlayerId = string.Empty;
             pendingTransferAction = string.Empty;
             selectedTransferPlayerId = string.Empty;
