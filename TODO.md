@@ -12,5 +12,6 @@
 
 ## Mobile quality
 
+- [x] Add a match pause/resume overlay with mobile touch and desktop keyboard controls.
 - [ ] Profile the active Unity scene on a mid-range Android device.
 - [ ] Tune rendering and input responsiveness after the first on-device review.
