@@ -26,6 +26,10 @@ namespace FC2026.Core
         private bool resetting;
         private bool live;
         private bool halfTimePending;
+        private bool paused;
+        private bool confirmRestart;
+        private bool confirmAbandon;
+        private float previousTimeScale = 1f;
         private int half;
         private float halfElapsed;
         private float autoSwitchTimer;
@@ -94,6 +98,8 @@ namespace FC2026.Core
 
         private void OnDestroy()
         {
+            if (paused)
+                Time.timeScale = previousTimeScale > 0f ? previousTimeScale : 1f;
             if (Instance == this)
                 Instance = null;
         }
@@ -122,6 +128,17 @@ namespace FC2026.Core
         private void Update()
         {
             if (matchFinished)
+                return;
+
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P))
+            {
+                if (paused)
+                    SetPaused(false);
+                else if (!halfTimePending)
+                    SetPaused(true);
+            }
+
+            if (paused)
                 return;
 
             if (userPlayer == null || !userPlayer.IsUserControlled)
@@ -157,6 +174,63 @@ namespace FC2026.Core
             {
                 HandleOutOfPlay(position);
             }
+        }
+
+        private void OnApplicationPause(bool applicationPaused)
+        {
+            if (applicationPaused && !matchFinished && !halfTimePending)
+                SetPaused(true);
+        }
+
+        private void SetPaused(bool value)
+        {
+            if (paused == value)
+                return;
+
+            paused = value;
+            if (paused)
+            {
+                previousTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
+                Time.timeScale = 0f;
+            }
+            else
+            {
+                Time.timeScale = previousTimeScale > 0f ? previousTimeScale : 1f;
+                confirmRestart = false;
+                confirmAbandon = false;
+            }
+        }
+
+        private void RestartMatch()
+        {
+            if (half > 0)
+                SwitchSides();
+
+            SetPaused(false);
+            homeScore = 0;
+            awayScore = 0;
+            homePossession = 0f;
+            awayPossession = 0f;
+            half = 0;
+            halfElapsed = 0f;
+            matchElapsed = 0f;
+            nextCommentaryAt = 8f;
+            autoSwitchTimer = 0f;
+            matchFinished = false;
+            resultSaved = false;
+            halfTimePending = false;
+            cupShootoutPending = false;
+            resetting = false;
+            goalBanner = string.Empty;
+            goalBannerUntil = 0f;
+            commentary = "The referee gets us underway!";
+            StartCoroutine(BeginKickoff(1, 0.45f));
+        }
+
+        private void AbandonMatch()
+        {
+            SetPaused(false);
+            CompleteCareerMatch(false);
         }
 
         private void FindUserPlayer()
@@ -1221,6 +1295,10 @@ namespace FC2026.Core
                 $"{(half == 0 ? "1ST HALF" : "2ND HALF")}  {minute:00}'   •   POSSESSION {homePossessionPercent}% - {100 - homePossessionPercent}%",
                 labelSmallStyle);
 
+            if (!halfTimePending && !matchFinished &&
+                GUI.Button(new Rect(Screen.width - 78f, 16f, 64f, 52f), "PAUSE", buttonStyle))
+                SetPaused(true);
+
             if (Application.isMobilePlatform)
             {
                 if (!halfTimePending && !matchFinished)
@@ -1228,7 +1306,7 @@ namespace FC2026.Core
             }
             else
                 GUI.Label(new Rect(18f, Screen.height - 48f, Screen.width - 36f, 36f),
-                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch", helpStyle);
+                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch   •   P / Esc: pause", helpStyle);
 
             if (Time.time < goalBannerUntil)
                 GUI.Label(new Rect(0, Screen.height * 0.33f, Screen.width, 100f), goalBanner, goalStyle);
@@ -1281,6 +1359,69 @@ namespace FC2026.Core
                     panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", flowButtonStyle))
                     CompleteCareerMatch();
             }
+
+            if (paused)
+                DrawPauseMenu();
+        }
+
+        private void DrawPauseMenu()
+        {
+            modalBackdrop ??= HubTheme.SolidTexture(new Color(0.02f, 0.035f, 0.05f, 0.72f));
+            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), modalBackdrop);
+
+            var panelWidth = Mathf.Min(Screen.width * 0.72f, 620f);
+            var panelHeight = Mathf.Min(Screen.height * 0.9f, 440f);
+            var panel = new Rect((Screen.width - panelWidth) * 0.5f,
+                (Screen.height - panelHeight) * 0.5f, panelWidth, panelHeight);
+            GUI.Box(panel, string.Empty, panelStyle);
+            fullTimeStyle ??= CreatePanelStyle();
+            GUI.Label(new Rect(panel.x + 18f, panel.y + 18f, panel.width - 36f, 54f),
+                confirmRestart ? "RESTART MATCH?" : confirmAbandon ? "LEAVE MATCH?" : "MATCH PAUSED", fullTimeStyle);
+
+            var scoreY = panel.y + 78f;
+            GUI.Label(new Rect(panel.x + 20f, scoreY, panel.width - 40f, 48f),
+                $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", scoreStyle);
+
+            var buttonX = panel.x + panel.width * 0.16f;
+            var buttonWidth = panel.width * 0.68f;
+            var buttonHeight = Mathf.Clamp(panel.height * 0.12f, 40f, 54f);
+            var gap = 8f;
+            var buttonY = scoreY + 58f;
+
+            if (confirmRestart)
+            {
+                GUI.Label(new Rect(panel.x + 24f, buttonY, panel.width - 48f, 42f),
+                    "The score and match clock will reset.", labelSmallStyle);
+                buttonY += 46f;
+                if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight), "RESTART MATCH", flowButtonStyle))
+                    RestartMatch();
+                buttonY += buttonHeight + gap;
+                if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight), "CANCEL", buttonStyle))
+                    confirmRestart = false;
+                return;
+            }
+
+            if (confirmAbandon)
+            {
+                GUI.Label(new Rect(panel.x + 24f, buttonY, panel.width - 48f, 42f),
+                    "This match will not count toward your career.", labelSmallStyle);
+                buttonY += 46f;
+                if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight), "LEAVE MATCH", flowButtonStyle))
+                    AbandonMatch();
+                buttonY += buttonHeight + gap;
+                if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight), "KEEP PLAYING", buttonStyle))
+                    confirmAbandon = false;
+                return;
+            }
+
+            if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight), "RESUME MATCH", flowButtonStyle))
+                SetPaused(false);
+            buttonY += buttonHeight + gap;
+            if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight), "RESTART MATCH", buttonStyle))
+                confirmRestart = true;
+            buttonY += buttonHeight + gap;
+            if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight), "RETURN TO CAREER", buttonStyle))
+                confirmAbandon = true;
         }
 
         private static GUIStyle CreatePanelStyle()
@@ -1309,11 +1450,11 @@ namespace FC2026.Core
             commentary = lines[Random.Range(0, lines.Length)];
         }
 
-        private void CompleteCareerMatch()
+        private void CompleteCareerMatch(bool saveResult = true)
         {
             if (resultSaved) return;
             resultSaved = true;
-            var save = CareerSaveSystem.Load();
+            var save = saveResult ? CareerSaveSystem.Load() : null;
             if (save != null)
             {
                 // The managed club always plays the left/home side of this scene,
