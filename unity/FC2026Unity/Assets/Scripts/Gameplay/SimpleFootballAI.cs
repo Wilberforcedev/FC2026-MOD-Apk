@@ -282,18 +282,23 @@ namespace FC2026.Gameplay
 
         private void UpdateGoalkeeper(BallController ball)
         {
-            // attackDirection points at the opponent's goal, so the keeper defends the opposite line.
-            var goalZ = -attackDirection * 52.5f;
+            // attackDirection points at the opponent goal, so the keeper guards the opposite goal.
+            const float pitchHalfLength = 52.5f;
+            const float postLimit = 3.66f;
+            var goalZ = -attackDirection * pitchHalfLength;
             var goal = new Vector3(0f, 0f, goalZ);
             var ballFlat = Flat(ball.Position);
             var selfFlat = Flat(transform.position);
             var distToBall = Vector3.Distance(selfFlat, ballFlat);
+            var distanceToGoal = Mathf.Abs(ball.Position.z - goalZ);
 
-            var goalToBall = ballFlat - goal;
-            goalToBall.y = 0f;
-            var depth = Mathf.Clamp(goalToBall.magnitude * 0.1f, 0.7f, 4f);
-            var baseTarget = goal + (goalToBall.sqrMagnitude > 0.01f ? goalToBall.normalized : Vector3.zero) * depth;
-            baseTarget.x = Mathf.Clamp(baseTarget.x, -3.6f, 3.6f);
+            // Stay between the posts and shift toward the ball while keeping the
+            // goalkeeper a little farther off the line when play is nearby.
+            var setDepth = Mathf.Lerp(3.3f, 0.8f, Mathf.Clamp01(distanceToGoal / 36f));
+            var baseTarget = new Vector3(
+                Mathf.Clamp(ball.Position.x * 0.58f, -3.1f, 3.1f),
+                0f,
+                goalZ + attackDirection * setDepth);
 
             if (ball.Owner == controller)
             {
@@ -325,25 +330,47 @@ namespace FC2026.Gameplay
                 }
             }
 
-            MoveTowards(baseTarget, moveSpeed * 0.85f, 20f);
-
             var velocity = ball.Velocity;
-            var flatVelocity = Flat(velocity);
-            var toGoal = goal - ballFlat;
-            toGoal.y = 0f;
-            if (velocity.magnitude > 7f && goalToBall.magnitude < 12f && flatVelocity.sqrMagnitude > 0.01f &&
-                toGoal.sqrMagnitude > 0.01f &&
-                Vector3.Dot(flatVelocity.normalized, toGoal.normalized) > 0.5f && diveTimer <= 0f)
+            var towardGoalSpeed = -attackDirection * velocity.z;
+            var timeToGoalLine = velocity.z == 0f
+                ? float.PositiveInfinity
+                : (goalZ - ball.Position.z) / velocity.z;
+            var isThreateningShot = ball.Owner == null &&
+                towardGoalSpeed > 2.5f &&
+                timeToGoalLine > 0.05f && timeToGoalLine < 1.85f &&
+                distanceToGoal < 18f;
+
+            if (isThreateningShot)
             {
-                var timeToLine = Mathf.Abs((goalZ - ball.Position.z) / Mathf.Max(0.5f, Mathf.Abs(velocity.z)));
-                var predictedX = ball.Position.x + velocity.x * timeToLine;
-                if (Mathf.Abs(predictedX) < 4.6f)
+                var predictedX = ball.Position.x + velocity.x * timeToGoalLine;
+                var predictedY = ball.Position.y + velocity.y * timeToGoalLine +
+                    0.5f * Physics.gravity.y * timeToGoalLine * timeToGoalLine;
+                var insideGoalMouth = Mathf.Abs(predictedX) <= postLimit &&
+                    predictedY >= 0.12f && predictedY <= 2.55f;
+
+                if (insideGoalMouth)
                 {
-                    diveTimer = 1.1f;
-                    motion?.TriggerGoalkeeperDive(Mathf.Sign(predictedX - transform.position.x));
-                    body.AddForce(new Vector3(Mathf.Sign(predictedX - transform.position.x) * 2.3f, 0f, 0f), ForceMode.VelocityChange);
+                    // Move toward the projected crossing point first. This gives
+                    // the keeper a chance to make a normal save before diving.
+                    var interceptTarget = baseTarget;
+                    interceptTarget.x = Mathf.Clamp(predictedX, -3.15f, 3.15f);
+                    MoveTowards(interceptTarget, moveSpeed * 1.12f, 28f);
+
+                    var lateralReach = Mathf.Abs(predictedX - transform.position.x);
+                    var needsDive = lateralReach > 1.05f && lateralReach < 4.15f;
+                    if (needsDive && diveTimer <= 0f && timeToGoalLine < 1.35f)
+                    {
+                        var side = Mathf.Sign(predictedX - transform.position.x);
+                        diveTimer = 1.1f;
+                        actionTimer = 0.65f;
+                        motion?.TriggerGoalkeeperDive(side);
+                        body.AddForce(new Vector3(side * 3.1f, 0f, -attackDirection * 0.45f), ForceMode.VelocityChange);
+                    }
+                    return;
                 }
             }
+
+            MoveTowards(baseTarget, moveSpeed * 0.85f, 20f);
         }
 
         private bool IsClosestToBall(Vector3 ballFlat)
