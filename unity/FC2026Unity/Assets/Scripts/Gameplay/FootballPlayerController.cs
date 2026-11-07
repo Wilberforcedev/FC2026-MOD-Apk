@@ -348,11 +348,12 @@ namespace FC2026.Gameplay
                 return false;
 
             tackleCooldown = 0.58f;
-            motion?.TriggerTackle();
+            var ball = BallController.Instance;
+            var tackleWithLeftFoot = ball != null && transform.InverseTransformPoint(ball.Position).x < 0f;
+            motion?.TriggerTackle(tackleWithLeftFoot);
             var direction = lastMoveDirection.sqrMagnitude > 0.01f ? lastMoveDirection.normalized : transform.forward;
             body.AddForce(direction * 2.1f, ForceMode.VelocityChange);
 
-            var ball = BallController.Instance;
             if (ball == null)
                 return false;
 
