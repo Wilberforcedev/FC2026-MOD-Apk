@@ -1,0 +1,25 @@
+name: Football world data validation
+
+on:
+  push:
+    paths:
+      - "unity_app/Assets/Data/FootballWorld/**"
+      - "unity_app/Tools/validate_football_world.py"
+      - ".github/workflows/football-world-validation.yml"
+  pull_request:
+    paths:
+      - "unity_app/Assets/Data/FootballWorld/**"
+      - "unity_app/Tools/validate_football_world.py"
+      - ".github/workflows/football-world-validation.yml"
+  workflow_dispatch:
+
+jobs:
+  validate-catalogs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Validate football-world catalogs
+        run: python unity_app/Tools/validate_football_world.py

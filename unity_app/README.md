@@ -108,4 +108,8 @@ Catalog files:
 
 Run python unity_app/Tools/validate_football_world.py from the repository root. The validator checks unique IDs, player-to-club links, club-to-league links, competition eligibility references, player rating ranges and each league's declared club count.
 
-The JSON catalogs are intended to be assigned as TextAsset references on FootballWorldCatalogLoader in the Unity scene. After importing or changing catalogs, verify the Inspector references and check the loader's LastLoadSucceeded / validation log. This repository update has been source/data-validated; it has not been compiled or play-tested in Unity, and no Android build validation is claimed.
+The Editor utility FootballWorldResourcesSync copies the canonical JSON files into Assets/Resources/FootballWorld when the Unity Editor opens, allowing the runtime bootstrap to load them as TextAssets on Android. FootballWorldRuntimeBootstrap creates the loader before scene objects initialize, and the loader reports catalog counts or validation errors in the Unity Console. Do not edit the generated Resources copies directly; Assets/Data/FootballWorld remains the source of truth.
+
+The Python validator runs in GitHub Actions for changes to these catalogs. In Unity, run the Editor tests in Assets/Tests/Editor, especially FootballWorldRuntimeCatalogTests, after the resource sync completes. CareerManager.InitializeFromWorldCatalog(database, leagueId, managedClubId) and FootballWorldTeamFactory map catalog clubs and players into the existing TeamData/PlayerData model. SeasonCalendarManager uses catalog competition IDs when generating fixtures.
+
+Validation is still pending until the CI result and Unity Editor tests are observed. No Unity compilation, Android APK build, emulator test, or physical-device test is claimed. Player identities/attributes remain fictional, and many stadium names are placeholders requiring a sourced real-world data pass.
