@@ -261,7 +261,7 @@ namespace FC2026.Gameplay
             var intercept = ballFlat + Flat(ball.Velocity) * 0.2f;
             MoveTowards(intercept, moveSpeed * sprintMultiplier, 21f);
 
-            if (distToBall <= 1.05f && ball.IsFree)
+            if (distToBall <= 1.05f && ball.IsFree && ball.CanBeControlledBy(controller))
             {
                 ball.Claim(controller);
                 actionTimer = 0.25f;

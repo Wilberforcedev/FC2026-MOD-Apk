@@ -9,6 +9,7 @@ namespace FC2026.Gameplay
     public sealed class FootballPlayerController : MonoBehaviour
     {
         private static readonly List<FootballPlayerController> Registry = new();
+        private const float MaxTackleBallHeight = 1.55f;
 
         [SerializeField] private float moveSpeed = 7.1f;
         [SerializeField] private float sprintSpeed = 9.7f;
@@ -259,7 +260,7 @@ namespace FC2026.Gameplay
         private void TryClaimLooseBall()
         {
             var ball = BallController.Instance;
-            if (ball == null || !ball.IsFree || kickLock > 0f)
+            if (ball == null || !ball.IsFree || kickLock > 0f || !ball.CanBeControlledBy(this))
                 return;
 
             var delta = ball.Position - transform.position;
@@ -355,7 +356,7 @@ namespace FC2026.Gameplay
 
             var delta = ball.Position - transform.position;
             delta.y = 0f;
-            if (delta.magnitude > 2.05f || ball.Owner == this)
+            if (delta.magnitude > 2.05f || ball.Position.y > MaxTackleBallHeight || ball.Owner == this)
                 return false;
 
             if (ball.Owner == null)

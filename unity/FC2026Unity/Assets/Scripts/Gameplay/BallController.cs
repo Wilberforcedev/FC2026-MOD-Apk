@@ -6,6 +6,8 @@ namespace FC2026.Gameplay
     public sealed class BallController : MonoBehaviour
     {
         private const float GroundY = 0.115f;
+        private const float MaxOutfieldControlHeight = 1.9f;
+        private const float MaxGoalkeeperControlHeight = 2.65f;
         private const float MaxSpeed = 38f;
         private const float DribbleDistance = 0.72f;
         private const float ReclaimDelay = 0.24f;
@@ -36,6 +38,8 @@ namespace FC2026.Gameplay
         public float PossessionCooldownUntil => cooldownUntil;
         public bool IsFree => owner == null && Time.time >= cooldownUntil;
         public bool IsOwnedBy(FootballPlayerController player) => owner == player;
+        public bool CanBeControlledBy(FootballPlayerController player) => player != null &&
+            transform.position.y <= (player.IsGoalkeeper ? MaxGoalkeeperControlHeight : MaxOutfieldControlHeight);
 
         private void Awake()
         {
@@ -171,7 +175,7 @@ namespace FC2026.Gameplay
 
         public void Claim(FootballPlayerController player)
         {
-            if (player == null)
+            if (!CanBeControlledBy(player))
                 return;
 
             if (owner == player)
