@@ -1242,7 +1242,10 @@ namespace FC2026.Core
             {
                 if (live && !halfTimePending && !matchFinished)
                 {
-                    var pauseRect = new Rect(Screen.width - 118f, 18f, 102f, 44f);
+                    var safeArea = Screen.safeArea;
+                    var safeRight = safeArea.xMax;
+                    var safeTop = Screen.height - safeArea.yMax;
+                    var pauseRect = new Rect(safeRight - 118f, safeTop + 18f, 102f, 44f);
                     if (GUI.Button(pauseRect, "PAUSE", buttonStyle))
                         PauseMatch();
                     DrawMobileControls();
@@ -1412,15 +1415,20 @@ namespace FC2026.Core
                 return;
 
             var move = Vector2.zero;
+            var safeArea = Screen.safeArea;
+            var safeLeft = safeArea.xMin;
+            var safeRight = safeArea.xMax;
+            var safeTop = Screen.height - safeArea.yMax;
+            var safeBottom = Screen.height - safeArea.yMin;
             var radius = Mathf.Clamp(Screen.height * 0.115f, 64f, 94f);
-            var joyCenter = new Vector2(radius + 28f, Screen.height - radius - 30f);
+            var joyCenter = new Vector2(safeLeft + radius + 28f, safeBottom - radius - 30f);
             var stickOffset = Vector2.zero;
             for (var i = 0; i < Input.touchCount; i++)
             {
                 var touch = Input.GetTouch(i);
                 var point = new Vector2(touch.position.x, Screen.height - touch.position.y);
                 var delta = point - joyCenter;
-                if (point.x < Screen.width * 0.44f && delta.sqrMagnitude <= radius * radius * 2.6f)
+                if (point.x < safeLeft + safeArea.width * 0.44f && delta.sqrMagnitude <= radius * radius * 2.6f)
                 {
                     stickOffset = Vector2.ClampMagnitude(delta, radius);
                     move = stickOffset / radius;
@@ -1430,8 +1438,8 @@ namespace FC2026.Core
 
             DrawJoystick(joyCenter, radius, stickOffset);
 
-            var right = Screen.width - 24f;
-            var bottom = Screen.height - 24f;
+            var right = safeRight - 24f;
+            var bottom = safeBottom - 24f;
             var actionSize = Mathf.Clamp(Screen.height * 0.105f, 62f, 88f);
             var gap = actionSize * 0.13f;
             Rect ActionRect(int column, int row) => new Rect(
