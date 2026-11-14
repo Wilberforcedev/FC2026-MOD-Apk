@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using FC2026.Core;
+using FC2026.World;
 
 namespace FC2026.Gameplay
 {
@@ -133,7 +134,7 @@ namespace FC2026.Gameplay
 
         private void Start()
         {
-            var styleSeed = (uint)gameObject.name.GetHashCode() / (float)uint.MaxValue;
+            var styleSeed = (WorldHash.Combine(gameObject.name) & 0xFFFFFFu) / 16777216f;
             motion = FootballVisualFactory.EnsureAnimatedRig(gameObject, IsGoalkeeper, styleSeed,
                 false, skinTone, hairColor, faceVariant);
         }
