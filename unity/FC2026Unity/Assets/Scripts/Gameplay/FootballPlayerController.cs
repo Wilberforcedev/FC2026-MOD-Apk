@@ -503,7 +503,11 @@ namespace FC2026.Gameplay
 
             var useLeftFoot = SelectLeftFoot(ball.Position);
             var footErrorFactor = useLeftFoot == prefersLeftFoot ? 1f : 1.25f;
-            var passError = (1f - passingStat) * (throughBall ? 0.045f : 0.03f) * footErrorFactor;
+            var pressureDistance = NearestOpponentDistance(transform.position);
+            // Nearby defenders add a small directional error while passing skill still shapes the base accuracy.
+            var pressureError = Mathf.Lerp(0.025f, 0f, Mathf.InverseLerp(1.25f, 5f, pressureDistance));
+            var skillError = (1f - passingStat) * (throughBall ? 0.045f : 0.03f);
+            var passError = (skillError + pressureError) * footErrorFactor;
             flat = (flat + transform.right * Random.Range(-passError, passError)).normalized;
 
             motion?.TriggerPass(useLeftFoot);
