@@ -1,9 +1,12 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace FC2026.Gameplay
 {
     public sealed class ProceduralHumanoidRig : MonoBehaviour
     {
+        private readonly List<UnityEngine.Object> runtimeAssets = new();
+
         private static Texture2D skinGrainTexture;
         private static Texture2D kitWeaveTexture;
         private int faceVariantIndex;
@@ -52,6 +55,11 @@ namespace FC2026.Gameplay
                 ? faceVariant % 3
                 : (GetInstanceID() & int.MaxValue) % 3;
             useOwnerFace = ownerLikeness;
+
+            // These source materials are created per player; team kit materials remain shared.
+            TrackRuntimeAsset(skin);
+            TrackRuntimeAsset(hair);
+            TrackRuntimeAsset(boots);
 
             var detailedShirt = CreateTexturedMaterial(shirt, GetKitWeaveTexture());
             var detailedShorts = CreateTexturedMaterial(shorts, GetKitWeaveTexture());
@@ -125,6 +133,25 @@ namespace FC2026.Gameplay
             }
         }
 
+        private void OnDestroy()
+        {
+            foreach (var asset in runtimeAssets)
+            {
+                if (asset != null)
+                    UnityEngine.Object.Destroy(asset);
+            }
+
+            runtimeAssets.Clear();
+        }
+
+        private T TrackRuntimeAsset<T>(T asset) where T : UnityEngine.Object
+        {
+            if (asset != null && !runtimeAssets.Contains(asset))
+                runtimeAssets.Add(asset);
+
+            return asset;
+        }
+
         private void CreateTexturedFace()
         {
             var resourcePath = useOwnerFace ? "PlayerFaces/owner_face" : "PlayerFaces/face_0" + (faceVariantIndex + 1);
@@ -180,7 +207,7 @@ namespace FC2026.Gameplay
                 triangles[triangle++] = inner + next;
             }
 
-            var mesh = new Mesh { name = "Textured Player Face" };
+            var mesh = TrackRuntimeAsset(new Mesh { name = "Textured Player Face" });
             mesh.vertices = vertices;
             mesh.uv = uvs;
             mesh.triangles = triangles;
@@ -188,7 +215,7 @@ namespace FC2026.Gameplay
             mesh.RecalculateBounds();
 
             var shader = Shader.Find("Standard");
-            var faceMaterial = new Material(shader) { mainTexture = faceTexture };
+            var faceMaterial = TrackRuntimeAsset(new Material(shader) { mainTexture = faceTexture });
             faceMaterial.SetFloat("_Glossiness", 0.22f);
             var face = new GameObject("Photographic Face Texture");
             face.transform.SetParent(Head, false);
@@ -228,9 +255,9 @@ namespace FC2026.Gameplay
             }
         }
 
-        private static Material CreateTexturedMaterial(Material source, Texture2D detailTexture)
+        private Material CreateTexturedMaterial(Material source, Texture2D detailTexture)
         {
-            var material = new Material(source);
+            var material = TrackRuntimeAsset(new Material(source));
             material.mainTexture = detailTexture;
             material.mainTextureScale = new Vector2(2f, 2f);
             return material;
@@ -335,7 +362,7 @@ namespace FC2026.Gameplay
                 triangles[index++] = top + side;
             }
 
-            var mesh = new Mesh { name = name + " Mesh" };
+            var mesh = TrackRuntimeAsset(new Mesh { name = name + " Mesh" });
             mesh.vertices = vertices;
             mesh.uv = uvs;
             mesh.triangles = triangles;

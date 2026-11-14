@@ -52,7 +52,7 @@ namespace FC2026.Gameplay
             foreach (var renderer in renderers)
             {
                 if (renderer != null && renderer.gameObject.name == objectName)
-                    return renderer.material;
+                    return renderer.sharedMaterial;
             }
             return null;
         }
