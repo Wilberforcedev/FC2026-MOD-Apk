@@ -360,6 +360,7 @@ namespace FC2026.Gameplay
 
             var delta = ball.Position - transform.position;
             delta.y = 0f;
+            // Tackles stay grounded so players cannot win possession from a high ball.
             if (delta.magnitude > 2.05f || ball.Position.y > MaxTackleBallHeight || ball.Owner == this)
                 return false;
 
