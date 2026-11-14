@@ -275,6 +275,7 @@ namespace FC2026.Gameplay
 
             if (distToBall <= 1.9f && tackleTimer <= 0f)
             {
+                // Throttle AI tackle attempts so the defender does not trigger one every physics tick.
                 tackleTimer = 0.65f;
                 controller.AttemptTackle();
             }
