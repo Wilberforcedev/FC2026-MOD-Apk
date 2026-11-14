@@ -892,6 +892,7 @@ namespace FC2026.Core
                     PassingFor(player),
                     DefendingFor(player),
                     SpeedFor(player),
+                    PhysicalFor(player),
                     player != null ? player.SkinTone : -1,
                     player != null ? player.HairColor : -1,
                     player != null ? player.FaceVariant : -1);
@@ -918,6 +919,7 @@ namespace FC2026.Core
                     PassingFor(player),
                     DefendingFor(player),
                     SpeedFor(player),
+                    PhysicalFor(player),
                     player != null ? player.SkinTone : -1,
                     player != null ? player.HairColor : -1,
                     player != null ? player.FaceVariant : -1);
@@ -1000,6 +1002,11 @@ namespace FC2026.Core
             return player == null ? 0.6f : Mathf.Lerp(0.32f, 0.95f, Attribute01(player.Defending));
         }
 
+        private static float PhysicalFor(WorldPlayer player)
+        {
+            return player == null ? 0.5f : Mathf.Lerp(0.32f, 0.95f, Attribute01(player.Physical));
+        }
+
         private static float SpeedFor(WorldPlayer player)
         {
             return player == null ? 0.96f : 0.88f + Attribute01(player.Pace) * 0.26f;
@@ -1057,7 +1064,7 @@ namespace FC2026.Core
         }
 
         private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts, float heightScale, float widthScale,
-            bool user, int attackDirection, PlayerRole role, float shooting, float passing, float defending, float speed,
+            bool user, int attackDirection, PlayerRole role, float shooting, float passing, float defending, float speed, float physical,
             int skinTone, int hairColor, int faceVariant)
         {
             var player = new GameObject(name);
@@ -1113,7 +1120,7 @@ namespace FC2026.Core
 
             var controller = player.AddComponent<FootballPlayerController>();
             controller.Configure(role, start, attackDirection, shooting, passing,
-                resolvedSkinTone, resolvedHairColor, faceVariant, defending);
+                resolvedSkinTone, resolvedHairColor, faceVariant, defending, physical);
             controller.SetUserControlled(user);
 
             var ai = player.AddComponent<SimpleFootballAI>();

@@ -37,6 +37,7 @@ namespace FC2026.Gameplay
         private float shootingStat = 0.6f;
         private float passingStat = 0.6f;
         private float defendingStat = 0.6f;
+        private float physicalStat = 0.5f;
         private int skinTone = -1;
         private int hairColor = -1;
         private int faceVariant = -1;
@@ -80,7 +81,7 @@ namespace FC2026.Gameplay
         }
 
         public void Configure(PlayerRole role, Vector3 homePosition, int teamDirection, float shooting, float passing,
-            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1, float defending = 0.6f)
+            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1, float defending = 0.6f, float physical = 0.5f)
         {
             Role = role;
             HomePosition = homePosition;
@@ -89,6 +90,7 @@ namespace FC2026.Gameplay
             shootingStat = Mathf.Clamp01(shooting);
             passingStat = Mathf.Clamp01(passing);
             defendingStat = Mathf.Clamp01(defending);
+            physicalStat = Mathf.Clamp01(physical);
             skinTone = playerSkinTone;
             hairColor = playerHairColor;
             faceVariant = playerFaceVariant;
@@ -250,10 +252,12 @@ namespace FC2026.Gameplay
 
         private void UpdateStamina(bool sprinting, float speed)
         {
+            var drainFactor = Mathf.Lerp(1.15f, 0.85f, physicalStat);
+            var recoveryFactor = Mathf.Lerp(0.85f, 1.15f, physicalStat);
             if (sprinting)
-                stamina -= staminaDrain * Time.fixedDeltaTime;
+                stamina -= staminaDrain * drainFactor * Time.fixedDeltaTime;
             else
-                stamina += (speed < 1.2f ? staminaRecovery : staminaRecovery * 0.55f) * Time.fixedDeltaTime;
+                stamina += (speed < 1.2f ? staminaRecovery : staminaRecovery * 0.55f) * recoveryFactor * Time.fixedDeltaTime;
             stamina = Mathf.Clamp01(stamina);
         }
 
