@@ -38,6 +38,7 @@ namespace FC2026.Gameplay
         public float PossessionCooldownUntil => cooldownUntil;
         public bool IsFree => owner == null && Time.time >= cooldownUntil;
         public bool IsOwnedBy(FootballPlayerController player) => owner == player;
+        // Goalkeepers can claim higher balls than outfield players, while lofted balls stay uncontested.
         public bool CanBeControlledBy(FootballPlayerController player) => player != null &&
             transform.position.y <= (player.IsGoalkeeper ? MaxGoalkeeperControlHeight : MaxOutfieldControlHeight);
 
