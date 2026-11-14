@@ -14,6 +14,7 @@ namespace FC2026.Core
     {
         public const int CurrentSchemaVersion = CareerSchema.Version;
         private const string SaveKey = "fc2026.career.save.v1";
+        private const string BackupSaveKey = SaveKey + ".backup";
 
         private static readonly string[] LegacyClubIds =
         {
@@ -31,6 +32,10 @@ namespace FC2026.Core
 
             try
             {
+                var currentSave = PlayerPrefs.GetString(SaveKey, string.Empty);
+                if (!string.IsNullOrWhiteSpace(currentSave))
+                    PlayerPrefs.SetString(BackupSaveKey, currentSave);
+
                 PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(data));
                 PlayerPrefs.Save();
                 return true;
@@ -44,35 +49,70 @@ namespace FC2026.Core
 
         public static CareerSaveData Load()
         {
-            if (!PlayerPrefs.HasKey(SaveKey))
+            var data = ReadSave(SaveKey, out var needsPersist, out var hasFutureSchema);
+            if (hasFutureSchema)
+            {
+                Debug.LogWarning("FC 2026: career save was created by a newer game version.");
+                return null;
+            }
+
+            if (data != null)
+            {
+                if (needsPersist && !Save(data))
+                    Debug.LogWarning("FC 2026: career save migration could not be persisted.");
+                return data;
+            }
+
+            data = ReadSave(BackupSaveKey, out _, out hasFutureSchema);
+            if (hasFutureSchema)
+            {
+                Debug.LogWarning("FC 2026: career backup was created by a newer game version.");
+                return null;
+            }
+            if (data == null)
+                return null;
+
+            // Remove the invalid primary first so saving the recovered copy preserves the good backup.
+            Debug.LogWarning("FC 2026: primary career save was invalid; restoring the previous save.");
+            PlayerPrefs.DeleteKey(SaveKey);
+            if (!Save(data))
+                Debug.LogWarning("FC 2026: recovered career save could not be restored.");
+            return data;
+        }
+
+        private static CareerSaveData ReadSave(string key, out bool needsPersist, out bool hasFutureSchema)
+        {
+            needsPersist = false;
+            hasFutureSchema = false;
+            if (!PlayerPrefs.HasKey(key))
                 return null;
 
             try
             {
-                var json = PlayerPrefs.GetString(SaveKey, string.Empty);
+                var json = PlayerPrefs.GetString(key, string.Empty);
                 if (string.IsNullOrWhiteSpace(json))
                     return null;
 
                 var data = JsonUtility.FromJson<CareerSaveData>(json);
                 if (data == null)
                     return null;
+                if (data.schemaVersion > CurrentSchemaVersion)
+                {
+                    hasFutureSchema = true;
+                    return null;
+                }
 
-                var needsPersist = data.schemaVersion != CurrentSchemaVersion;
+                needsPersist = data.schemaVersion != CurrentSchemaVersion;
                 if (data.schemaVersion < CurrentSchemaVersion)
                     Migrate(data);
                 else
                     Normalize(data);
 
-                if (!IsValid(data))
-                    return null;
-
-                if (needsPersist && !Save(data))
-                    Debug.LogWarning("FC 2026: career save migration could not be persisted.");
-                return data;
+                return IsValid(data) ? data : null;
             }
             catch (Exception exception)
             {
-                Debug.LogWarning($"FC 2026 career save could not be loaded: {exception.Message}");
+                Debug.LogWarning($"FC 2026 career save \"{key}\" could not be loaded: {exception.Message}");
                 return null;
             }
         }
@@ -80,6 +120,7 @@ namespace FC2026.Core
         public static void Delete()
         {
             PlayerPrefs.DeleteKey(SaveKey);
+            PlayerPrefs.DeleteKey(BackupSaveKey);
             PlayerPrefs.Save();
             CareerTransferSystem.Invalidate();
         }
