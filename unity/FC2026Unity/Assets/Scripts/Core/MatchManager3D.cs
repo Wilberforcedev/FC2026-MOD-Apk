@@ -101,6 +101,13 @@ namespace FC2026.Core
                 Instance = null;
         }
 
+        private void OnApplicationPause(bool isPaused)
+        {
+            // Keep active matches paused after a phone call or app switch.
+            if (isPaused && live)
+                PauseMatch();
+        }
+
         private void ResolveTeamNames(CareerSaveData career)
         {
             if (career == null)
