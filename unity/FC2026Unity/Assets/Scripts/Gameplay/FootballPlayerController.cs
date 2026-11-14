@@ -53,6 +53,7 @@ namespace FC2026.Gameplay
         public float ShootingStat => shootingStat;
         public float PassingStat => passingStat;
         public float DefendingStat => defendingStat;
+        public float PhysicalStat => physicalStat;
         public bool IsGoalkeeper => Role == PlayerRole.Goalkeeper;
         public bool HasBall => BallController.Instance != null && BallController.Instance.IsOwnedBy(this);
         public Vector3 LastMoveDirection => lastMoveDirection;
@@ -381,7 +382,11 @@ namespace FC2026.Gameplay
 
             var defenderBonus = Role == PlayerRole.Defender ? 0.12f : Role == PlayerRole.Midfielder ? 0.05f : 0f;
             var skillBonus = (defendingStat - 0.6f) * 0.24f;
-            var chance = Mathf.Clamp(Mathf.Lerp(0.36f, 0.78f, stamina) + defenderBonus + skillBonus, 0f, 0.9f);
+            // A stronger ball carrier is harder to dispossess, even against a skilled tackler.
+            var carrierResistance = (ball.Owner.PhysicalStat - 0.5f) * 0.18f;
+            var chance = Mathf.Clamp(
+                Mathf.Lerp(0.36f, 0.78f, stamina) + defenderBonus + skillBonus - carrierResistance,
+                0f, 0.9f);
             if (Random.value > chance)
                 return false;
 
