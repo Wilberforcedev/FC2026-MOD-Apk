@@ -878,25 +878,17 @@ namespace FC2026.Core
                 var player = homeLineup[i];
                 var role = RoleForIndex(i, formationId);
                 var isUser = i == 9;
+                var playerName = player != null ? player.Name : $"Home Player {i + 1}";
+                var profile = BuildMatchProfile(player, i, playerName);
                 var created = CreatePlayer(
-                    player != null ? player.Name : $"Home Player {i + 1}",
+                    playerName,
                     homeFormation[i],
                     role == PlayerRole.Goalkeeper ? homeKeeper : homeShirt,
                     homeShorts,
-                    HeightScaleFor(player, i),
-                    WidthScaleFor(player, i),
                     isUser,
                     1,
                     role,
-                    ShootingFor(player),
-                    PassingFor(player),
-                    DefendingFor(player),
-                    SpeedFor(player),
-                    PhysicalFor(player),
-                    player != null ? player.SkinTone : -1,
-                    player != null ? player.HairColor : -1,
-                    player != null ? player.FaceVariant : -1,
-                    player != null && player.LeftFooted);
+                    profile);
                 if (isUser)
                     userPlayer = created.GetComponent<FootballPlayerController>();
             }
@@ -906,26 +898,35 @@ namespace FC2026.Core
                 var player = awayLineup[i];
                 var mirrored = new Vector3(-homeFormation[i].x, 0f, -homeFormation[i].z);
                 var role = RoleForIndex(i, formationId);
+                var playerName = player != null ? player.Name : $"Away Player {i + 1}";
+                var profile = BuildMatchProfile(player, i + 11, playerName);
                 CreatePlayer(
-                    player != null ? player.Name : $"Away Player {i + 1}",
+                    playerName,
                     mirrored,
                     role == PlayerRole.Goalkeeper ? awayKeeper : awayShirt,
                     awayShorts,
-                    HeightScaleFor(player, i + 11),
-                    WidthScaleFor(player, i + 11),
                     false,
                     -1,
                     role,
-                    ShootingFor(player),
-                    PassingFor(player),
-                    DefendingFor(player),
-                    SpeedFor(player),
-                    PhysicalFor(player),
-                    player != null ? player.SkinTone : -1,
-                    player != null ? player.HairColor : -1,
-                    player != null ? player.FaceVariant : -1,
-                    player != null && player.LeftFooted);
+                    profile);
             }
+        }
+
+        private static PlayerMatchProfile BuildMatchProfile(WorldPlayer player, int index, string playerName)
+        {
+            // Keep career ratings and generated appearance data together in one named profile.
+            return new PlayerMatchProfile(
+                heightScale: HeightScaleFor(player, index),
+                widthScale: WidthScaleFor(player, index),
+                shooting: ShootingFor(player),
+                passing: PassingFor(player),
+                defending: DefendingFor(player),
+                pace: SpeedFor(player),
+                physical: PhysicalFor(player),
+                skinTone: player != null ? player.SkinTone : WorldHash.Index(playerName, 3),
+                hairColor: player != null ? player.HairColor : WorldHash.Index(playerName, 4),
+                faceVariant: player != null ? player.FaceVariant : -1,
+                leftFooted: player != null && player.LeftFooted);
         }
 
         private WorldPlayer[] BuildLineup(WorldPlayer[] squad)
@@ -1065,9 +1066,8 @@ namespace FC2026.Core
             }
         }
 
-        private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts, float heightScale, float widthScale,
-            bool user, int attackDirection, PlayerRole role, float shooting, float passing, float defending, float speed, float physical,
-            int skinTone, int hairColor, int faceVariant, bool leftFooted)
+        private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts,
+            bool user, int attackDirection, PlayerRole role, PlayerMatchProfile profile)
         {
             var player = new GameObject(name);
             player.transform.SetParent(transform);
@@ -1081,33 +1081,33 @@ namespace FC2026.Core
             rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
 
             var capsule = player.AddComponent<CapsuleCollider>();
-            capsule.height = 1.82f * heightScale;
-            capsule.radius = 0.31f * widthScale;
+            capsule.height = 1.82f * profile.HeightScale;
+            capsule.radius = 0.31f * profile.WidthScale;
             capsule.center = new Vector3(0, capsule.height / 2f, 0);
 
             var torso = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             torso.name = "3D Body";
             torso.transform.SetParent(player.transform);
-            torso.transform.localPosition = new Vector3(0, 0.9f * heightScale, 0);
-            torso.transform.localScale = new Vector3(0.62f * widthScale, 0.9f * heightScale, 0.5f * widthScale);
+            torso.transform.localPosition = new Vector3(0, 0.9f * profile.HeightScale, 0);
+            torso.transform.localScale = new Vector3(0.62f * profile.WidthScale, 0.9f * profile.HeightScale, 0.5f * profile.WidthScale);
             torso.GetComponent<Renderer>().material = shirt;
             Destroy(torso.GetComponent<Collider>());
 
             var lower = GameObject.CreatePrimitive(PrimitiveType.Cube);
             lower.name = "Shorts";
             lower.transform.SetParent(player.transform);
-            lower.transform.localPosition = new Vector3(0, 0.78f * heightScale, 0);
-            lower.transform.localScale = new Vector3(0.62f * widthScale, 0.34f, 0.46f * widthScale);
+            lower.transform.localPosition = new Vector3(0, 0.78f * profile.HeightScale, 0);
+            lower.transform.localScale = new Vector3(0.62f * profile.WidthScale, 0.34f, 0.46f * profile.WidthScale);
             lower.GetComponent<Renderer>().material = shorts;
             Destroy(lower.GetComponent<Collider>());
 
-            var resolvedSkinTone = skinTone >= 0 ? skinTone : WorldHash.Index(name, 3);
-            var resolvedHairColor = hairColor >= 0 ? hairColor : WorldHash.Index(name, 4);
+            var resolvedSkinTone = profile.SkinTone;
+            var resolvedHairColor = profile.HairColor;
             var skin = CreateMaterial(SkinColorFor(resolvedSkinTone), 0.38f);
             var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             head.name = "Head";
             head.transform.SetParent(player.transform);
-            head.transform.localPosition = new Vector3(0, 1.95f * heightScale, 0.04f);
+            head.transform.localPosition = new Vector3(0, 1.95f * profile.HeightScale, 0.04f);
             head.transform.localScale = Vector3.one * 0.42f;
             head.GetComponent<Renderer>().material = skin;
             Destroy(head.GetComponent<Collider>());
@@ -1121,12 +1121,11 @@ namespace FC2026.Core
             Destroy(hair.GetComponent<Collider>());
 
             var controller = player.AddComponent<FootballPlayerController>();
-            controller.Configure(role, start, attackDirection, shooting, passing,
-                resolvedSkinTone, resolvedHairColor, faceVariant, defending, physical, leftFooted, speed);
+            controller.Configure(role, start, attackDirection, profile);
             controller.SetUserControlled(user);
 
             var ai = player.AddComponent<SimpleFootballAI>();
-            ai.Configure(start, attackDirection, role, role == PlayerRole.Goalkeeper ? 0.9f : speed);
+            ai.Configure(start, attackDirection, role, role == PlayerRole.Goalkeeper ? 0.9f : profile.Pace);
             ai.enabled = !user;
 
             playerStarts.Add((player.transform, start));

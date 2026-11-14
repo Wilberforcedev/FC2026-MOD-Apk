@@ -82,22 +82,21 @@ namespace FC2026.Gameplay
             return nearest;
         }
 
-        public void Configure(PlayerRole role, Vector3 homePosition, int teamDirection, float shooting, float passing,
-            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1, float defending = 0.6f, float physical = 0.5f, bool leftFootedPlayer = false, float pace = 1f)
+        public void Configure(PlayerRole role, Vector3 homePosition, int teamDirection, PlayerMatchProfile profile)
         {
             Role = role;
             HomePosition = homePosition;
             TeamDirection = teamDirection >= 0 ? 1 : -1;
             TeamId = TeamDirection;
-            shootingStat = Mathf.Clamp01(shooting);
-            passingStat = Mathf.Clamp01(passing);
-            defendingStat = Mathf.Clamp01(defending);
-            physicalStat = Mathf.Clamp01(physical);
-            paceMultiplier = Mathf.Clamp(pace, 0.88f, 1.14f);
-            prefersLeftFoot = leftFootedPlayer;
-            skinTone = playerSkinTone;
-            hairColor = playerHairColor;
-            faceVariant = playerFaceVariant;
+            shootingStat = Mathf.Clamp01(profile.Shooting);
+            passingStat = Mathf.Clamp01(profile.Passing);
+            defendingStat = Mathf.Clamp01(profile.Defending);
+            physicalStat = Mathf.Clamp01(profile.Physical);
+            paceMultiplier = Mathf.Clamp(profile.Pace, 0.88f, 1.14f);
+            prefersLeftFoot = profile.LeftFooted;
+            skinTone = profile.SkinTone;
+            hairColor = profile.HairColor;
+            faceVariant = profile.FaceVariant;
             lastMoveDirection = new Vector3(0f, 0f, TeamDirection);
         }
 
