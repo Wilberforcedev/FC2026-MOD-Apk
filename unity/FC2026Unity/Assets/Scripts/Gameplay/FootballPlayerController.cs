@@ -519,8 +519,12 @@ namespace FC2026.Gameplay
 
             foreach (var candidate in Registry)
             {
-                if (candidate == null || candidate == this || candidate.TeamDirection != TeamDirection || candidate.IsGoalkeeper)
+                // Through balls need a runner ahead; regular passes may use the goalkeeper as a safe outlet.
+                if (candidate == null || candidate == this || candidate.TeamDirection != TeamDirection ||
+                    (throughBall && candidate.IsGoalkeeper))
+                {
                     continue;
+                }
 
                 var offset = candidate.transform.position - origin;
                 offset.y = 0f;
@@ -541,6 +545,8 @@ namespace FC2026.Gameplay
 
                 if (throughBall)
                     score += offset.z * TeamDirection * 0.12f;
+                if (candidate.IsGoalkeeper)
+                    score -= 1.5f;
                 if (candidate.Role == PlayerRole.Forward)
                     score += throughBall ? 3f : 1.2f;
 
