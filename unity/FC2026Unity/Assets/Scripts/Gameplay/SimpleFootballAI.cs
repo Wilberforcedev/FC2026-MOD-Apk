@@ -306,6 +306,13 @@ namespace FC2026.Gameplay
                 MoveTowards(baseTarget, moveSpeed * 0.7f, 18f);
                 if (actionTimer <= 0f)
                 {
+                    // Prefer a short pass to a teammate, then clear long if nobody is available.
+                    if (controller.AttemptPass(false))
+                    {
+                        actionTimer = 1.2f;
+                        return;
+                    }
+
                     var clearance = new Vector3(Random.Range(-0.4f, 0.4f), 0f, attackDirection);
                     clearance.Normalize();
                     ball.Kick(clearance, 21f, 0.4f, transform, Random.Range(-2f, 2f));
