@@ -429,7 +429,10 @@ namespace FC2026.Gameplay
             var error = (1f - accuracy) * (0.10f + distance * 0.0035f);
             flat = (flat + transform.right * Random.Range(-error, error)).normalized;
 
-            var power = Mathf.Lerp(15.5f, 26.5f, shootingStat) * Mathf.Lerp(0.92f, 1.07f, Mathf.Clamp01(distance / 36f));
+            // Longer shots need more pace; BallController still enforces the global speed limit.
+            var distancePower = Mathf.Lerp(1f, 1.4f, Mathf.InverseLerp(20f, 44f, distance));
+            var power = Mathf.Lerp(15.5f, 26.5f, shootingStat) *
+                        Mathf.Lerp(0.92f, 1.07f, Mathf.Clamp01(distance / 36f)) * distancePower;
             if (chip) power *= 0.72f;
             else if (finesse) power *= 0.95f;
 
