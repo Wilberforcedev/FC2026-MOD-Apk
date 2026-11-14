@@ -473,6 +473,10 @@ namespace FC2026.Gameplay
             if (body == null)
                 return;
 
+            // AI players lose pace as stamina falls, matching user-controlled movement.
+            var stamina = controller != null ? controller.Stamina01 : 1f;
+            speed *= Mathf.Lerp(0.74f, 1f, stamina);
+
             var self = Flat(transform.position);
             var direction = target - self;
             direction.y = 0f;
