@@ -38,6 +38,7 @@ namespace FC2026.Gameplay
         private float passingStat = 0.6f;
         private float defendingStat = 0.6f;
         private float physicalStat = 0.5f;
+        private bool prefersLeftFoot;
         private int skinTone = -1;
         private int hairColor = -1;
         private int faceVariant = -1;
@@ -81,7 +82,7 @@ namespace FC2026.Gameplay
         }
 
         public void Configure(PlayerRole role, Vector3 homePosition, int teamDirection, float shooting, float passing,
-            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1, float defending = 0.6f, float physical = 0.5f)
+            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1, float defending = 0.6f, float physical = 0.5f, bool leftFootedPlayer = false)
         {
             Role = role;
             HomePosition = homePosition;
@@ -91,6 +92,7 @@ namespace FC2026.Gameplay
             passingStat = Mathf.Clamp01(passing);
             defendingStat = Mathf.Clamp01(defending);
             physicalStat = Mathf.Clamp01(physical);
+            prefersLeftFoot = leftFootedPlayer;
             skinTone = playerSkinTone;
             hairColor = playerHairColor;
             faceVariant = playerFaceVariant;
@@ -385,6 +387,13 @@ namespace FC2026.Gameplay
             return true;
         }
 
+        // Use the preferred foot for centered contact; use the nearby foot when the ball is clearly to one side.
+        private bool SelectLeftFoot(Vector3 ballPosition)
+        {
+            var localX = transform.InverseTransformPoint(ballPosition).x;
+            return Mathf.Abs(localX) < 0.12f ? prefersLeftFoot : localX < 0f;
+        }
+
         public bool AttemptShot(bool chip = false, bool finesse = false)
         {
             var ball = BallController.Instance;
@@ -402,9 +411,12 @@ namespace FC2026.Gameplay
                 return false;
             flat.Normalize();
 
+            var useLeftFoot = SelectLeftFoot(ball.Position);
+            var footAccuracy = useLeftFoot == prefersLeftFoot ? 1f : 0.88f;
             var accuracy = Mathf.Lerp(0.55f, 0.95f, shootingStat)
                            * Mathf.Clamp01(1.18f - distance * 0.011f)
-                           * Mathf.Lerp(0.82f, 1f, stamina);
+                           * Mathf.Lerp(0.82f, 1f, stamina)
+                           * footAccuracy;
             var error = (1f - accuracy) * (0.10f + distance * 0.0035f);
             flat = (flat + transform.right * Random.Range(-error, error)).normalized;
 
@@ -415,7 +427,6 @@ namespace FC2026.Gameplay
             var lift = chip ? 0.5f : finesse ? 0.11f : Mathf.Clamp(0.085f + distance * 0.0014f, 0.085f, 0.155f);
             var curve = finesse ? Mathf.Sign(targetX - ball.Position.x) * (3.5f + shootingStat * 5.5f) : 0f;
 
-            var useLeftFoot = transform.InverseTransformPoint(ball.Position).x < 0f;
             motion?.TriggerShot(useLeftFoot);
             ball.Kick(flat, power, lift, transform, curve);
             kickLock = 0.32f;
@@ -474,10 +485,11 @@ namespace FC2026.Gameplay
                 return false;
             flat.Normalize();
 
-            var passError = (1f - passingStat) * (throughBall ? 0.045f : 0.03f);
+            var useLeftFoot = SelectLeftFoot(ball.Position);
+            var footErrorFactor = useLeftFoot == prefersLeftFoot ? 1f : 1.25f;
+            var passError = (1f - passingStat) * (throughBall ? 0.045f : 0.03f) * footErrorFactor;
             flat = (flat + transform.right * Random.Range(-passError, passError)).normalized;
 
-            var useLeftFoot = transform.InverseTransformPoint(ball.Position).x < 0f;
             motion?.TriggerPass(useLeftFoot);
             ball.Kick(flat, speed, throughBall ? 0.17f : 0.025f, transform, throughBall ? 1.5f : 0f);
             kickLock = 0.26f;

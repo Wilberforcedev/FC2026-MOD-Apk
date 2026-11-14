@@ -895,7 +895,8 @@ namespace FC2026.Core
                     PhysicalFor(player),
                     player != null ? player.SkinTone : -1,
                     player != null ? player.HairColor : -1,
-                    player != null ? player.FaceVariant : -1);
+                    player != null ? player.FaceVariant : -1,
+                    player != null && player.LeftFooted);
                 if (isUser)
                     userPlayer = created.GetComponent<FootballPlayerController>();
             }
@@ -922,7 +923,8 @@ namespace FC2026.Core
                     PhysicalFor(player),
                     player != null ? player.SkinTone : -1,
                     player != null ? player.HairColor : -1,
-                    player != null ? player.FaceVariant : -1);
+                    player != null ? player.FaceVariant : -1,
+                    player != null && player.LeftFooted);
             }
         }
 
@@ -1065,7 +1067,7 @@ namespace FC2026.Core
 
         private GameObject CreatePlayer(string name, Vector3 start, Material shirt, Material shorts, float heightScale, float widthScale,
             bool user, int attackDirection, PlayerRole role, float shooting, float passing, float defending, float speed, float physical,
-            int skinTone, int hairColor, int faceVariant)
+            int skinTone, int hairColor, int faceVariant, bool leftFooted)
         {
             var player = new GameObject(name);
             player.transform.SetParent(transform);
@@ -1120,7 +1122,7 @@ namespace FC2026.Core
 
             var controller = player.AddComponent<FootballPlayerController>();
             controller.Configure(role, start, attackDirection, shooting, passing,
-                resolvedSkinTone, resolvedHairColor, faceVariant, defending, physical);
+                resolvedSkinTone, resolvedHairColor, faceVariant, defending, physical, leftFooted);
             controller.SetUserControlled(user);
 
             var ai = player.AddComponent<SimpleFootballAI>();
