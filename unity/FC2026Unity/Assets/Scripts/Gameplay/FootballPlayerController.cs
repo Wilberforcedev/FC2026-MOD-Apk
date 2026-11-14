@@ -551,8 +551,10 @@ namespace FC2026.Gameplay
 
                 var openness = NearestOpponentDistance(candidate.transform.position);
                 var laneRisk = LaneRisk(origin, candidate.transform.position);
+                // Better passers accept more risk when a forward lane is available.
+                var laneRiskPenalty = Mathf.Lerp(9f, 5f, passingStat);
                 var score = forwardAmount * 9f + Mathf.Clamp(openness, 0f, 12f) * 0.85f
-                            - Mathf.Abs(offset.x) * 0.07f - distance * 0.08f - laneRisk * 7f;
+                            - Mathf.Abs(offset.x) * 0.07f - distance * 0.08f - laneRisk * laneRiskPenalty;
 
                 if (throughBall)
                     score += offset.z * TeamDirection * 0.12f;
