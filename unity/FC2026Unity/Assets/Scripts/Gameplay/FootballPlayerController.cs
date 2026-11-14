@@ -380,12 +380,14 @@ namespace FC2026.Gameplay
             if (ball.Owner.TeamDirection == TeamDirection)
                 return false;
 
+            var facingBall = Vector3.Dot(transform.forward, delta.normalized);
+            var approachBonus = Mathf.Lerp(-0.12f, 0.06f, Mathf.Clamp01((facingBall + 1f) * 0.5f));
             var defenderBonus = Role == PlayerRole.Defender ? 0.12f : Role == PlayerRole.Midfielder ? 0.05f : 0f;
             var skillBonus = (defendingStat - 0.6f) * 0.24f;
-            // A stronger ball carrier is harder to dispossess, even against a skilled tackler.
+            // Stronger carriers resist contact; facing the ball improves the tackler's approach.
             var carrierResistance = (ball.Owner.PhysicalStat - 0.5f) * 0.18f;
             var chance = Mathf.Clamp(
-                Mathf.Lerp(0.36f, 0.78f, stamina) + defenderBonus + skillBonus - carrierResistance,
+                Mathf.Lerp(0.36f, 0.78f, stamina) + defenderBonus + skillBonus + approachBonus - carrierResistance,
                 0f, 0.9f);
             if (Random.value > chance)
                 return false;
