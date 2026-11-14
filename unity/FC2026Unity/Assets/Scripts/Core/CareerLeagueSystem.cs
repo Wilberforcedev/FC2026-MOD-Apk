@@ -315,6 +315,10 @@ namespace FC2026.Core
             save.season++;
             save.matchweek = 1;
             save.transferBudget += SeasonBudgetReward;
+            CareerTransferSystem.ProcessAiTransferWindow(save);
+            // Contracts that could not be released at the squad floor are
+            // extended to the new season so the in-memory save stays valid.
+            CareerTransferSystem.Normalize(save);
             ResetStandings(save);
             CareerCupSystem.ResetForSeason(save);
         }

@@ -42,7 +42,14 @@ namespace FC2026.Core
         private bool showSquadManagement;
         private bool showTransfers;
         private bool transfersShowSquad;
+        private bool transfersShowScout;
         private TransferTarget[] marketCache;
+        private TransferTarget[] scoutCache;
+        private string scoutCacheClubId = string.Empty;
+        private string scoutConfederation = "UEFA";
+        private string scoutCountryId = string.Empty;
+        private string scoutClubId = string.Empty;
+        private Vector2 scoutScroll;
         private string selectedTransferPlayerId = string.Empty;
         private string pendingTransferPlayerId = string.Empty;
         private string pendingTransferAction = string.Empty;
@@ -246,7 +253,13 @@ namespace FC2026.Core
             GUI.Label(new Rect(x, y, width, lineHeight),
                 $"W {save.wins}   D {save.draws}   L {save.losses}  •  Budget {save.transferBudget:N0}",
                 smallStyle);
-            y += lineHeight + 6f;
+            y += lineHeight;
+            if (panel.height >= 560f && !string.IsNullOrEmpty(save.lastTransferSummary))
+            {
+                GUI.Label(new Rect(x, y, width, lineHeight), save.lastTransferSummary, smallStyle);
+                y += lineHeight;
+            }
+            y += 6f;
 
             var gap = 8f;
             var half = (width - gap) / 2f;
@@ -489,7 +502,12 @@ namespace FC2026.Core
             showClubBrowser = false;
             confirmNewCareer = false;
             showTransfers = false;
+            transfersShowScout = false;
             marketCache = null;
+            scoutCache = null;
+            scoutCacheClubId = string.Empty;
+            scoutCountryId = string.Empty;
+            scoutClubId = string.Empty;
             pendingTransferPlayerId = string.Empty;
             pendingTransferAction = string.Empty;
             selectedTransferPlayerId = string.Empty;
@@ -607,12 +625,18 @@ namespace FC2026.Core
         {
             showTransfers = true;
             transfersShowSquad = false;
+            transfersShowScout = false;
             marketCache = null;
+            scoutCache = null;
+            scoutCacheClubId = string.Empty;
+            scoutCountryId = string.Empty;
+            scoutClubId = string.Empty;
+            scoutScroll = Vector2.zero;
             selectedTransferPlayerId = string.Empty;
             pendingTransferPlayerId = string.Empty;
             pendingTransferAction = string.Empty;
             transferScroll = Vector2.zero;
-            notice = "Tap a player to sign, then tap again to confirm.";
+            notice = "Tap a player to sign, then tap again to confirm. SCOUT signs from other countries.";
         }
 
         private void DrawTransfers(Rect panel)
@@ -636,23 +660,37 @@ namespace FC2026.Core
             var tabY = headerY + lineHeight * 2f + 4f;
             var tabHeight = Mathf.Clamp(panel.height * 0.07f, 34f, 46f);
             var gap = 8f;
-            var half = (width - gap) / 2f;
-            var marketSelected = !transfersShowSquad;
-            if (GUI.Button(new Rect(x, tabY, half, tabHeight),
+            var tabWidth = (width - gap * 2f) / 3f;
+            var marketSelected = !transfersShowSquad && !transfersShowScout;
+            if (GUI.Button(new Rect(x, tabY, tabWidth, tabHeight),
                 (marketSelected ? "* " : string.Empty) + "MARKET",
                 marketSelected ? accentButtonStyle : buttonStyle))
             {
                 transfersShowSquad = false;
+                transfersShowScout = false;
                 selectedTransferPlayerId = string.Empty;
                 pendingTransferPlayerId = string.Empty;
                 pendingTransferAction = string.Empty;
                 transferScroll = Vector2.zero;
             }
-            if (GUI.Button(new Rect(x + half + gap, tabY, half, tabHeight),
+            if (GUI.Button(new Rect(x + tabWidth + gap, tabY, tabWidth, tabHeight),
+                (transfersShowScout ? "* " : string.Empty) + "SCOUT",
+                transfersShowScout ? accentButtonStyle : buttonStyle))
+            {
+                transfersShowSquad = false;
+                transfersShowScout = true;
+                selectedTransferPlayerId = string.Empty;
+                pendingTransferPlayerId = string.Empty;
+                pendingTransferAction = string.Empty;
+                scoutScroll = Vector2.zero;
+                notice = "Scout any country, then choose a club and a player. Foreign deals add a premium.";
+            }
+            if (GUI.Button(new Rect(x + (tabWidth + gap) * 2f, tabY, tabWidth, tabHeight),
                 (transfersShowSquad ? "* " : string.Empty) + "MY SQUAD",
                 transfersShowSquad ? accentButtonStyle : buttonStyle))
             {
                 transfersShowSquad = true;
+                transfersShowScout = false;
                 pendingTransferPlayerId = string.Empty;
                 pendingTransferAction = string.Empty;
                 transferScroll = Vector2.zero;
@@ -668,64 +706,71 @@ namespace FC2026.Core
 
             var rowHeight = Mathf.Clamp(panel.height * 0.055f, 30f, 42f);
             var innerWidth = width - 22f;
-            var squadFull = squad.Length >= CareerTransferSystem.MaxSquadSize;
-            var wageBill = CareerTransferSystem.WageBill(save);
-            var wageCeiling = CareerTransferSystem.WageBudget(club);
-            marketCache ??= CareerTransferSystem.GetMarket(save);
-            var market = transfersShowSquad ? Array.Empty<TransferTarget>() : marketCache;
-            var count = transfersShowSquad ? squad.Length : market.Length;
-            transferScroll = GUI.BeginScrollView(new Rect(x, listTop, width, viewHeight), transferScroll,
-                new Rect(0f, 0f, innerWidth, count * rowHeight + 4f));
-
-            for (var i = 0; i < count; i++)
+            if (transfersShowScout)
             {
-                var rect = new Rect(0f, i * rowHeight, innerWidth, rowHeight - 2f);
-                if (transfersShowSquad)
+                DrawScoutContent(x, width, listTop, viewHeight, rowHeight, innerWidth);
+            }
+            else
+            {
+                var squadFull = squad.Length >= CareerTransferSystem.MaxSquadSize;
+                var wageBill = CareerTransferSystem.WageBill(save);
+                var wageCeiling = CareerTransferSystem.WageBudget(club);
+                marketCache ??= CareerTransferSystem.GetMarket(save);
+                var market = transfersShowSquad ? Array.Empty<TransferTarget>() : marketCache;
+                var count = transfersShowSquad ? squad.Length : market.Length;
+                transferScroll = GUI.BeginScrollView(new Rect(x, listTop, width, viewHeight), transferScroll,
+                    new Rect(0f, 0f, innerWidth, count * rowHeight + 4f));
+
+                for (var i = 0; i < count; i++)
                 {
-                    var player = squad[i];
-                    var selected = player.Id == selectedTransferPlayerId;
-                    var expiry = CareerTransferSystem.ContractExpiry(save, player.Id);
-                    var label = $"{(selected ? "> " : string.Empty)}{player.Name}  •  {PositionLabel(player.Position)} {player.Overall}" +
-                                $"  •  S{expiry}  •  {CareerTransferSystem.FormatMoney(CareerTransferSystem.MarketValue(player))}";
-                    if (GUI.Button(rect, label, selected ? selectedRowStyle : rowStyle))
+                    var rect = new Rect(0f, i * rowHeight, innerWidth, rowHeight - 2f);
+                    if (transfersShowSquad)
                     {
-                        selectedTransferPlayerId = player.Id;
-                        pendingTransferPlayerId = string.Empty;
-                        pendingTransferAction = string.Empty;
-                    }
-                }
-                else
-                {
-                    var target = market[i];
-                    var armed = target.Player.Id == pendingTransferPlayerId && pendingTransferAction == "SIGN";
-                    var blocked = squadFull
-                                  || target.Price > save.transferBudget
-                                  || wageBill + target.Wage > wageCeiling;
-                    var clubLabel = string.IsNullOrEmpty(target.ClubId)
-                        ? "FREE"
-                        : WorldDatabase.GetClub(target.ClubId)?.ShortName ?? "—";
-                    var label = armed
-                        ? $"CONFIRM SIGN  {target.Player.Name}  •  {CareerTransferSystem.FormatMoney(target.Price)}"
-                        : $"{target.Player.Name}  •  {PositionLabel(target.Player.Position)} {target.Player.Overall}" +
-                          $"  •  {clubLabel}  •  {CareerTransferSystem.FormatMoney(target.Price)}";
-                    var previousColor = GUI.color;
-                    if (blocked)
-                        GUI.color = new Color(1f, 1f, 1f, DisabledRowAlpha);
-                    if (GUI.Button(rect, label, armed ? accentButtonStyle : rowStyle))
-                    {
-                        if (armed || blocked)
-                            ExecuteTransfer("SIGN", target.Player.Id);
-                        else
+                        var player = squad[i];
+                        var selected = player.Id == selectedTransferPlayerId;
+                        var expiry = CareerTransferSystem.ContractExpiry(save, player.Id);
+                        var label = $"{(selected ? "> " : string.Empty)}{player.Name}  •  {PositionLabel(player.Position)} {player.Overall}" +
+                                    $"  •  S{expiry}  •  {CareerTransferSystem.FormatMoney(CareerTransferSystem.MarketValue(player))}";
+                        if (GUI.Button(rect, label, selected ? selectedRowStyle : rowStyle))
                         {
-                            pendingTransferPlayerId = target.Player.Id;
-                            pendingTransferAction = "SIGN";
-                            notice = "Tap again to confirm the signing of " + target.Player.Name + ".";
+                            selectedTransferPlayerId = player.Id;
+                            pendingTransferPlayerId = string.Empty;
+                            pendingTransferAction = string.Empty;
                         }
                     }
-                    GUI.color = previousColor;
+                    else
+                    {
+                        var target = market[i];
+                        var armed = target.Player.Id == pendingTransferPlayerId && pendingTransferAction == "SIGN";
+                        var blocked = squadFull
+                                      || target.Price > save.transferBudget
+                                      || wageBill + target.Wage > wageCeiling;
+                        var clubLabel = string.IsNullOrEmpty(target.ClubId)
+                            ? "FREE"
+                            : WorldDatabase.GetClub(target.ClubId)?.ShortName ?? "—";
+                        var label = armed
+                            ? $"CONFIRM SIGN  {target.Player.Name}  •  {CareerTransferSystem.FormatMoney(target.Price)}"
+                            : $"{target.Player.Name}  •  {PositionLabel(target.Player.Position)} {target.Player.Overall}" +
+                              $"  •  {clubLabel}  •  {CareerTransferSystem.FormatMoney(target.Price)}";
+                        var previousColor = GUI.color;
+                        if (blocked)
+                            GUI.color = new Color(1f, 1f, 1f, DisabledRowAlpha);
+                        if (GUI.Button(rect, label, armed ? accentButtonStyle : rowStyle))
+                        {
+                            if (armed || blocked)
+                                ExecuteTransfer("SIGN", target.Player.Id);
+                            else
+                            {
+                                pendingTransferPlayerId = target.Player.Id;
+                                pendingTransferAction = "SIGN";
+                                notice = "Tap again to confirm the signing of " + target.Player.Name + ".";
+                            }
+                        }
+                        GUI.color = previousColor;
+                    }
                 }
+                GUI.EndScrollView();
             }
-            GUI.EndScrollView();
 
             if (transfersShowSquad)
                 DrawSquadTransferActions(x, width, actionY, actionHeight, squad);
@@ -737,6 +782,187 @@ namespace FC2026.Core
                 pendingTransferPlayerId = string.Empty;
                 pendingTransferAction = string.Empty;
             }
+        }
+
+        private void DrawScoutContent(float x, float width, float top, float height, float rowHeight,
+            float innerWidth)
+        {
+            var barHeight = Mathf.Clamp(height * 0.1f, 28f, 40f);
+            var gap = 6f;
+            var backWidth = Mathf.Clamp(width * 0.22f, 70f, 120f);
+            var country = WorldDatabase.GetCountry(scoutCountryId);
+            var league = country == null ? null : WorldDatabase.GetLeagueForCountry(country.Id);
+            var club = WorldDatabase.GetClub(scoutClubId);
+
+            var crumb = club != null
+                ? $"{country?.Name ?? string.Empty}  •  {club.Name}"
+                : league != null
+                    ? $"{country?.Name ?? string.Empty}  •  {league.Name}"
+                    : "Choose a confederation, then a country and club.";
+
+            GUI.Label(new Rect(x, top, width - backWidth - gap, barHeight), crumb, smallStyle);
+            if (!string.IsNullOrEmpty(scoutCountryId) &&
+                GUI.Button(new Rect(x + width - backWidth, top, backWidth, barHeight), "BACK", buttonStyle))
+            {
+                if (!string.IsNullOrEmpty(scoutClubId))
+                {
+                    scoutClubId = string.Empty;
+                    scoutCache = null;
+                    scoutCacheClubId = string.Empty;
+                }
+                else
+                {
+                    scoutCountryId = string.Empty;
+                }
+                scoutScroll = Vector2.zero;
+                pendingTransferPlayerId = string.Empty;
+                pendingTransferAction = string.Empty;
+            }
+
+            var contentTop = top + barHeight + 6f;
+            var contentHeight = Mathf.Max(40f, height - barHeight - 6f);
+            if (league == null)
+            {
+                scoutCountryId = string.Empty;
+                DrawScoutCountries(x, width, contentTop, contentHeight);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(scoutClubId) || club == null)
+            {
+                if (club == null)
+                {
+                    scoutClubId = string.Empty;
+                    scoutCache = null;
+                    scoutCacheClubId = string.Empty;
+                }
+                DrawScoutClubs(x, width, contentTop, contentHeight, league, rowHeight);
+                return;
+            }
+
+            DrawScoutSquad(x, width, contentTop, contentHeight, rowHeight, innerWidth, club);
+        }
+
+        private void DrawScoutCountries(float x, float width, float top, float height)
+        {
+            var tabGap = 6f;
+            var tabWidth = (width - tabGap * (Confederations.Length - 1)) / Confederations.Length;
+            var tabHeight = Mathf.Clamp(height * 0.14f, 28f, 44f);
+            for (var i = 0; i < Confederations.Length; i++)
+            {
+                var confederation = Confederations[i];
+                var selected = scoutConfederation == confederation;
+                var label = (selected ? "* " : string.Empty) + confederation;
+                if (GUI.Button(new Rect(x + i * (tabWidth + tabGap), top, tabWidth, tabHeight), label,
+                    selected ? accentButtonStyle : buttonStyle))
+                {
+                    scoutConfederation = confederation;
+                    scoutScroll = Vector2.zero;
+                }
+            }
+
+            var countries = WorldDatabase.GetCountries()
+                .Where(item => item.Confederation == scoutConfederation)
+                .ToArray();
+            var gridTop = top + tabHeight + 8f;
+            var gap = 8f;
+            var columns = 4;
+            var buttonWidth = (width - gap * (columns - 1)) / columns;
+            var buttonHeight = Mathf.Clamp(height * 0.11f, 28f, 40f);
+            var contentHeight = Mathf.Ceil(countries.Length / (float)columns) * (buttonHeight + gap);
+            var viewHeight = Mathf.Max(30f, height - tabHeight - 8f);
+            scoutScroll = GUI.BeginScrollView(new Rect(x, gridTop, width, viewHeight), scoutScroll,
+                new Rect(0f, 0f, width - 22f, contentHeight));
+            for (var i = 0; i < countries.Length; i++)
+            {
+                var column = i % columns;
+                var row = i / columns;
+                var rect = new Rect(column * (buttonWidth + gap), row * (buttonHeight + gap),
+                    buttonWidth, buttonHeight);
+                if (GUI.Button(rect, countries[i].Name, buttonStyle))
+                {
+                    scoutCountryId = countries[i].Id;
+                    scoutScroll = Vector2.zero;
+                    notice = "Scouting " + countries[i].Name + ": choose a club.";
+                }
+            }
+            GUI.EndScrollView();
+        }
+
+        private void DrawScoutClubs(float x, float width, float top, float height, WorldLeague league,
+            float rowHeight)
+        {
+            var clubs = WorldDatabase.GetLeagueClubs(league.Id);
+            var contentHeight = clubs.Length * rowHeight + 4f;
+            scoutScroll = GUI.BeginScrollView(new Rect(x, top, width, height), scoutScroll,
+                new Rect(0f, 0f, width - 22f, contentHeight));
+            for (var i = 0; i < clubs.Length; i++)
+            {
+                var club = clubs[i];
+                var rect = new Rect(0f, i * rowHeight, width - 22f, rowHeight - 2f);
+                var label = $"{club.Name}   ·   STR {club.Strength}   ·   {club.City}";
+                if (GUI.Button(rect, label, rowStyle))
+                {
+                    scoutClubId = club.Id;
+                    scoutCache = null;
+                    scoutCacheClubId = string.Empty;
+                    scoutScroll = Vector2.zero;
+                    pendingTransferPlayerId = string.Empty;
+                    pendingTransferAction = string.Empty;
+                    notice = "Tap a player from " + club.ShortName + " to sign, then tap again to confirm.";
+                }
+            }
+            GUI.EndScrollView();
+        }
+
+        private void DrawScoutSquad(float x, float width, float top, float height, float rowHeight,
+            float innerWidth, WorldClub club)
+        {
+            if (scoutCache == null || scoutCacheClubId != club.Id)
+            {
+                scoutCache = CareerTransferSystem.GetScoutSquad(save, club.Id);
+                scoutCacheClubId = club.Id;
+            }
+            var targets = scoutCache;
+
+            var squad = CareerTransferSystem.GetSquad(save, save.managedClubId);
+            var squadFull = squad.Length >= CareerTransferSystem.MaxSquadSize;
+            var wageBill = CareerTransferSystem.WageBill(save);
+            var wageCeiling = CareerTransferSystem.WageBudget(CareerLeagueSystem.GetManagedClub(save));
+
+            scoutScroll = GUI.BeginScrollView(new Rect(x, top, width, height), scoutScroll,
+                new Rect(0f, 0f, innerWidth, targets.Length * rowHeight + 4f));
+            for (var i = 0; i < targets.Length; i++)
+            {
+                var target = targets[i];
+                var armed = target.Player.Id == pendingTransferPlayerId && pendingTransferAction == "SIGN";
+                var blocked = squadFull
+                              || target.Price > save.transferBudget
+                              || wageBill + target.Wage > wageCeiling;
+                var premium = CareerTransferSystem.PremiumPercent(save, target.Player.Id);
+                var label = armed
+                    ? $"CONFIRM SIGN  {target.Player.Name}  •  {CareerTransferSystem.FormatMoney(target.Price)}"
+                    : $"{target.Player.Name}  •  {PositionLabel(target.Player.Position)} {target.Player.Overall}" +
+                      $"  •  {CareerTransferSystem.FormatMoney(target.Wage)}/wk" +
+                      $"  •  {CareerTransferSystem.FormatMoney(target.Price)} (+{premium}%)";
+                var previousColor = GUI.color;
+                if (blocked)
+                    GUI.color = new Color(1f, 1f, 1f, DisabledRowAlpha);
+                if (GUI.Button(new Rect(0f, i * rowHeight, innerWidth, rowHeight - 2f), label,
+                    armed ? accentButtonStyle : rowStyle))
+                {
+                    if (armed || blocked)
+                        ExecuteTransfer("SIGN", target.Player.Id);
+                    else
+                    {
+                        pendingTransferPlayerId = target.Player.Id;
+                        pendingTransferAction = "SIGN";
+                        notice = "Tap again to confirm the signing of " + target.Player.Name + ".";
+                    }
+                }
+                GUI.color = previousColor;
+            }
+            GUI.EndScrollView();
         }
 
         private void DrawSquadTransferActions(float x, float width, float y, float height, WorldPlayer[] squad)
@@ -809,6 +1035,8 @@ namespace FC2026.Core
             if (success)
             {
                 marketCache = null;
+                scoutCache = null;
+                scoutCacheClubId = string.Empty;
                 if (!CareerSaveSystem.Save(save))
                     message += " The change could not be saved.";
                 else if (action == "SELL" || action == "RELEASE")

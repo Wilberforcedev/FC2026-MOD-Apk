@@ -4,7 +4,7 @@ namespace FC2026.Core
 {
     public static class CareerSchema
     {
-        public const int Version = 6;
+        public const int Version = 7;
     }
 
     public enum CareerFixtureKind
@@ -109,5 +109,8 @@ namespace FC2026.Core
 
         public string[] honours = Array.Empty<string>();
         public string lastSeasonSummary = string.Empty;
+
+        // Recap of the most recent AI transfer window, shown on the hub.
+        public string lastTransferSummary = string.Empty;
     }
 }

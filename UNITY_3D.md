@@ -67,11 +67,12 @@ All clubs, players, cities, stadiums and kits in the Unity career are generated;
 - 30-matchweek double round-robin, generated deterministically from the world seed
 - every AI match in the managed league is simulated, so the table is complete each week
 - a 16-club national knockout cup with a seeded bracket and penalty shootouts
-- an in-league transfer market, squad contracts and wage budget
+- an in-league transfer market, cross-border scouting, squad contracts and wage budget
+- a deterministic AI transfer window for the rest of the managed division each season
 
 The generator lives in `Assets/Scripts/World` and is plain C# (`WorldDatabase`, `WorldSimulation`) so it can be tested outside Unity. `WorldRandom` uses xorshift32 and FNV-1a instead of `System.Random` so every device produces the same world.
 
-Career saves use schema v6 (`CareerModels.cs`, `CareerSaveSystem.cs`). Only the managed league table, the selected league/club, the calendar, the cup run, trophies, transfers, contracts and the manager's career totals are stored; everything else is regenerated. Saves from the earlier four-club Uganda prototype and from schema v4/v5 migrate automatically: the managed club maps into the generated Uganda top division when needed, career totals/season/budget/tactics/cup state are kept, and the new league table starts at matchweek 1. Contracts are generated for the existing squad on migration.
+Career saves use schema v7 (`CareerModels.cs`, `CareerSaveSystem.cs`). Only the managed league table, the selected league/club, the calendar, the cup run, trophies, transfers, contracts, the last transfer-window recap and the manager's career totals are stored; everything else is regenerated. Saves from the earlier four-club Uganda prototype and from schema v4/v5/v6 migrate automatically: the managed club maps into the generated Uganda top division when needed, career totals/season/budget/tactics/cup state are kept, contracts are generated for the existing squad on migration, and the new league table starts at matchweek 1.
 
 The hub (`CareerHubManager`) browses confederation → country → league → club, shows the next fixture and league position, and exposes formation, mentality, the squad and the transfer market. Launching a match uses the resolved lineups, ratings (shooting, passing, pace), height/build, appearance data (skin tone, hair colour, face variant) and club/keeper kit colours.
 
@@ -81,11 +82,11 @@ The hub (`CareerHubManager`) browses confederation → country → league → cl
 
 ### Transfers and contracts
 
-`CareerTransferSystem` keeps the generated squads authoritative. The save stores one compacted move per transferred player and the managed squad's contract end dates, so every squad is rebuilt by applying the moves to the generated world. Buying from a division club costs the market value plus a 15% premium; free agents cost nothing. Sales pay market value and the player joins a deterministically chosen club in the same division. Squads are capped at 26 and must keep at least 12 players and one goalkeeper.
+`CareerTransferSystem` keeps the generated squads authoritative. The save stores one compacted move per transferred player and the managed squad's contract end dates, so every squad is rebuilt by applying the moves to the generated world. Buying from a division club costs the market value plus a 15% premium; free agents cost nothing. The SCOUT tab browses any confederation, country and club, and foreign signings add a scouting premium scaled by the selling country's strength (25% at strength 1 up to 45% at strength 5). Sales pay market value and the player joins a deterministically chosen club, at home or abroad. Squads are capped at 26 and must keep at least 12 players and one goalkeeper.
 
 Every generated player starts on a 1-3 season contract; a signing gets three seasons and renewal adds three more. At season rollover, expired contracts leave on a free transfer unless that would break the minimum squad rules. The hub's TRANSFERS screen lists the division's market and the squad, with contract expiry, value and weekly wage; the wage bill is capped by a budget derived from the club's strength.
 
-The market currently covers the managed division plus free agents, and AI clubs only change through the user's sales. Cross-border scouting and an AI transfer window are future work.
+At the same rollover, every AI club in the managed division runs a deterministic transfer window: up to two sales and two signings, including cross-border purchases, bounded to 24 moves per season and never touching the managed squad. The window is seeded from the world seed and season, so every device replays the same moves, and the hub shows a one-line recap. The move log stores one row per player, so it stays bounded across many seasons. Simulated AI fixtures still use the generated club strength, so AI squad changes affect the user's matches, market and scouting but not the simulated scoreline model.
 
 ## Controls
 
@@ -215,7 +216,7 @@ The Unity version will progressively take over these systems from the existing p
 4. broadcast/replay/cinematic camera system
 5. team and player database migration — done for the fictional world (`Assets/Scripts/World`)
 6. tournament mode
-7. career mode, transfers and saves — league career, cup, transfers and save v6 done
+7. career mode, transfers and saves — league career, cup, cross-border scouting, AI transfer windows and save v7 done
 8. menus/HUD
 9. URP mobile rendering profiles and Android optimization
 10. signed release APK/AAB — build scripts and CI done; on-device QA remains

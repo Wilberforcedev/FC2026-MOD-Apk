@@ -21,7 +21,7 @@ The current 3D build includes:
 - keyboard and Android touch controls
 - dynamic broadcast camera, match score, and goal detection
 - generated fictional clubs, players, and kits
-- a deterministic career world with 96 national top divisions, league seasons, a national cup, transfers, contracts, and career saves
+- a deterministic career world with 96 national top divisions, league seasons, a national cup, transfers, cross-border scouting, AI transfer windows, contracts, and career saves
 
 The match AI and physics are still being improved. Current work is focused on more deliberate attacking choices, better defensive shape, and less rigid ball control.
 

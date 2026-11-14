@@ -7,16 +7,23 @@ namespace FC2026.Core
 {
     /// <summary>
     /// Transfer market and contracts for the worldwide career. The generated
-    /// squads stay authoritative; the save only stores the user's transfers and
-    /// the managed squad's contract end dates, so clubs and players are rebuilt
-    /// deterministically on every launch.
+    /// squads stay authoritative; the save only stores one recent move per
+    /// player plus the managed squad's contract end dates, so clubs and players
+    /// are rebuilt deterministically on every launch. The market covers the
+    /// managed division, free agents and cross-border scouting, and AI clubs in
+    /// the managed division run a deterministic transfer window each season.
     /// </summary>
     public static class CareerTransferSystem
     {
         public const int MaxSquadSize = 26;
         public const int MinimumSquadSize = 12;
         public const int ContractYears = 3;
-        private const int SellingPremiumPercent = 15;
+        public const int MaxStoredMoves = 2048;
+        public const int MaxAiMovesPerWindow = 24;
+        public const int MaxTransferSummaryLength = 200;
+        private const int DomesticPremiumPercent = 15;
+        private const int ForeignBasePremiumPercent = 20;
+        private const int ForeignPremiumPerStrength = 5;
 
         // The cache is only valid for the loaded career; every mutation and
         // every career load calls Invalidate.
@@ -126,7 +133,29 @@ namespace FC2026.Core
                 return 0;
 
             var value = MarketValue(player);
-            return value + value * SellingPremiumPercent / 100;
+            return value + value * PremiumPercent(save, playerId) / 100;
+        }
+
+        /// <summary>
+        /// Domestic signings pay the 15% selling premium. Players owned by a
+        /// club in another division add a scouting premium scaled by that
+        /// country's strength (25% at strength 1 up to 45% at strength 5).
+        /// </summary>
+        public static int PremiumPercent(CareerSaveData save, string playerId)
+        {
+            var club = WorldDatabase.GetClub(ClubOf(save, playerId));
+            if (save == null || club == null || club.LeagueId == save.leagueId)
+                return DomesticPremiumPercent;
+
+            var country = WorldDatabase.GetCountry(club.CountryId);
+            var strength = country == null ? 2 : country.Strength;
+            return ForeignBasePremiumPercent + strength * ForeignPremiumPerStrength;
+        }
+
+        public static bool IsForeignPlayer(CareerSaveData save, string playerId)
+        {
+            var club = WorldDatabase.GetClub(ClubOf(save, playerId));
+            return save != null && club != null && club.LeagueId != save.leagueId;
         }
 
         public static int WageBill(CareerSaveData save)
@@ -307,6 +336,40 @@ namespace FC2026.Core
         }
 
         /// <summary>
+        /// Cross-border scouting: the current squad of any club outside the
+        /// managed one, priced with the foreign premium so the hub can offer
+        /// signings from other divisions and continents.
+        /// </summary>
+        public static TransferTarget[] GetScoutSquad(CareerSaveData save, string clubId)
+        {
+            if (save == null || string.IsNullOrEmpty(clubId) || clubId == save.managedClubId)
+                return Array.Empty<TransferTarget>();
+
+            var club = WorldDatabase.GetClub(clubId);
+            if (club == null)
+                return Array.Empty<TransferTarget>();
+
+            var squad = GetSquad(save, clubId);
+            var targets = new TransferTarget[squad.Length];
+            for (var i = 0; i < squad.Length; i++)
+            {
+                var player = squad[i];
+                targets[i] = new TransferTarget
+                {
+                    Player = player,
+                    ClubId = club.Id,
+                    Price = PriceFor(save, player.Id),
+                    Wage = Wage(player)
+                };
+            }
+
+            return targets
+                .OrderByDescending(target => target.Player.Overall)
+                .ThenBy(target => target.Player.Name, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        /// <summary>
         /// Fills in contract end dates for the managed squad. Generated players
         /// get a deterministic 1-3 season deal so every career starts with a
         /// spread of expiring contracts.
@@ -346,6 +409,156 @@ namespace FC2026.Core
             }
 
             save.contracts = contracts;
+        }
+
+        /// <summary>
+        /// Runs once per season at rollover. AI clubs in the managed division
+        /// make a bounded, deterministic set of transfers: sales inside the
+        /// division, cross-border purchases, and releases. The managed squad is
+        /// never touched. The move log stays compact because it stores one row
+        /// per player, so the save does not grow with the number of windows.
+        /// </summary>
+        public static void ProcessAiTransferWindow(CareerSaveData save)
+        {
+            if (save == null)
+                return;
+
+            var clubs = WorldDatabase.GetLeagueClubs(save.leagueId)
+                .Where(club => club.Id != save.managedClubId)
+                .ToArray();
+
+            save.lastTransferSummary = string.Empty;
+            if (clubs.Length == 0)
+                return;
+
+            var seed = unchecked((uint)(save.worldSeed * 397
+                                        ^ save.season * 7919
+                                        ^ WorldHash.Combine(save.leagueId)));
+            var random = new DeterministicRandom(seed);
+            var moves = 0;
+            var headline = string.Empty;
+            var headlineFee = 0;
+
+            foreach (var club in clubs)
+            {
+                var sales = random.Range(0, 3);
+                for (var i = 0; i < sales && moves < MaxAiMovesPerWindow; i++)
+                {
+                    if (!TryAiSell(save, club, random, ref moves))
+                        break;
+                }
+
+                var signings = random.Range(0, 3);
+                for (var i = 0; i < signings && moves < MaxAiMovesPerWindow; i++)
+                {
+                    if (!TryAiBuy(save, club, random, ref moves, ref headline, ref headlineFee))
+                        break;
+                }
+            }
+
+            Invalidate();
+            save.lastTransferSummary = moves == 0
+                ? "No AI transfer activity this window."
+                : headline.Length > 0
+                    ? $"AI window: {moves} moves  •  {headline}"
+                    : $"AI window: {moves} moves.";
+        }
+
+        private static bool TryAiSell(CareerSaveData save, WorldClub club, DeterministicRandom random, ref int moves)
+        {
+            Invalidate();
+            var squad = GetSquad(save, club.Id);
+            if (squad.Length <= MinimumSquadSize)
+                return false;
+
+            var keepers = 0;
+            var candidates = new List<WorldPlayer>(squad.Length);
+            foreach (var player in squad)
+            {
+                if (player.Position == PlayerPosition.Goalkeeper)
+                    keepers++;
+                if (LatestMove(save, player.Id)?.season == save.season)
+                    continue;
+                candidates.Add(player);
+            }
+
+            if (candidates.Count == 0)
+                return false;
+
+            var seller = candidates[random.Range(0, candidates.Count)];
+            if (seller.Position == PlayerPosition.Goalkeeper && keepers <= 1)
+                return false;
+
+            var seed = seller.Id + "|ai-sell|" + save.season;
+            WorldClub buyer = null;
+            if (random.Range(0, 100) < 60)
+                buyer = PickDomesticBuyer(save, seed, club.Id);
+            buyer ??= PickForeignBuyer(save, seed);
+            if (buyer == null)
+                return false;
+
+            RecordMove(save, seller.Id, buyer.Id, MarketValue(seller));
+            Invalidate();
+            moves++;
+            return true;
+        }
+
+        private static bool TryAiBuy(CareerSaveData save, WorldClub club, DeterministicRandom random,
+            ref int moves, ref string headline, ref int headlineFee)
+        {
+            Invalidate();
+            if (GetSquad(save, club.Id).Length >= MaxSquadSize)
+                return false;
+
+            for (var attempt = 0; attempt < 6; attempt++)
+            {
+                var sellerClub = PickForeignClub(save, random);
+                if (sellerClub == null)
+                    continue;
+
+                Invalidate();
+                var squad = GetSquad(save, sellerClub.Id);
+                if (squad.Length <= MinimumSquadSize)
+                    continue;
+
+                var player = squad[random.Range(0, squad.Length)];
+                if (player.Position == PlayerPosition.Goalkeeper &&
+                    squad.Count(item => item.Position == PlayerPosition.Goalkeeper) <= 1)
+                    continue;
+                if (LatestMove(save, player.Id)?.season == save.season)
+                    continue;
+
+                var fee = MarketValue(player);
+                RecordMove(save, player.Id, club.Id, fee);
+                Invalidate();
+                moves++;
+
+                if (fee > headlineFee)
+                {
+                    headlineFee = fee;
+                    headline = $"{player.Name}: {sellerClub.ShortName} → {club.ShortName} ({FormatMoney(fee)})";
+                }
+                return true;
+            }
+
+            return false;
+        }
+
+        private static WorldClub PickForeignClub(CareerSaveData save, DeterministicRandom random)
+        {
+            var countries = WorldDatabase.GetCountries();
+            for (var attempt = 0; attempt < 6; attempt++)
+            {
+                var country = countries[random.Range(0, countries.Count)];
+                var league = country == null ? null : WorldDatabase.GetLeagueForCountry(country.Id);
+                if (league == null || league.Id == save.leagueId)
+                    continue;
+
+                var clubs = WorldDatabase.GetLeagueClubs(league.Id);
+                if (clubs.Length > 0)
+                    return clubs[random.Range(0, clubs.Length)];
+            }
+            return null;
         }
 
         /// <summary>
@@ -394,6 +607,9 @@ namespace FC2026.Core
 
             save.playerMoves = CompactMoves(save.playerMoves);
             save.contracts ??= Array.Empty<CareerContract>();
+            save.lastTransferSummary ??= string.Empty;
+            if (save.lastTransferSummary.Length > MaxTransferSummaryLength)
+                save.lastTransferSummary = save.lastTransferSummary.Substring(0, MaxTransferSummaryLength);
             Invalidate();
             EnsureContracts(save);
         }
@@ -402,8 +618,13 @@ namespace FC2026.Core
         {
             if (save == null || save.playerMoves == null || save.contracts == null)
                 return false;
-            if (save.playerMoves.Length > 512 || save.contracts.Length > MaxSquadSize)
+            if (save.playerMoves.Length > MaxStoredMoves || save.contracts.Length > MaxSquadSize)
                 return false;
+            if (!string.IsNullOrEmpty(save.lastTransferSummary) &&
+                save.lastTransferSummary.Length > MaxTransferSummaryLength)
+            {
+                return false;
+            }
 
             var movedPlayers = new HashSet<string>(StringComparer.Ordinal);
             foreach (var move in save.playerMoves)
@@ -471,12 +692,46 @@ namespace FC2026.Core
 
         private static WorldClub PickBuyer(CareerSaveData save, string playerId)
         {
+            var seed = playerId + "|buyer|" + save.season;
+            if (WorldHash.Index(seed, 100) < 60)
+            {
+                var domestic = PickDomesticBuyer(save, seed, string.Empty);
+                if (domestic != null)
+                    return domestic;
+            }
+
+            return PickForeignBuyer(save, seed);
+        }
+
+        private static WorldClub PickDomesticBuyer(CareerSaveData save, string seed, string excludedClubId)
+        {
             var buyers = WorldDatabase.GetLeagueClubs(save.leagueId)
-                .Where(club => club.Id != save.managedClubId)
+                .Where(club => club.Id != save.managedClubId
+                               && club.Id != excludedClubId
+                               && GetSquad(save, club.Id).Length < MaxSquadSize)
                 .ToArray();
-            if (buyers.Length == 0)
-                return null;
-            return buyers[WorldHash.Index(playerId + "|buyer|" + save.season, buyers.Length)];
+            return buyers.Length == 0 ? null : buyers[WorldHash.Index(seed + "|domestic", buyers.Length)];
+        }
+
+        private static WorldClub PickForeignBuyer(CareerSaveData save, string seed)
+        {
+            var countries = WorldDatabase.GetCountries();
+            for (var attempt = 0; attempt < 8; attempt++)
+            {
+                var country = countries[WorldHash.Index(seed + "|country|" + attempt, countries.Count)];
+                var league = country == null ? null : WorldDatabase.GetLeagueForCountry(country.Id);
+                if (league == null || league.Id == save.leagueId)
+                    continue;
+
+                var clubs = WorldDatabase.GetLeagueClubs(league.Id);
+                if (clubs.Length == 0)
+                    continue;
+
+                var club = clubs[WorldHash.Index(seed + "|club|" + attempt, clubs.Length)];
+                if (club != null && GetSquad(save, club.Id).Length < MaxSquadSize)
+                    return club;
+            }
+            return null;
         }
 
         private static bool IsMovedAway(CareerSaveData save, string playerId, string clubId)
