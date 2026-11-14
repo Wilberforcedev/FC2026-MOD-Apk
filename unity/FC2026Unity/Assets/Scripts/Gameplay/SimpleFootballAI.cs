@@ -346,8 +346,11 @@ namespace FC2026.Gameplay
                 var predictedX = ball.Position.x + velocity.x * timeToGoalLine;
                 var predictedY = ball.Position.y + velocity.y * timeToGoalLine +
                     0.5f * Physics.gravity.y * timeToGoalLine * timeToGoalLine;
+                // Include ground-level shots while excluding shots above the crossbar.
+                const float ballRadius = 0.11f;
+                const float goalHeight = 2.44f;
                 var insideGoalMouth = Mathf.Abs(predictedX) <= postLimit &&
-                    predictedY >= 0.12f && predictedY <= 2.55f;
+                    predictedY >= ballRadius * 0.5f && predictedY <= goalHeight - ballRadius;
 
                 if (insideGoalMouth)
                 {
