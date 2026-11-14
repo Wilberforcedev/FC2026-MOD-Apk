@@ -21,8 +21,11 @@ namespace FC2026.Gameplay
 
             lastGoalAt = Time.time;
             var scorer = ball.LastKicker;
-            if (scorer != null)
+            var scorerController = scorer != null ? scorer.GetComponent<FootballPlayerController>() : null;
+            var scoringDirection = HomeGoal ? -1 : 1;
+            if (scorerController != null && scorerController.TeamDirection == scoringDirection)
             {
+                // Only celebrate when the last touch belongs to the team awarded the goal.
                 scorer.GetComponent<FootballMotionAnimator>()?.TriggerCelebration();
                 FindFirstObjectByType<BroadcastCameraController>()?.FocusCelebration(scorer);
             }
