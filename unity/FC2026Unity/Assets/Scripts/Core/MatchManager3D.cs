@@ -97,6 +97,11 @@ namespace FC2026.Core
         {
             if (paused)
                 Time.timeScale = 1f;
+
+            // This joystick texture belongs only to the current match instance.
+            if (joystickDisc != null)
+                Destroy(joystickDisc);
+
             if (Instance == this)
                 Instance = null;
         }

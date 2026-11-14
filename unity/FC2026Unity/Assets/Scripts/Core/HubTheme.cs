@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace FC2026.Core
@@ -8,6 +9,8 @@ namespace FC2026.Core
     /// </summary>
     internal static class HubTheme
     {
+        private static readonly Dictionary<Color32, Texture2D> SolidTextureCache = new();
+
         public static readonly Color32 TextColor = new Color32(0xF2, 0xF7, 0xFB, 0xFF);
         public static readonly Color32 GoldTextColor = new Color32(0xF5, 0xDD, 0x92, 0xFF);
         public static readonly Color32 PanelColor = new Color32(0x0F, 0x15, 0x1B, 0xE6);
@@ -111,12 +114,18 @@ namespace FC2026.Core
 
         public static Texture2D SolidTexture(Color color)
         {
+            var colorKey = (Color32)color;
+            if (SolidTextureCache.TryGetValue(colorKey, out var cached) && cached != null)
+                return cached;
+
+            // Palette colours are reused across screens, so keep one tiny texture per colour.
             var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
             {
                 hideFlags = HideFlags.HideAndDontSave
             };
-            texture.SetPixel(0, 0, color);
+            texture.SetPixel(0, 0, colorKey);
             texture.Apply();
+            SolidTextureCache[colorKey] = texture;
             return texture;
         }
 
