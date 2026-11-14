@@ -44,7 +44,7 @@ The runtime prototype also includes a generated pitch, ball passing and shooting
 
 ## Shared UI direction
 
-All screens follow one FC 2026 presentation system:  dark stadium backdrops, soft spotlighting, bold white uppercase headings, cyan focus brackets, muted blue-gray secondary text, collectible card silhouettes, and a consistent controller/touch interaction rail. The shared `FC2026UITheme` ScriptableObject stores the palette, card tiers, spacing, panel radius, focus treatment, and interaction colors so screens do not drift visually. See `UI_STYLE_GUIDE.md` before creating any new screen or component.
+All screens follow one FC 2026 presentation system: dark stadium backdrops, soft spotlighting, bold white uppercase headings, cyan focus brackets, muted blue-gray secondary text, collectible card silhouettes, and a consistent controller/touch interaction rail. The shared `FC2026UITheme` ScriptableObject stores the palette, card tiers, spacing, panel radius, focus treatment, and interaction colors so screens do not drift visually. See `UI_STYLE_GUIDE.md` before creating any new screen or component.
 
 ## Android-first cinematic mobile hub
 
@@ -91,7 +91,7 @@ EditMode tests live under `Assets/Tests/Editor/FootballWorldCatalogTests.cs`. Th
 
 `TransferNegotiationManager` supports opening a player negotiation, submitting fee/wage/term offers, receiving counter-offers, accepting or rejecting deals, and completing the transfer through the career budget and squad. `ScoutingNetworkManager` supports regional scout assignments, multi-week reports, confidence, estimated overall/potential, fee estimates, recommendations, network upgrades, and report completion events.
 
-`TransferSocialFeedScreen` is the mobile-first presentation for this system. It replaces the desktop-style transfer grid with a vertical dark social/news feed with  Dynamic News Feed, Club Inbox, and Social Buzz tabs; cyan navigation; magenta transfer/scouting labels; unread badges; verified handles; engagement rows; stacked post cards; and direct **SCOUT PLAYER** / **OPEN NEGOTIATION** actions. The screen intentionally uses fictional in-game network accounts and original content.
+`TransferSocialFeedScreen` is the mobile-first presentation for this system. It replaces the desktop-style transfer grid with a vertical dark social/news feed featuring Dynamic News Feed, Club Inbox, and Social Buzz tabs; cyan navigation; magenta transfer/scouting labels; unread badges; verified handles; engagement rows; stacked post cards; and direct **SCOUT PLAYER** / **OPEN NEGOTIATION** actions. The screen intentionally uses fictional in-game network accounts and original content.
 
 
 ## AERO Soccer 2027 global football database
