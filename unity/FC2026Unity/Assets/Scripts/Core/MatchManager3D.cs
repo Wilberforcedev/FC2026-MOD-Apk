@@ -1085,8 +1085,8 @@ namespace FC2026.Core
             lower.GetComponent<Renderer>().material = shorts;
             Destroy(lower.GetComponent<Collider>());
 
-            var resolvedSkinTone = skinTone >= 0 ? skinTone : (name.GetHashCode() & int.MaxValue) % 3;
-            var resolvedHairColor = hairColor >= 0 ? hairColor : (name.GetHashCode() & int.MaxValue) % 4;
+            var resolvedSkinTone = skinTone >= 0 ? skinTone : WorldHash.Index(name, 3);
+            var resolvedHairColor = hairColor >= 0 ? hairColor : WorldHash.Index(name, 4);
             var skin = CreateMaterial(SkinColorFor(resolvedSkinTone), 0.38f);
             var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             head.name = "Head";
