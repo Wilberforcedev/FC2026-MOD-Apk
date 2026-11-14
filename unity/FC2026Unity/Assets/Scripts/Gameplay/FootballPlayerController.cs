@@ -38,6 +38,7 @@ namespace FC2026.Gameplay
         private float passingStat = 0.6f;
         private float defendingStat = 0.6f;
         private float physicalStat = 0.5f;
+        private float paceMultiplier = 1f;
         private bool prefersLeftFoot;
         private int skinTone = -1;
         private int hairColor = -1;
@@ -82,7 +83,7 @@ namespace FC2026.Gameplay
         }
 
         public void Configure(PlayerRole role, Vector3 homePosition, int teamDirection, float shooting, float passing,
-            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1, float defending = 0.6f, float physical = 0.5f, bool leftFootedPlayer = false)
+            int playerSkinTone = -1, int playerHairColor = -1, int playerFaceVariant = -1, float defending = 0.6f, float physical = 0.5f, bool leftFootedPlayer = false, float pace = 1f)
         {
             Role = role;
             HomePosition = homePosition;
@@ -92,6 +93,7 @@ namespace FC2026.Gameplay
             passingStat = Mathf.Clamp01(passing);
             defendingStat = Mathf.Clamp01(defending);
             physicalStat = Mathf.Clamp01(physical);
+            paceMultiplier = Mathf.Clamp(pace, 0.88f, 1.14f);
             prefersLeftFoot = leftFootedPlayer;
             skinTone = playerSkinTone;
             hairColor = playerHairColor;
@@ -193,7 +195,8 @@ namespace FC2026.Gameplay
             var sprinting = ReadSprint() && move.sqrMagnitude > 0.02f && stamina > 0.04f;
             var carryFactor = HasBall ? 0.93f : 1f;
             var fatigueFactor = Mathf.Lerp(0.74f, 1f, stamina);
-            var desiredSpeed = (sprinting ? sprintSpeed : moveSpeed) * fatigueFactor * carryFactor;
+            // The selected player's pace rating scales their movement and sprint speed.
+            var desiredSpeed = (sprinting ? sprintSpeed : moveSpeed) * paceMultiplier * fatigueFactor * carryFactor;
             var desired = new Vector3(move.x, 0f, move.y);
             if (desired.sqrMagnitude > 1f)
                 desired.Normalize();

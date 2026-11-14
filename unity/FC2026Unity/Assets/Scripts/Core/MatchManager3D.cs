@@ -1122,7 +1122,7 @@ namespace FC2026.Core
 
             var controller = player.AddComponent<FootballPlayerController>();
             controller.Configure(role, start, attackDirection, shooting, passing,
-                resolvedSkinTone, resolvedHairColor, faceVariant, defending, physical, leftFooted);
+                resolvedSkinTone, resolvedHairColor, faceVariant, defending, physical, leftFooted, speed);
             controller.SetUserControlled(user);
 
             var ai = player.AddComponent<SimpleFootballAI>();
