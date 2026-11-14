@@ -17,6 +17,7 @@ namespace FC2026.Gameplay
         private int attackDirection = 1;
         private PlayerRole role = PlayerRole.Midfielder;
         private bool goalkeeper;
+        private float configuredSpeedMultiplier = 1f;
         private float decisionOffset;
         private float actionTimer;
         private float tackleTimer;
@@ -36,7 +37,7 @@ namespace FC2026.Gameplay
             attackDirection = direction >= 0 ? 1 : -1;
             role = assignedRole;
             goalkeeper = assignedRole == PlayerRole.Goalkeeper;
-            moveSpeed *= Mathf.Clamp(speedMultiplier, 0.82f, 1.18f);
+            configuredSpeedMultiplier = Mathf.Clamp(speedMultiplier, 0.82f, 1.18f);
             decisionOffset = Random.Range(0f, 10f);
             actionTimer = Random.Range(0.1f, 0.45f);
         }
@@ -482,7 +483,8 @@ namespace FC2026.Gameplay
 
             // AI players lose pace as stamina falls, matching user-controlled movement.
             var stamina = controller != null ? controller.Stamina01 : 1f;
-            speed *= Mathf.Lerp(0.74f, 1f, stamina);
+            // Apply match tuning without changing the serialized base speed across configurations.
+            speed *= configuredSpeedMultiplier * Mathf.Lerp(0.74f, 1f, stamina);
 
             var self = Flat(transform.position);
             var direction = target - self;
