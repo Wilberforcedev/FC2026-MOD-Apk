@@ -422,10 +422,14 @@ namespace FC2026.Gameplay
 
             var useLeftFoot = SelectLeftFoot(ball.Position);
             var footAccuracy = useLeftFoot == prefersLeftFoot ? 1f : 0.88f;
+            var pressureDistance = NearestOpponentDistance(transform.position);
+            // A close marker makes accurate placement harder, even for a skilled shooter.
+            var pressureAccuracy = Mathf.Lerp(0.78f, 1f, Mathf.InverseLerp(1.4f, 5f, pressureDistance));
             var accuracy = Mathf.Lerp(0.55f, 0.95f, shootingStat)
                            * Mathf.Clamp01(1.18f - distance * 0.011f)
                            * Mathf.Lerp(0.82f, 1f, stamina)
-                           * footAccuracy;
+                           * footAccuracy
+                           * pressureAccuracy;
             var error = (1f - accuracy) * (0.10f + distance * 0.0035f);
             flat = (flat + transform.right * Random.Range(-error, error)).normalized;
 
