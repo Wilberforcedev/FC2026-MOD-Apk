@@ -358,8 +358,13 @@ namespace FC2026.Gameplay
                     MoveTowards(interceptTarget, moveSpeed * 1.12f, 28f);
 
                     var lateralReach = Mathf.Abs(predictedX - transform.position.x);
-                    var needsDive = lateralReach > 1.05f && lateralReach < 4.15f;
-                    if (needsDive && diveTimer <= 0f && timeToGoalLine < 1.35f)
+                    var keeperSkill = controller.DefendingStat;
+                    var maximumDiveReach = Mathf.Lerp(3.25f, 4.15f, keeperSkill);
+                    var reactionWindow = Mathf.Lerp(1.05f, 1.45f, keeperSkill);
+                    var needsDive = lateralReach > 1.05f && lateralReach < maximumDiveReach;
+
+                    // Stronger goalkeepers react sooner and can reach farther across the goal.
+                    if (needsDive && diveTimer <= 0f && timeToGoalLine < reactionWindow)
                     {
                         var side = Mathf.Sign(predictedX - transform.position.x);
                         diveTimer = 1.1f;
