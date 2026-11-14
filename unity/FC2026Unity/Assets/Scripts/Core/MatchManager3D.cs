@@ -1254,6 +1254,8 @@ namespace FC2026.Core
                 $"{(half == 0 ? "1ST HALF" : "2ND HALF")}  {minute:00}'   •   POSSESSION {homePossessionPercent}% - {100 - homePossessionPercent}%",
                 labelSmallStyle);
 
+            DrawStaminaMeter();
+
             if (Application.isMobilePlatform)
             {
                 if (live && !halfTimePending && !matchFinished)
@@ -1339,6 +1341,36 @@ namespace FC2026.Core
                     panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", flowButtonStyle))
                     CompleteCareerMatch();
             }
+        }
+
+        // Show the selected player's energy so sprinting and fatigue are visible during play.
+        private void DrawStaminaMeter()
+        {
+            if (userPlayer == null)
+                return;
+
+            var safeArea = Screen.safeArea;
+            var safeTop = Screen.height - safeArea.yMax;
+            var width = Mathf.Clamp(Screen.width * 0.18f, 120f, 190f);
+            var x = safeArea.xMin + 18f;
+            var y = safeTop + 18f;
+            var stamina = Mathf.Clamp01(userPlayer.Stamina01);
+            var previousColor = GUI.color;
+
+            GUI.Label(new Rect(x, y, width, 22f),
+                $"STAMINA  {Mathf.RoundToInt(stamina * 100f)}%", labelSmallStyle);
+
+            var bar = new Rect(x, y + 24f, width, 12f);
+            GUI.color = new Color(0.02f, 0.05f, 0.08f, 0.88f);
+            GUI.DrawTexture(bar, Texture2D.whiteTexture);
+
+            GUI.color = stamina < 0.25f
+                ? new Color(0.92f, 0.25f, 0.22f, 0.95f)
+                : stamina < 0.55f
+                    ? new Color(0.98f, 0.72f, 0.2f, 0.95f)
+                    : new Color(0.25f, 0.86f, 0.58f, 0.95f);
+            GUI.DrawTexture(new Rect(bar.x, bar.y, bar.width * stamina, bar.height), Texture2D.whiteTexture);
+            GUI.color = previousColor;
         }
 
         private static GUIStyle CreatePanelStyle()
