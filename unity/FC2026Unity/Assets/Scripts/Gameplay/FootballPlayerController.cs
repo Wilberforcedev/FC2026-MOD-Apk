@@ -10,6 +10,7 @@ namespace FC2026.Gameplay
     {
         private static readonly List<FootballPlayerController> Registry = new();
         private const float MaxTackleBallHeight = 1.55f;
+        private const float MobileInputDeadZone = 0.12f;
 
         [SerializeField] private float moveSpeed = 7.1f;
         [SerializeField] private float sprintSpeed = 9.7f;
@@ -61,6 +62,14 @@ namespace FC2026.Gameplay
         public static FootballPlayerController ActiveUserPlayer { get; private set; }
 
         public static IReadOnlyList<FootballPlayerController> All => Registry;
+
+        private static Vector2 NormalizeInput(Vector2 value)
+        {
+            var magnitude = value.magnitude;
+            if (magnitude < MobileInputDeadZone)
+                return Vector2.zero;
+            return value.normalized * Mathf.InverseLerp(MobileInputDeadZone, 1f, magnitude);
+        }
 
         public static FootballPlayerController FindNearestTo(Vector3 position, int teamDirection, bool excludeGoalkeeper = false)
         {
@@ -202,7 +211,6 @@ namespace FC2026.Gameplay
             var sprinting = ReadSprint() && move.sqrMagnitude > 0.02f && stamina > 0.04f;
             var carryFactor = HasBall ? 0.93f : 1f;
             var fatigueFactor = Mathf.Lerp(0.74f, 1f, stamina);
-            // The selected player's pace rating scales their movement and sprint speed.
             var desiredSpeed = (sprinting ? sprintSpeed : moveSpeed) * paceMultiplier * fatigueFactor * carryFactor;
             var desired = new Vector3(move.x, 0f, move.y);
             if (desired.sqrMagnitude > 1f)
@@ -297,20 +305,24 @@ namespace FC2026.Gameplay
         {
             var move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             if (Application.isMobilePlatform)
-                move = mobileMove;
+                move = NormalizeInput(mobileMove);
             return Vector2.ClampMagnitude(move, 1f);
         }
 
         private bool ReadSprint()
         {
             var keyboardSprint = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-            return keyboardSprint || (Application.isMobilePlatform && mobileSprint);
+            if (keyboardSprint)
+                return true;
+            if (!Application.isMobilePlatform)
+                return false;
+            return mobileSprint && mobileMove.sqrMagnitude > MobileInputDeadZone * MobileInputDeadZone;
         }
 
         public void SetMobileMove(Vector2 direction, bool sprint = false)
         {
-            mobileMove = Vector2.ClampMagnitude(direction, 1f);
-            mobileSprint = sprint;
+            mobileMove = NormalizeInput(direction);
+            mobileSprint = sprint && mobileMove.sqrMagnitude > 0.01f;
         }
 
         public void QueuePass() => passQueued = true;
@@ -380,7 +392,6 @@ namespace FC2026.Gameplay
 
             var delta = ball.Position - transform.position;
             delta.y = 0f;
-            // Tackles stay grounded so players cannot win possession from a high ball.
             if (delta.magnitude > 2.05f || ball.Position.y > MaxTackleBallHeight || ball.Owner == this)
                 return false;
 
@@ -399,7 +410,6 @@ namespace FC2026.Gameplay
             var approachBonus = Mathf.Lerp(-0.12f, 0.06f, Mathf.Clamp01((facingBall + 1f) * 0.5f));
             var defenderBonus = Role == PlayerRole.Defender ? 0.12f : Role == PlayerRole.Midfielder ? 0.05f : 0f;
             var skillBonus = (defendingStat - 0.6f) * 0.24f;
-            // Stronger carriers resist contact; facing the ball improves the tackler's approach.
             var carrierResistance = (ball.Owner.PhysicalStat - 0.5f) * 0.18f;
             var chance = Mathf.Clamp(
                 Mathf.Lerp(0.36f, 0.78f, stamina) + defenderBonus + skillBonus + approachBonus - carrierResistance,
@@ -411,7 +421,6 @@ namespace FC2026.Gameplay
             return true;
         }
 
-        // Use the preferred foot for centered contact; use the nearby foot when the ball is clearly to one side.
         private bool SelectLeftFoot(Vector3 ballPosition)
         {
             var localX = transform.InverseTransformPoint(ballPosition).x;
@@ -438,7 +447,6 @@ namespace FC2026.Gameplay
             var useLeftFoot = SelectLeftFoot(ball.Position);
             var footAccuracy = useLeftFoot == prefersLeftFoot ? 1f : 0.88f;
             var pressureDistance = NearestOpponentDistance(transform.position);
-            // A close marker makes accurate placement harder, even for a skilled shooter.
             var pressureAccuracy = Mathf.Lerp(0.78f, 1f, Mathf.InverseLerp(1.4f, 5f, pressureDistance));
             var accuracy = Mathf.Lerp(0.55f, 0.95f, shootingStat)
                            * Mathf.Clamp01(1.18f - distance * 0.011f)
@@ -448,7 +456,6 @@ namespace FC2026.Gameplay
             var error = (1f - accuracy) * (0.10f + distance * 0.0035f);
             flat = (flat + transform.right * Random.Range(-error, error)).normalized;
 
-            // Longer shots need more pace; BallController still enforces the global speed limit.
             var distancePower = Mathf.Lerp(1f, 1.4f, Mathf.InverseLerp(20f, 44f, distance));
             var power = Mathf.Lerp(15.5f, 26.5f, shootingStat) *
                         Mathf.Lerp(0.92f, 1.07f, Mathf.Clamp01(distance / 36f)) * distancePower;
@@ -519,10 +526,8 @@ namespace FC2026.Gameplay
             var useLeftFoot = SelectLeftFoot(ball.Position);
             var footErrorFactor = useLeftFoot == prefersLeftFoot ? 1f : 1.25f;
             var pressureDistance = NearestOpponentDistance(transform.position);
-            // Nearby defenders add a small directional error while passing skill still shapes the base accuracy.
             var pressureError = Mathf.Lerp(0.025f, 0f, Mathf.InverseLerp(1.25f, 5f, pressureDistance));
             var skillError = (1f - passingStat) * (throughBall ? 0.045f : 0.03f);
-            // Fatigue affects touch and execution, with passing skill softening the accuracy loss.
             var fatigueError = (1f - stamina) * Mathf.Lerp(0.025f, 0.012f, passingStat);
             var passError = (skillError + pressureError + fatigueError) * footErrorFactor;
             flat = (flat + transform.right * Random.Range(-passError, passError)).normalized;
@@ -547,7 +552,6 @@ namespace FC2026.Gameplay
 
             foreach (var candidate in Registry)
             {
-                // Through balls need a runner ahead; regular passes may use the goalkeeper as a safe outlet.
                 if (candidate == null || candidate == this || candidate.TeamDirection != TeamDirection ||
                     (throughBall && candidate.IsGoalkeeper))
                 {
@@ -568,7 +572,6 @@ namespace FC2026.Gameplay
 
                 var openness = NearestOpponentDistance(candidate.transform.position);
                 var laneRisk = LaneRisk(origin, candidate.transform.position);
-                // Better passers accept more risk when a forward lane is available.
                 var laneRiskPenalty = Mathf.Lerp(9f, 5f, passingStat);
                 var score = forwardAmount * 9f + Mathf.Clamp(openness, 0f, 12f) * 0.85f
                             - Mathf.Abs(offset.x) * 0.07f - distance * 0.08f - laneRisk * laneRiskPenalty;
