@@ -179,6 +179,12 @@ namespace FC2026.Gameplay
 
             if (!IsUserControlled)
             {
+                if (!MatchManager3D.IsLive)
+                {
+                    UpdateStamina(false, 0f);
+                    return;
+                }
+
                 var aiSpeed = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z).magnitude;
                 UpdateStamina(aiSpeed > moveSpeed * 1.02f, aiSpeed);
                 return;
@@ -188,6 +194,7 @@ namespace FC2026.Gameplay
             {
                 ClearQueuedActions();
                 Decelerate(acceleration);
+                UpdateStamina(false, 0f);
                 return;
             }
 
