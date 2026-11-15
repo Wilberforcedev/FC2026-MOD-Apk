@@ -522,7 +522,9 @@ namespace FC2026.Gameplay
             // Nearby defenders add a small directional error while passing skill still shapes the base accuracy.
             var pressureError = Mathf.Lerp(0.025f, 0f, Mathf.InverseLerp(1.25f, 5f, pressureDistance));
             var skillError = (1f - passingStat) * (throughBall ? 0.045f : 0.03f);
-            var passError = (skillError + pressureError) * footErrorFactor;
+            // Fatigue affects touch and execution, with passing skill softening the accuracy loss.
+            var fatigueError = (1f - stamina) * Mathf.Lerp(0.025f, 0.012f, passingStat);
+            var passError = (skillError + pressureError + fatigueError) * footErrorFactor;
             flat = (flat + transform.right * Random.Range(-passError, passError)).normalized;
 
             motion?.TriggerPass(useLeftFoot);
