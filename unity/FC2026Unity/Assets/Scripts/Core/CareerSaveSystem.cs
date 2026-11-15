@@ -30,21 +30,54 @@ namespace FC2026.Core
             if (!IsValid(data))
                 return false;
 
+            string previousSave = null;
+            var hadPreviousSave = false;
             try
             {
-                var currentSave = PlayerPrefs.GetString(SaveKey, string.Empty);
-                if (!string.IsNullOrWhiteSpace(currentSave))
-                    PlayerPrefs.SetString(BackupSaveKey, currentSave);
+                previousSave = PlayerPrefs.GetString(SaveKey, string.Empty);
+                hadPreviousSave = !string.IsNullOrWhiteSpace(previousSave);
 
-                PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(data));
+                // Persist the last known primary before replacing it. If the app is
+                // terminated during the next write, Load can still recover this copy.
+                if (hadPreviousSave)
+                {
+                    PlayerPrefs.SetString(BackupSaveKey, previousSave);
+                    PlayerPrefs.Save();
+                }
+
+                var serialized = JsonUtility.ToJson(data);
+                PlayerPrefs.SetString(SaveKey, serialized);
                 PlayerPrefs.Save();
-                return true;
+
+                if (PlayerPrefs.GetString(SaveKey, string.Empty) == serialized)
+                    return true;
+
+                Debug.LogWarning("FC 2026: career save verification failed; restoring the previous save.");
+                RestorePreviousSave(previousSave, hadPreviousSave);
+                return false;
             }
             catch (Exception exception)
             {
                 Debug.LogWarning($"FC 2026 career save failed: {exception.Message}");
+                try
+                {
+                    RestorePreviousSave(previousSave, hadPreviousSave);
+                }
+                catch (Exception restoreException)
+                {
+                    Debug.LogWarning($"FC 2026 career save rollback failed: {restoreException.Message}");
+                }
                 return false;
             }
+        }
+
+        private static void RestorePreviousSave(string previousSave, bool hadPreviousSave)
+        {
+            if (hadPreviousSave)
+                PlayerPrefs.SetString(SaveKey, previousSave);
+            else
+                PlayerPrefs.DeleteKey(SaveKey);
+            PlayerPrefs.Save();
         }
 
         public static CareerSaveData Load()
