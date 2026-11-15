@@ -269,13 +269,21 @@ namespace FC2026.Gameplay
         private void TryClaimLooseBall()
         {
             var ball = BallController.Instance;
+            if (CanControlLooseBall(ball))
+                ball.Claim(this);
+        }
+
+        public bool CanControlLooseBall(BallController ball)
+        {
             if (ball == null || !ball.IsFree || kickLock > 0f || !ball.CanBeControlledBy(this))
-                return;
+                return false;
 
             var delta = ball.Position - transform.position;
             delta.y = 0f;
-            if (delta.sqrMagnitude <= controlRadius * controlRadius)
-                ball.Claim(this);
+            var horizontalSpeed = new Vector2(ball.Velocity.x, ball.Velocity.z).magnitude;
+            var controlRadiusAtSpeed = controlRadius * Mathf.Lerp(
+                1f, 0.55f, Mathf.InverseLerp(8f, 24f, horizontalSpeed));
+            return delta.sqrMagnitude <= controlRadiusAtSpeed * controlRadiusAtSpeed;
         }
 
         private Vector2 ReadMove()
