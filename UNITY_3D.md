@@ -194,7 +194,7 @@ $env:FC2026_KEY_PASS = "..."
 
 `.github/workflows/unity-android.yml` builds a debug **Unity 3D** APK on Unity project changes or on demand, and uploads `FC2026-Unity-3D-Android-APK` for 14 days.
 
-`.github/workflows/unity-android-release.yml` builds a signed AAB for the Play Console, and optionally a signed APK. It runs when a `v*` tag is pushed or manually with `version_name`/`version_code` inputs; tag pushes take the version from the tag (`v1.2.0` → `1.2.0`) and the version code from the workflow run number. Uploads `FC2026-Unity-3D-Android-Release-<version>` for 30 days.
+`.github/workflows/unity-android-release.yml` builds a signed AAB for the Play Console, and optionally a signed APK. For manual runs, provide both a numeric `major.minor.patch` version name and a positive version code; invalid values fail before Unity starts. For tag runs, use a tag such as `v1.2.0`; the version name comes from the tag and the version code comes from the release workflow run number. Confirm that the code is higher than every version already uploaded to Play Console. The workflow uploads `FC2026-Unity-3D-Android-Release-<version>` for 30 days.
 
 Add these to the repository's **Settings → Secrets and variables → Actions** before running either workflow:
 

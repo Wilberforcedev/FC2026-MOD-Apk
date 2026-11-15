@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: "Android version name (e.g. 1.0.0). Required for a Play upload."
-        required: false
-        default: ""
+        description: "Android version name (for example, 1.2.0). Required for a Play upload."
+        required: true
+        type: string
       version_code:
         description: "Android version code. Must be higher than every previous Play upload."
-        required: false
-        default: ""
+        required: true
+        type: string
       build_apk:
         description: "Also build a signed APK next to the AAB."
         required: false
@@ -53,20 +53,30 @@ jobs:
           done
           exit $missing
 
-      - name: Resolve version
+      - name: Resolve and validate version
         id: version
+        env:
+          INPUT_VERSION_NAME: ${{ inputs.version_name }}
+          INPUT_VERSION_CODE: ${{ inputs.version_code }}
+        shell: bash
         run: |
-          version="${{ github.event.inputs.version_name }}"
-          code="${{ github.event.inputs.version_code }}"
-          if [ -z "$version" ] && [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            version="$INPUT_VERSION_NAME"
+            code="$INPUT_VERSION_CODE"
+          else
             version="${GITHUB_REF_NAME#v}"
-          fi
-          if [ -z "$version" ]; then
-            version="1.0.0"
-          fi
-          if [ -z "$code" ]; then
             code="$GITHUB_RUN_NUMBER"
           fi
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Version name must use numeric major.minor.patch form, optionally followed by a prerelease suffix."
+            exit 1
+          fi
+          if [[ ! "$code" =~ ^[1-9][0-9]{0,9}$ ]] || (( code > 2100000000 )); then
+            echo "::error::Version code must be an integer from 1 to 2100000000."
+            exit 1
+          fi
+
           echo "name=$version" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "Building FC 2026 $version ($code)"
