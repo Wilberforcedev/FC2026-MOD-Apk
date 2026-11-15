@@ -98,7 +98,6 @@ namespace FC2026.Core
             if (paused)
                 Time.timeScale = 1f;
 
-            // This joystick texture belongs only to the current match instance.
             if (joystickDisc != null)
                 Destroy(joystickDisc);
 
@@ -108,7 +107,6 @@ namespace FC2026.Core
 
         private void OnApplicationPause(bool isPaused)
         {
-            // Keep active matches paused after a phone call or app switch.
             if (isPaused && live)
                 PauseMatch();
         }
@@ -550,7 +548,6 @@ namespace FC2026.Core
             CreateLine(new Vector3(PitchWidth / 2f, 0.035f, 0), new Vector3(0.12f, 0.04f, PitchLength), line);
             CreateLine(new Vector3(0, 0.035f, 0), new Vector3(PitchWidth, 0.04f, 0.12f), line);
 
-            // Penalty boxes give the prototype a true regulation-scale visual reference.
             CreatePenaltyBox(-1, line);
             CreatePenaltyBox(1, line);
             CreatePitchDetails(line);
@@ -926,7 +923,6 @@ namespace FC2026.Core
 
         private static PlayerMatchProfile BuildMatchProfile(WorldPlayer player, int index, string playerName)
         {
-            // Keep career ratings and generated appearance data together in one named profile.
             return new PlayerMatchProfile(
                 heightScale: HeightScaleFor(player, index),
                 widthScale: WidthScaleFor(player, index),
@@ -1354,7 +1350,6 @@ namespace FC2026.Core
             }
         }
 
-        // Show the selected player's energy so sprinting and fatigue are visible during play.
         private void DrawStaminaMeter()
         {
             if (userPlayer == null)
@@ -1417,14 +1412,11 @@ namespace FC2026.Core
             var save = CareerSaveSystem.Load();
             if (save != null)
             {
-                // The managed club always plays the left/home side of this scene,
-                // so homeScore belongs to the user regardless of the fixture venue.
                 if (!CareerLeagueSystem.CompleteNextFixture(save, homeScore, awayScore))
                     Debug.LogWarning("FC 2026: could not apply this match to the career.");
                 else if (!CareerSaveSystem.Save(save))
                     Debug.LogWarning("FC 2026: match finished, but career result could not be saved.");
             }
-            // The hub and match manager share this root. Preserve it and remove only generated children.
             for (var i = transform.childCount - 1; i >= 0; i--)
                 Destroy(transform.GetChild(i).gameObject);
 
@@ -1463,8 +1455,6 @@ namespace FC2026.Core
                 hub.enabled = true;
             }
 
-            // Remove this match component so the career hub can create a fresh manager
-            // next time. Merely disabling it leaves a stale component that blocks rematches.
             Destroy(this);
         }
 
@@ -1477,7 +1467,6 @@ namespace FC2026.Core
             var safeArea = Screen.safeArea;
             var safeLeft = safeArea.xMin;
             var safeRight = safeArea.xMax;
-            var safeTop = Screen.height - safeArea.yMax;
             var safeBottom = Screen.height - safeArea.yMin;
             var radius = Mathf.Clamp(Screen.height * 0.115f, 64f, 94f);
             var joyCenter = new Vector2(safeLeft + radius + 28f, safeBottom - radius - 30f);
@@ -1497,33 +1486,38 @@ namespace FC2026.Core
 
             DrawJoystick(joyCenter, radius, stickOffset);
 
-            var right = safeRight - 24f;
-            var bottom = safeBottom - 24f;
-            var actionSize = Mathf.Clamp(Screen.height * 0.105f, 62f, 88f);
-            var gap = actionSize * 0.13f;
-            Rect ActionRect(int column, int row) => new Rect(
-                right - actionSize - column * (actionSize + gap),
-                bottom - actionSize - row * (actionSize + gap), actionSize, actionSize);
+            var actionSize = Mathf.Clamp(Screen.height * 0.102f, 64f, 82f);
+            var gap = actionSize * 0.22f;
+            var rightEdge = safeRight - 18f;
+            var bottomEdge = safeBottom - 20f;
+            var actionColX = rightEdge - actionSize;
+            var actionColY = bottomEdge - (actionSize * 2f + gap);
 
-            if (GUI.Button(ActionRect(0, 0), "SHOOT", primaryButtonStyle))
+            Rect ActionRect(int xIndex, int yIndex)
+            {
+                return new Rect(
+                    actionColX - xIndex * (actionSize + gap),
+                    actionColY - yIndex * (actionSize + gap),
+                    actionSize, actionSize);
+            }
+
+            if (GUI.Button(ActionRect(0, 0), "SHOT", primaryButtonStyle))
                 userPlayer.QueueShot();
             if (GUI.Button(ActionRect(1, 0), "PASS", buttonStyle))
                 userPlayer.QueuePass();
-            if (GUI.Button(ActionRect(0, 1), "TACKLE", buttonStyle))
+            if (GUI.Button(ActionRect(0, 1), "TACK", buttonStyle))
                 userPlayer.QueueTackle();
-            if (GUI.Button(ActionRect(1, 1), "THROUGH", buttonStyle))
+            if (GUI.Button(ActionRect(1, 1), "THRU", buttonStyle))
                 userPlayer.QueueThroughBall();
-            var sprint = GUI.RepeatButton(ActionRect(0, 2), "SPRINT", buttonStyle);
-            if (GUI.Button(ActionRect(1, 2), "SWITCH", buttonStyle))
+            var sprintHeld = GUI.RepeatButton(ActionRect(0, 2), "SPR", buttonStyle);
+            if (GUI.Button(ActionRect(1, 2), "SW", buttonStyle))
                 userPlayer.SwitchToNearestTeammate();
             if (GUI.Button(ActionRect(0, 3), "CHIP", buttonStyle))
                 userPlayer.QueueChipShot();
-            if (GUI.Button(ActionRect(1, 3), "FINESSE", buttonStyle))
+            if (GUI.Button(ActionRect(1, 3), "FIN", buttonStyle))
                 userPlayer.QueueFinesseShot();
 
-            // Keep the analogue stick live while another finger taps an action.
-            userPlayer.SetMobileMove(move, sprint);
-
+            userPlayer.SetMobileMove(move, sprintHeld);
             GUI.color = Color.white;
         }
 
