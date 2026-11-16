@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+      - "fix/**"
+      - "feature/**"
     paths:
       - "unity/FC2026Unity/**"
       - ".github/workflows/unity-android.yml"
@@ -15,10 +17,18 @@ on:
       - "unity/FC2026Unity/**"
       - ".github/workflows/unity-android.yml"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: unity-android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-unity-android:
-    name: Build Unity 6.3 Android APK
+    name: Build and verify Unity 6.3 Android APK
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,10 +54,59 @@ jobs:
           targetPlatform: Android
           buildMethod: FC2026.EditorTools.AndroidBuilder.BuildAndroid
 
-      - name: Upload Unity APK
+      - name: Verify APK package and write checksum
+        env:
+          APK_PATH: unity/FC2026Unity/Builds/Android/FC2026-3D-debug.apk
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import os
+          import sys
+          import zipfile
+
+          apk = os.environ["APK_PATH"]
+          if not os.path.isfile(apk):
+              sys.exit(f"::error::Unity build did not produce the expected APK: {apk}")
+
+          size = os.path.getsize(apk)
+          if size < 1_000_000:
+              sys.exit(f"::error::APK is unexpectedly small ({size} bytes); refusing to upload a likely incomplete build.")
+
+          try:
+              with zipfile.ZipFile(apk) as package:
+                  corrupt_entry = package.testzip()
+                  if corrupt_entry:
+                      sys.exit(f"::error::APK archive contains a corrupt entry: {corrupt_entry}")
+                  entries = set(package.namelist())
+                  required = {"AndroidManifest.xml", "assets/bin/Data/boot.config", "lib/arm64-v8a/libil2cpp.so"}
+                  missing = sorted(required - entries)
+                  if missing:
+                      sys.exit("::error::APK is missing expected Unity/Android entries: " + ", ".join(missing))
+          except zipfile.BadZipFile:
+              sys.exit("::error::Unity output is not a valid APK/ZIP archive.")
+
+          digest = hashlib.sha256()
+          with open(apk, "rb") as stream:
+              for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                  digest.update(chunk)
+
+          checksum_path = apk + ".sha256"
+          with open(checksum_path, "w", encoding="utf-8") as checksum:
+              checksum.write(f"{digest.hexdigest()}  {os.path.basename(apk)}\n")
+
+          print(f"Verified APK: {apk}")
+          print(f"Size: {size} bytes")
+          print(f"SHA-256: {digest.hexdigest()}")
+          print(f"Source commit: {os.environ['COMMIT_SHA']}")
+          PY
+
+      - name: Upload verified Unity APK
         uses: actions/upload-artifact@v4
         with:
-          name: FC2026-Unity-3D-Android-APK
-          path: unity/FC2026Unity/Builds/Android/FC2026-3D-debug.apk
+          name: FC2026-Unity-3D-Android-APK-${{ github.sha }}
+          path: |
+            unity/FC2026Unity/Builds/Android/FC2026-3D-debug.apk
+            unity/FC2026Unity/Builds/Android/FC2026-3D-debug.apk.sha256
           if-no-files-found: error
           retention-days: 14
