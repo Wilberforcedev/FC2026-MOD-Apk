@@ -25,6 +25,8 @@ namespace FC2026.Core
         private int awayScore;
         private bool resetting;
         private bool paused;
+        private bool confirmRestart;
+        private bool confirmAbandon;
         private bool live;
         private bool halfTimePending;
         private int half;
@@ -203,6 +205,45 @@ namespace FC2026.Core
             paused = false;
             live = true;
             Time.timeScale = 1f;
+            confirmRestart = false;
+            confirmAbandon = false;
+        }
+
+        private void RestartMatch()
+        {
+            if (half > 0)
+                SwitchSides();
+
+            paused = false;
+            Time.timeScale = 1f;
+            live = false;
+            homeScore = 0;
+            awayScore = 0;
+            homePossession = 0f;
+            awayPossession = 0f;
+            half = 0;
+            halfElapsed = 0f;
+            matchElapsed = 0f;
+            nextCommentaryAt = 8f;
+            autoSwitchTimer = 0f;
+            matchFinished = false;
+            resultSaved = false;
+            halfTimePending = false;
+            cupShootoutPending = false;
+            resetting = false;
+            confirmRestart = false;
+            confirmAbandon = false;
+            goalBanner = string.Empty;
+            goalBannerUntil = 0f;
+            commentary = "The referee gets us underway!";
+            userPlayer?.ClearQueuedActions();
+            StartCoroutine(BeginKickoff(1, 0.45f));
+        }
+
+        private void AbandonMatch()
+        {
+            ResumeMatch();
+            CompleteCareerMatch(false);
         }
 
         private void FindUserPlayer()
@@ -1308,18 +1349,56 @@ namespace FC2026.Core
             if (paused)
             {
                 fullTimeStyle ??= CreatePanelStyle();
-                var panelWidth = Mathf.Min(Screen.width * 0.7f, 500f);
-                var panelHeight = Mathf.Clamp(Screen.height * 0.38f, 180f, 240f);
+                var panelWidth = Mathf.Min(Screen.width * 0.84f, 540f);
+                var panelHeight = Mathf.Min(Mathf.Max(Screen.height * 0.82f, 270f), 360f);
                 var panel = new Rect((Screen.width - panelWidth) * 0.5f, (Screen.height - panelHeight) * 0.5f,
                     panelWidth, panelHeight);
                 GUI.Box(panel, string.Empty, panelStyle);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 20f, panel.width - 24f, 58f), "MATCH PAUSED", fullTimeStyle);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 80f, panel.width - 24f, 42f),
+                var title = confirmRestart ? "RESTART MATCH?" : confirmAbandon ? "LEAVE MATCH?" : "MATCH PAUSED";
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 10f, panel.width - 24f, 48f), title, fullTimeStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 58f, panel.width - 24f, 36f),
                     $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", scoreStyle);
-                var resumeRect = new Rect(panel.x + panel.width * 0.16f, panel.y + panel.height - 70f,
-                    panel.width * 0.68f, 50f);
-                if (GUI.Button(resumeRect, "RESUME MATCH", flowButtonStyle))
-                    ResumeMatch();
+                var buttonX = panel.x + panel.width * 0.14f;
+                var buttonWidth = panel.width * 0.72f;
+                const float buttonHeight = 42f;
+                const float buttonGap = 7f;
+                var buttonY = panel.y + 103f;
+
+                if (confirmRestart || confirmAbandon)
+                {
+                    var prompt = confirmRestart
+                        ? "The score and match clock will reset."
+                        : "Leave without recording this match in your career?";
+                    GUI.Label(new Rect(panel.x + 18f, buttonY, panel.width - 36f, 32f), prompt, labelSmallStyle);
+                    buttonY += 36f;
+                    if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
+                        confirmRestart ? "RESTART MATCH" : "LEAVE MATCH", flowButtonStyle))
+                    {
+                        if (confirmRestart) RestartMatch();
+                        else AbandonMatch();
+                    }
+                    buttonY += buttonHeight + buttonGap;
+                    if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
+                        confirmRestart ? "CANCEL" : "KEEP PLAYING", buttonStyle))
+                    {
+                        confirmRestart = false;
+                        confirmAbandon = false;
+                    }
+                }
+                else
+                {
+                    if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
+                        "RESUME MATCH", flowButtonStyle))
+                        ResumeMatch();
+                    buttonY += buttonHeight + buttonGap;
+                    if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
+                        "RESTART MATCH", buttonStyle))
+                        confirmRestart = true;
+                    buttonY += buttonHeight + buttonGap;
+                    if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
+                        "RETURN TO CAREER", buttonStyle))
+                        confirmAbandon = true;
+                }
             }
 
             if (halfTimePending)
@@ -1410,11 +1489,11 @@ namespace FC2026.Core
             commentary = lines[Random.Range(0, lines.Length)];
         }
 
-        private void CompleteCareerMatch()
+        private void CompleteCareerMatch(bool saveResult = true)
         {
             if (resultSaved) return;
             resultSaved = true;
-            var save = CareerSaveSystem.Load();
+            var save = saveResult ? CareerSaveSystem.Load() : null;
             if (save != null)
             {
                 // The managed club always plays the left/home side of this scene,
@@ -1459,7 +1538,7 @@ namespace FC2026.Core
             var hub = GetComponent<CareerHubManager>();
             if (hub != null)
             {
-                hub.RefreshCareer();
+                hub.RefreshCareer(saveResult);
                 hub.enabled = true;
             }
 
