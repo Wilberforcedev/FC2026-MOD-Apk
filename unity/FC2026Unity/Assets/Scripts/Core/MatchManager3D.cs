@@ -907,12 +907,13 @@ namespace FC2026.Core
             var awaySecondary = awayClub != null ? ToColor(awayClub.SecondaryColor) : new Color(0.03f, 0.08f, 0.2f);
             if (homeClub != null && careerSave != null && homeClub.Id == careerSave.managedClubId)
             {
-                homePrimary = CareerKitSystem.GetPrimary(homeClub.Id, 0, homePrimary);
-                homeSecondary = CareerKitSystem.GetSecondary(homeClub.Id, 0, homeSecondary);
+                var activeKitSlot = CareerKitSystem.GetActiveMatchSlot(homeClub.Id);
+                homePrimary = CareerKitSystem.GetPrimary(homeClub.Id, activeKitSlot, homePrimary);
+                homeSecondary = CareerKitSystem.GetSecondary(homeClub.Id, activeKitSlot, homeSecondary);
             }
-            if (homeClub != null && awayClub != null && awayClub.PrimaryColor.DistanceTo(homeClub.PrimaryColor) < 0.4f)
+            if (homeClub != null && awayClub != null && ColorDistance(awayPrimary, homePrimary) < 0.4f)
             {
-                awayPrimary = awayClub.SecondaryColor.DistanceTo(homeClub.PrimaryColor) >= 0.4f
+                awayPrimary = ColorDistance(awaySecondary, homePrimary) >= 0.4f
                     ? ToColor(awayClub.SecondaryColor)
                     : homePrimary.grayscale > 0.5f
                         ? new Color(0.07f, 0.12f, 0.26f)
@@ -1093,6 +1094,14 @@ namespace FC2026.Core
         private static Color ToColor(WorldColor color)
         {
             return new Color(color.R, color.G, color.B);
+        }
+
+        private static float ColorDistance(Color left, Color right)
+        {
+            var red = left.r - right.r;
+            var green = left.g - right.g;
+            var blue = left.b - right.b;
+            return Mathf.Sqrt(red * red + green * green + blue * blue);
         }
 
         private static Color SkinColorFor(int skinTone)
