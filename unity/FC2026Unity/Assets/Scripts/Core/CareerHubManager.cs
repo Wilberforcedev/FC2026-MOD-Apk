@@ -1009,7 +1009,7 @@ namespace FC2026.Core
                 showHonours = false;
         }
 
-        public void RefreshCareer()
+        public void RefreshCareer(bool matchResultSaved = true)
         {
             save = CareerSaveSystem.Load();
             showClubBrowser = false;
@@ -1025,7 +1025,9 @@ namespace FC2026.Core
             selectedTransferPlayerId = string.Empty;
             notice = save == null
                 ? "Match ended. Browse the world to start a career."
-                : save.matchweek == 1 && save.season > 1 && !string.IsNullOrEmpty(save.lastSeasonSummary)
+                : !matchResultSaved
+                    ? "Match abandoned. No result was recorded."
+                    : save.matchweek == 1 && save.season > 1 && !string.IsNullOrEmpty(save.lastSeasonSummary)
                     ? save.lastSeasonSummary
                     : "Match result saved. Career updated.";
         }
