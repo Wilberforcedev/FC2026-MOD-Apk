@@ -905,6 +905,11 @@ namespace FC2026.Core
             var homeSecondary = homeClub != null ? ToColor(homeClub.SecondaryColor) : new Color(0.08f, 0.1f, 0.18f);
             var awayPrimary = awayClub != null ? ToColor(awayClub.PrimaryColor) : new Color(0.07f, 0.28f, 0.72f);
             var awaySecondary = awayClub != null ? ToColor(awayClub.SecondaryColor) : new Color(0.03f, 0.08f, 0.2f);
+            if (homeClub != null && careerSave != null && homeClub.Id == careerSave.managedClubId)
+            {
+                homePrimary = CareerKitSystem.GetPrimary(homeClub.Id, 0, homePrimary);
+                homeSecondary = CareerKitSystem.GetSecondary(homeClub.Id, 0, homeSecondary);
+            }
             if (homeClub != null && awayClub != null && awayClub.PrimaryColor.DistanceTo(homeClub.PrimaryColor) < 0.4f)
             {
                 awayPrimary = awayClub.SecondaryColor.DistanceTo(homeClub.PrimaryColor) >= 0.4f
@@ -916,7 +921,10 @@ namespace FC2026.Core
 
             var homeShirt = CreateMaterial(homePrimary, 0.3f);
             var awayShirt = CreateMaterial(awayPrimary, 0.32f);
-            var homeKeeper = CreateMaterial(homeClub != null ? ToColor(homeClub.GoalkeeperColor) : new Color(0.95f, 0.65f, 0.08f), 0.3f);
+            var homeKeeperColor = homeClub != null ? ToColor(homeClub.GoalkeeperColor) : new Color(0.95f, 0.65f, 0.08f);
+            if (homeClub != null && careerSave != null && homeClub.Id == careerSave.managedClubId)
+                homeKeeperColor = CareerKitSystem.GetPrimary(homeClub.Id, 3, homeKeeperColor);
+            var homeKeeper = CreateMaterial(homeKeeperColor, 0.3f);
             var awayKeeper = CreateMaterial(awayClub != null ? ToColor(awayClub.GoalkeeperColor) : new Color(0.88f, 0.17f, 0.22f), 0.3f);
             var homeShorts = CreateMaterial(homeSecondary, 0.35f);
             var awayShorts = CreateMaterial(awaySecondary, 0.35f);
