@@ -42,6 +42,21 @@ namespace FC2026.Core
             return Mathf.Clamp(PlayerPrefs.GetInt(Key(clubId, slot), 0), 0, PresetNames.Length - 1);
         }
 
+        public static int GetActiveMatchSlot(string clubId)
+        {
+            if (string.IsNullOrEmpty(clubId))
+                return 0;
+            return Mathf.Clamp(PlayerPrefs.GetInt($"FC2026.Kit.Active.{clubId}", 0), 0, 2);
+        }
+
+        public static void SetActiveMatchSlot(string clubId, int slot)
+        {
+            if (string.IsNullOrEmpty(clubId))
+                return;
+            PlayerPrefs.SetInt($"FC2026.Kit.Active.{clubId}", Mathf.Clamp(slot, 0, 2));
+            PlayerPrefs.Save();
+        }
+
         public static void SetPreset(string clubId, int slot, int preset)
         {
             if (string.IsNullOrEmpty(clubId))
