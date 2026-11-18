@@ -13,18 +13,18 @@ namespace FC2026.Core
 
         public static readonly Color32 TextColor = new Color32(0xF2, 0xF7, 0xFB, 0xFF);
         public static readonly Color32 GoldTextColor = new Color32(0xF5, 0xDD, 0x92, 0xFF);
-        public static readonly Color32 PanelColor = new Color32(0x0F, 0x15, 0x1B, 0xE6);
-        public static readonly Color32 TableHeaderColor = new Color32(0x1B, 0x2A, 0x38, 0xFF);
-        public static readonly Color32 TableRowColor = new Color32(0x16, 0x1F, 0x29, 0xFF);
-        public static readonly Color32 TableAltRowColor = new Color32(0x12, 0x1A, 0x22, 0xFF);
+        public static readonly Color32 PanelColor = new Color32(0x05, 0x11, 0x22, 0xF2);
+        public static readonly Color32 TableHeaderColor = new Color32(0x08, 0x2D, 0x4A, 0xFF);
+        public static readonly Color32 TableRowColor = new Color32(0x0B, 0x1E, 0x34, 0xFF);
+        public static readonly Color32 TableAltRowColor = new Color32(0x07, 0x18, 0x2A, 0xFF);
         public static readonly Color32 HighlightColor = new Color32(0x45, 0x39, 0x16, 0xFF);
 
-        private static readonly Color32 SecondaryColor = new Color32(0x31, 0x46, 0x5A, 0xFF);
-        private static readonly Color32 SecondaryHover = new Color32(0x3E, 0x59, 0x72, 0xFF);
-        private static readonly Color32 SecondaryActive = new Color32(0x27, 0x38, 0x48, 0xFF);
-        private static readonly Color32 PrimaryColor = new Color32(0x14, 0x7A, 0x4E, 0xFF);
-        private static readonly Color32 PrimaryHover = new Color32(0x1B, 0x99, 0x62, 0xFF);
-        private static readonly Color32 PrimaryActive = new Color32(0x0F, 0x5F, 0x3D, 0xFF);
+        private static readonly Color32 SecondaryColor = new Color32(0x0D, 0x2A, 0x43, 0xFF);
+        private static readonly Color32 SecondaryHover = new Color32(0x10, 0x45, 0x67, 0xFF);
+        private static readonly Color32 SecondaryActive = new Color32(0x09, 0x20, 0x35, 0xFF);
+        private static readonly Color32 PrimaryColor = new Color32(0x00, 0x9D, 0xD8, 0xFF);
+        private static readonly Color32 PrimaryHover = new Color32(0x18, 0xC1, 0xF3, 0xFF);
+        private static readonly Color32 PrimaryActive = new Color32(0x00, 0x73, 0xA8, 0xFF);
         private static readonly Color32 AccentColor = new Color32(0x8A, 0x6D, 0x1D, 0xFF);
         private static readonly Color32 AccentHover = new Color32(0xA5, 0x85, 0x24, 0xFF);
         private static readonly Color32 AccentActive = new Color32(0x6E, 0x57, 0x17, 0xFF);
