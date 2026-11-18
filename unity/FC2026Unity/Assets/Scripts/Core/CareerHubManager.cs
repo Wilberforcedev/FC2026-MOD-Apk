@@ -39,6 +39,8 @@ namespace FC2026.Core
         private Texture2D tableHighlightTexture;
         private string notice = "Browse the world and choose a club to begin.";
         private bool showLeagueTable;
+        private bool showCupCampaign;
+        private bool showHonours;
         private bool showSquadManagement;
         private bool showTransfers;
         private bool transfersShowSquad;
@@ -56,6 +58,7 @@ namespace FC2026.Core
         private Vector2 countryScroll;
         private Vector2 clubScroll;
         private Vector2 leagueTableScroll;
+        private Vector2 honoursScroll;
 
         private void Awake()
         {
@@ -85,6 +88,16 @@ namespace FC2026.Core
             if (showLeagueTable)
             {
                 DrawLeagueTable(panel);
+                return;
+            }
+            if (showCupCampaign)
+            {
+                DrawCupCampaign(panel);
+                return;
+            }
+            if (showHonours)
+            {
+                DrawHonours(panel);
                 return;
             }
             if (showSquadManagement)
@@ -263,14 +276,22 @@ namespace FC2026.Core
             var actionHeight = Mathf.Clamp(panel.height * 0.12f, 40f, 58f);
             if (compact)
             {
-                var quarter = (width - gap * 3f) / 4f;
-                if (GUI.Button(new Rect(x, y, quarter, actionHeight), "SQUAD", buttonStyle))
+                var third = (width - gap * 2f) / 3f;
+                if (GUI.Button(new Rect(x, y, third, actionHeight), "SQUAD", buttonStyle))
                     showSquadManagement = true;
-                if (GUI.Button(new Rect(x + quarter + gap, y, quarter, actionHeight), "TABLE", buttonStyle))
+                if (GUI.Button(new Rect(x + third + gap, y, third, actionHeight), "TABLE", buttonStyle))
                     showLeagueTable = true;
-                if (GUI.Button(new Rect(x + (quarter + gap) * 2f, y, quarter, actionHeight), "TRANSFERS", buttonStyle))
+                if (GUI.Button(new Rect(x + (third + gap) * 2f, y, third, actionHeight), "TRANSFERS", buttonStyle))
                     OpenTransfers();
-                if (GUI.Button(new Rect(x + (quarter + gap) * 3f, y, quarter, actionHeight), "BROWSE", buttonStyle))
+                y += actionHeight + 6f;
+                if (GUI.Button(new Rect(x, y, third, actionHeight), "CUP", buttonStyle))
+                    showCupCampaign = true;
+                if (GUI.Button(new Rect(x + third + gap, y, third, actionHeight), "HONOURS", buttonStyle))
+                {
+                    honoursScroll = Vector2.zero;
+                    showHonours = true;
+                }
+                if (GUI.Button(new Rect(x + (third + gap) * 2f, y, third, actionHeight), "BROWSE", buttonStyle))
                 {
                     browserCountryId = string.Empty;
                     showClubBrowser = true;
@@ -890,11 +911,111 @@ namespace FC2026.Core
                 showLeagueTable = false;
         }
 
+        private void DrawCupCampaign(Rect panel)
+        {
+            var x = panel.x + 22f;
+            var width = panel.width - 44f;
+            GUI.Label(new Rect(x, panel.y + 10f, width, 42f),
+                CareerCupSystem.CompetitionName(save).ToUpperInvariant(), headingStyle);
+
+            var played = CareerCupSystem.PlayedRounds(save);
+            var tie = CareerCupSystem.GetUserTie(save);
+            var status = save.cupChampionId == save.managedClubId
+                ? "CHAMPIONS"
+                : save.cupRound > 0
+                    ? $"NEXT: {CareerCupSystem.RoundName(save.cupRound)}  •  MATCHWEEK {CareerCupSystem.WeekForRound(save.cupRound)}"
+                    : played > 0 ? "CUP RUN COMPLETE" : "NOT QUALIFIED FOR THIS SEASON";
+            GUI.Label(new Rect(x, panel.y + 54f, width, 34f), status, bodyStyle);
+
+            var footerHeight = Mathf.Clamp(panel.height * 0.09f, 42f, 60f);
+            var footerY = panel.yMax - footerHeight - 12f;
+            var rowHeight = Mathf.Clamp(panel.height * 0.085f, 30f, 76f);
+            var gap = 6f;
+            for (var round = 1; round <= CareerCupSystem.Rounds; round++)
+            {
+                var index = round - 1;
+                var rowY = panel.y + 96f + index * (rowHeight + gap);
+                if (rowY + rowHeight > footerY - 4f)
+                    break;
+
+                var opponentId = save.cupOpponentIds != null && index < save.cupOpponentIds.Length
+                    ? save.cupOpponentIds[index] : string.Empty;
+                var opponent = WorldDatabase.GetClub(opponentId);
+                string detail;
+                if (opponent != null)
+                {
+                    var score = index < save.cupUserGoals.Length && index < save.cupOpponentGoals.Length
+                        ? $"{save.cupUserGoals[index]}  -  {save.cupOpponentGoals[index]}" : "Result unavailable";
+                    var penalties = save.cupUserPenalties != null && save.cupOpponentPenalties != null &&
+                                    index < save.cupUserPenalties.Length && index < save.cupOpponentPenalties.Length &&
+                                    (save.cupUserPenalties[index] > 0 || save.cupOpponentPenalties[index] > 0)
+                        ? $"  (PEN {save.cupUserPenalties[index]} - {save.cupOpponentPenalties[index]})" : string.Empty;
+                    detail = $"{opponent.Name}   •   {score}{penalties}";
+                }
+                else if (tie != null && tie.Round == round)
+                {
+                    var nextOpponent = WorldDatabase.GetClub(tie.OpponentFor(save.managedClubId));
+                    detail = nextOpponent == null ? "Fixture pending" : "vs " + nextOpponent.Name;
+                }
+                else if (save.cupRound == 0 && played > 0 && round > played)
+                    detail = "Eliminated before this round";
+                else
+                    detail = "Not played yet";
+
+                GUI.Box(new Rect(x, rowY, width, rowHeight), GUIContent.none,
+                    round <= played ? selectedRowStyle : rowStyle);
+                GUI.Label(new Rect(x + 12f, rowY, width * 0.3f, rowHeight),
+                    CareerCupSystem.RoundName(round), tableHeaderStyle);
+                GUI.Label(new Rect(x + width * 0.32f, rowY, width * 0.66f, rowHeight), detail, tableNameStyle);
+            }
+
+            if (GUI.Button(new Rect(x, footerY, width, footerHeight), "BACK TO CAREER", buttonStyle))
+                showCupCampaign = false;
+        }
+
+        private void DrawHonours(Rect panel)
+        {
+            var x = panel.x + 22f;
+            var width = panel.width - 44f;
+            GUI.Label(new Rect(x, panel.y + 10f, width, 42f), "CLUB HONOURS", headingStyle);
+            var honours = save.honours ?? Array.Empty<string>();
+            var footerHeight = Mathf.Clamp(panel.height * 0.09f, 42f, 60f);
+            var footerY = panel.yMax - footerHeight - 12f;
+            var rowHeight = Mathf.Clamp(panel.height * 0.075f, 34f, 54f);
+            var contentHeight = Mathf.Max(rowHeight, honours.Length * (rowHeight + 6f));
+            var viewY = panel.y + 58f;
+            var viewHeight = footerY - viewY - 6f;
+            var innerWidth = width - 22f;
+            honoursScroll = GUI.BeginScrollView(new Rect(x, viewY, width, viewHeight), honoursScroll,
+                new Rect(0f, 0f, innerWidth, contentHeight));
+
+            if (honours.Length == 0)
+                GUI.Label(new Rect(0f, 0f, innerWidth, rowHeight * 2f),
+                    "No trophies recorded yet. Keep playing to build your club history.", bodyStyle);
+            else
+            {
+                for (var i = 0; i < honours.Length; i++)
+                {
+                    var rowY = i * (rowHeight + 6f);
+                    GUI.DrawTexture(new Rect(0f, rowY, innerWidth, rowHeight),
+                        i % 2 == 0 ? tableHighlightTexture : tableAltRowTexture);
+                    GUI.Label(new Rect(12f, rowY, innerWidth - 24f, rowHeight),
+                        $"{i + 1:00}   {honours[i]}", tableNameStyle);
+                }
+            }
+            GUI.EndScrollView();
+
+            if (GUI.Button(new Rect(x, footerY, width, footerHeight), "BACK TO CAREER", buttonStyle))
+                showHonours = false;
+        }
+
         public void RefreshCareer()
         {
             save = CareerSaveSystem.Load();
             showClubBrowser = false;
             showLeagueTable = false;
+            showCupCampaign = false;
+            showHonours = false;
             showSquadManagement = false;
             showTransfers = false;
             confirmNewCareer = false;
