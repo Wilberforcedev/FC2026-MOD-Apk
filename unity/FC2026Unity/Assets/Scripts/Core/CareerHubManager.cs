@@ -65,6 +65,10 @@ namespace FC2026.Core
         private Vector2 clubScroll;
         private Vector2 leagueTableScroll;
         private Vector2 honoursScroll;
+        private Vector2 dashboardScroll;
+        private Vector2 playerStatsScroll;
+        private Vector2 kitScroll;
+        private Vector2 competitionScroll;
 
         private void Awake()
         {
@@ -242,6 +246,11 @@ namespace FC2026.Core
             var competition = next.Kind == CareerFixtureKind.Cup
                 ? $"{CareerCupSystem.CompetitionName(save)} {CareerCupSystem.ShortRoundName(next.Round)}"
                 : "League";
+            if (panel.height < 460f || width < 470f)
+            {
+                DrawCompactDashboard(panel, x, width, club, league, country, position, ranked.Length, next, opponent, competition);
+                return;
+            }
             GUI.Label(new Rect(x, y + 2f, width, 42f), "FC 2026  •  DREAM  •  BUILD  •  WIN", headingStyle);
             y += 48f;
             GUI.Label(new Rect(x, y, width, 42f), club.Name.ToUpperInvariant(), titleStyle);
@@ -288,6 +297,51 @@ namespace FC2026.Core
             GUI.Label(new Rect(x, footerY, width, 28f), notice, smallStyle);
         }
 
+        private void DrawCompactDashboard(Rect panel, float x, float width, WorldClub club, WorldLeague league,
+            WorldCountry country, int position, int teamCount, CareerNextFixture next, WorldClub opponent, string competition)
+        {
+            GUI.Label(new Rect(x, panel.y + 8f, width, 38f), club.Name.ToUpperInvariant(), headingStyle);
+            GUI.Label(new Rect(x, panel.y + 43f, width, 28f),
+                $"{league.Name}  •  {country?.Name ?? club.CountryId}  •  {position}/{teamCount}", smallStyle);
+            var viewport = new Rect(x, panel.y + 76f, width, panel.height - 122f);
+            var contentWidth = width - 18f;
+            var gap = 8f;
+            var cardWidth = (contentWidth - gap) / 2f;
+            var actionHeight = 52f;
+            var fixtureHeight = 74f;
+            var contentHeight = fixtureHeight + 10f + 3f * (actionHeight + gap);
+            dashboardScroll = GUI.BeginScrollView(viewport, dashboardScroll,
+                new Rect(0f, 0f, contentWidth, contentHeight));
+            var fixtureText = opponent == null ? "No fixture scheduled" :
+                $"{competition}  •  {(next.UserIsHome ? "vs" : "at")} {opponent.Name}";
+            var playText = next.Kind == CareerFixtureKind.Cup && next.IsValid ? "PLAY CUP TIE" : "PLAY NEXT MATCH";
+            if (GUI.Button(new Rect(0f, 0f, contentWidth, fixtureHeight), $"{playText}\n{fixtureText}", primaryButtonStyle))
+                showMatchPreview = true;
+            var cardY = fixtureHeight + 10f;
+            if (GUI.Button(new Rect(0f, cardY, cardWidth, actionHeight), "SQUAD & TACTICS", buttonStyle)) showSquadManagement = true;
+            if (GUI.Button(new Rect(cardWidth + gap, cardY, cardWidth, actionHeight), "PLAYER MARKET", buttonStyle)) OpenTransfers();
+            cardY += actionHeight + gap;
+            if (GUI.Button(new Rect(0f, cardY, cardWidth, actionHeight), "COMPETITIONS", buttonStyle)) showTournamentHub = true;
+            if (GUI.Button(new Rect(cardWidth + gap, cardY, cardWidth, actionHeight), "KIT ROOM", buttonStyle))
+            {
+                selectedKitSlot = 0;
+                showKitRoom = true;
+            }
+            cardY += actionHeight + gap;
+            if (GUI.Button(new Rect(0f, cardY, cardWidth, actionHeight), "MY CLUB", buttonStyle))
+            {
+                honoursScroll = Vector2.zero;
+                showHonours = true;
+            }
+            if (GUI.Button(new Rect(cardWidth + gap, cardY, cardWidth, actionHeight), "BROWSE WORLD", buttonStyle))
+            {
+                browserCountryId = string.Empty;
+                showClubBrowser = true;
+            }
+            GUI.EndScrollView();
+            GUI.Label(new Rect(x, panel.yMax - 42f, width, 28f), notice, smallStyle);
+        }
+
         private void DrawPlayerDetails(Rect panel)
         {
             var x = panel.x + 24f;
@@ -305,12 +359,16 @@ namespace FC2026.Core
             GUI.Label(new Rect(x, y, width, 34f),
                 $"{PositionLabel(selectedPlayer.Position)}   •   #{selectedPlayer.ShirtNumber}   •   AGE {selectedPlayer.Age}   •   {selectedPlayer.HeightCm} CM   •   {(selectedPlayer.LeftFooted ? "LEFT" : "RIGHT")} FOOT",
                 bodyStyle);
-            y += 54f;
+            y += 42f;
             var stats = new[] { $"PACE  {selectedPlayer.Pace}", $"SHOOTING  {selectedPlayer.Shooting}", $"PASSING  {selectedPlayer.Passing}", $"DEFENDING  {selectedPlayer.Defending}", $"PHYSICAL  {selectedPlayer.Physical}" };
-            var rowHeight = Mathf.Clamp((panel.yMax - y - 90f) / stats.Length, 36f, 56f);
-            for (var i = 0; i < stats.Length; i++)
-                GUI.Box(new Rect(x + 12f, y + i * (rowHeight + 6f), width - 24f, rowHeight), stats[i], selectedRowStyle);
+            var rowHeight = Mathf.Clamp(panel.height * 0.075f, 34f, 52f);
             var footerY = panel.yMax - 62f;
+            var viewportHeight = Mathf.Max(40f, footerY - y - 6f);
+            playerStatsScroll = GUI.BeginScrollView(new Rect(x, y, width, viewportHeight), playerStatsScroll,
+                new Rect(0f, 0f, width - 18f, stats.Length * (rowHeight + 6f)));
+            for (var i = 0; i < stats.Length; i++)
+                GUI.Box(new Rect(8f, i * (rowHeight + 6f), width - 34f, rowHeight), stats[i], selectedRowStyle);
+            GUI.EndScrollView();
             if (GUI.Button(new Rect(x, footerY, width, 48f), "BACK TO SQUAD", buttonStyle))
             {
                 showPlayerDetails = false;
@@ -330,12 +388,24 @@ namespace FC2026.Core
             var tabsY = panel.y + 96f;
             for (var i = 0; i < CareerKitSystem.SlotNames.Length; i++)
                 if (GUI.Button(new Rect(x + i * (slotW + gap), tabsY, slotW, 48f), CareerKitSystem.SlotNames[i],
-                    selectedKitSlot == i ? accentButtonStyle : buttonStyle)) selectedKitSlot = i;
-            var presetsY = tabsY + 66f;
-            var presetHeight = Mathf.Clamp((panel.yMax - presetsY - 104f) / CareerKitSystem.PresetNames.Length, 34f, 54f);
+                    selectedKitSlot == i ? accentButtonStyle : buttonStyle))
+                {
+                    selectedKitSlot = i;
+                    if (i < 3)
+                        CareerKitSystem.SetActiveMatchSlot(club.Id, i);
+                }
+            var presetsY = tabsY + 84f;
+            var activeKit = CareerKitSystem.GetActiveMatchSlot(club.Id);
+            GUI.Label(new Rect(x, presetsY - 22f, width, 20f),
+                $"MATCH KIT: {CareerKitSystem.SlotNames[activeKit]}  •  KEEPERS USE THEIR OWN PALETTE", smallStyle);
+            var footerY = panel.yMax - 60f;
+            var listHeight = Mathf.Max(40f, footerY - presetsY - 8f);
+            var presetHeight = Mathf.Clamp(panel.height * 0.075f, 34f, 50f);
+            kitScroll = GUI.BeginScrollView(new Rect(x, presetsY, width, listHeight), kitScroll,
+                new Rect(0f, 0f, width - 18f, CareerKitSystem.PresetNames.Length * (presetHeight + 6f)));
             for (var i = 0; i < CareerKitSystem.PresetNames.Length; i++)
             {
-                var row = new Rect(x + 18f, presetsY + i * (presetHeight + 6f), width - 36f, presetHeight);
+                var row = new Rect(0f, i * (presetHeight + 6f), width - 18f, presetHeight);
                 var primary = CareerKitSystem.PreviewPrimary(i, ToColor(club.PrimaryColor));
                 var secondary = CareerKitSystem.PreviewSecondary(i, ToColor(club.SecondaryColor));
                 var selected = CareerKitSystem.GetPreset(club.Id, selectedKitSlot) == i;
@@ -350,7 +420,7 @@ namespace FC2026.Core
                 GUI.Box(new Rect(row.xMax - 52f, row.y + 5f, 46f, row.height - 10f), GUIContent.none, selectedRowStyle);
                 GUI.color = Color.white;
             }
-            var footerY = panel.yMax - 60f;
+            GUI.EndScrollView();
             if (GUI.Button(new Rect(x, footerY, width, 46f), "BACK TO HOME", buttonStyle)) showKitRoom = false;
         }
 
@@ -360,15 +430,18 @@ namespace FC2026.Core
             var width = panel.width - 48f;
             GUI.Label(new Rect(x, panel.y + 10f, width, 46f), "COMPETITIONS", headingStyle);
             GUI.Label(new Rect(x, panel.y + 56f, width, 42f), "Your career competitions and club record", smallStyle);
-            var gap = 10f;
-            var rowHeight = Mathf.Clamp((panel.height - 160f) / 3f, 62f, 112f);
-            var y = panel.y + 112f;
-            if (GUI.Button(new Rect(x, y, width, rowHeight), $"{CareerLeagueSystem.GetManagedLeague(save)?.Name ?? "LEAGUE"}\nView standings and the next scheduled fixture", buttonStyle)) showLeagueTable = true;
-            y += rowHeight + gap;
-            if (GUI.Button(new Rect(x, y, width, rowHeight), $"{CareerCupSystem.CompetitionName(save)}\n{(save.cupRound > 0 ? CareerCupSystem.RoundName(save.cupRound) : "Season cup campaign")}", buttonStyle)) showCupCampaign = true;
-            y += rowHeight + gap;
-            if (GUI.Button(new Rect(x, y, width, rowHeight), $"CLUB HONOURS  •  {(save.honours == null ? 0 : save.honours.Length)} TROPHIES\nReview titles won in this save", buttonStyle)) { honoursScroll = Vector2.zero; showHonours = true; }
-            if (GUI.Button(new Rect(x, panel.yMax - 60f, width, 46f), "BACK TO HOME", buttonStyle)) showTournamentHub = false;
+            var gap = 8f;
+            var startY = panel.y + 106f;
+            var footerY = panel.yMax - 60f;
+            var viewHeight = Mathf.Max(40f, footerY - startY - 6f);
+            var rowHeight = Mathf.Clamp(panel.height * 0.1f, 48f, 72f);
+            competitionScroll = GUI.BeginScrollView(new Rect(x, startY, width, viewHeight), competitionScroll,
+                new Rect(0f, 0f, width - 18f, 3f * (rowHeight + gap)));
+            if (GUI.Button(new Rect(0f, 0f, width - 18f, rowHeight), $"{CareerLeagueSystem.GetManagedLeague(save)?.Name ?? "LEAGUE"}\nView standings and the next scheduled fixture", buttonStyle)) showLeagueTable = true;
+            if (GUI.Button(new Rect(0f, rowHeight + gap, width - 18f, rowHeight), $"{CareerCupSystem.CompetitionName(save)}\n{(save.cupRound > 0 ? CareerCupSystem.RoundName(save.cupRound) : "Season cup campaign")}", buttonStyle)) showCupCampaign = true;
+            if (GUI.Button(new Rect(0f, (rowHeight + gap) * 2f, width - 18f, rowHeight), $"CLUB HONOURS  •  {(save.honours == null ? 0 : save.honours.Length)} TROPHIES\nReview titles won in this save", buttonStyle)) { honoursScroll = Vector2.zero; showHonours = true; }
+            GUI.EndScrollView();
+            if (GUI.Button(new Rect(x, footerY, width, 46f), "BACK TO HOME", buttonStyle)) showTournamentHub = false;
         }
 
         private void DrawMatchPreview(Rect panel)
@@ -376,16 +449,24 @@ namespace FC2026.Core
             var x = panel.x + 24f;
             var width = panel.width - 48f;
             var next = CareerLeagueSystem.GetNextFixture(save);
-            var home = next.UserIsHome ? CareerLeagueSystem.GetManagedClub(save) : WorldDatabase.GetClub(next.OpponentClubId);
-            var away = next.UserIsHome ? WorldDatabase.GetClub(next.OpponentClubId) : CareerLeagueSystem.GetManagedClub(save);
+            var userClub = CareerLeagueSystem.GetManagedClub(save);
+            var opponent = WorldDatabase.GetClub(next.OpponentClubId);
             GUI.Label(new Rect(x, panel.y + 12f, width, 46f), "MATCH PREVIEW", headingStyle);
-            var y = panel.y + 90f;
-            GUI.Label(new Rect(x, y, width, 76f), $"{home?.Name ?? "HOME"}\nVS\n{away?.Name ?? "AWAY"}", titleStyle);
-            y += 96f;
-            GUI.Label(new Rect(x, y, width, 36f), $"{(next.Kind == CareerFixtureKind.Cup ? CareerCupSystem.CompetitionName(save) : CareerLeagueSystem.GetManagedLeague(save)?.Name)}   •   {save.formationId}", bodyStyle);
-            y += 42f;
-            GUI.Label(new Rect(x, y, width, 52f), $"TACTIC  {save.tacticalStyle}   •   KIT  {CareerKitSystem.PresetNames[CareerKitSystem.GetPreset(save.managedClubId, 0)]}", smallStyle);
-            var footerY = panel.yMax - 70f;
+            var compact = panel.height < 420f;
+            var y = compact ? panel.y + 58f : panel.y + 90f;
+            var teamsHeight = compact ? 82f : 76f;
+            GUI.Label(new Rect(x, y, width, teamsHeight), $"{userClub?.Name ?? "YOUR CLUB"}\nVS\n{opponent?.Name ?? "OPPONENT"}", titleStyle);
+            y += compact ? 90f : 96f;
+            var competition = next.Kind == CareerFixtureKind.Cup
+                ? CareerCupSystem.CompetitionName(save)
+                : CareerLeagueSystem.GetManagedLeague(save)?.Name;
+            GUI.Label(new Rect(x, y, width, compact ? 46f : 36f),
+                $"{competition}  •  FIXTURE VENUE: {(next.UserIsHome ? "HOME" : "AWAY")}   •   {save.formationId}", bodyStyle);
+            y += compact ? 48f : 42f;
+            var kitSlot = CareerKitSystem.GetActiveMatchSlot(save.managedClubId);
+            GUI.Label(new Rect(x, y, width, compact ? 36f : 52f),
+                $"TACTIC  {save.tacticalStyle}   •   KIT  {CareerKitSystem.SlotNames[kitSlot]} / {CareerKitSystem.PresetNames[CareerKitSystem.GetPreset(save.managedClubId, kitSlot)]}", smallStyle);
+            var footerY = panel.yMax - (compact ? 58f : 70f);
             var gap = 10f;
             var half = (width - gap) / 2f;
             if (GUI.Button(new Rect(x, footerY, half, 52f), "BACK", buttonStyle)) showMatchPreview = false;
