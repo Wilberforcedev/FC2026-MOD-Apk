@@ -145,7 +145,10 @@ namespace FC2026.Gameplay
                 return;
 
             var pressured = opponentDistance < 3.2f;
-            var clearShootingLane = opponentDistance > 2.4f && HasClearShootingLane(ballFlat, goal);
+            var shotTargetX = controller.SelectShotTargetX();
+            var shotTarget = new Vector3(shotTargetX, 0f, goalZ);
+            var clearShootingLane = opponentDistance > 2.4f &&
+                                    HasClearShootingLane(ballFlat, shotTarget);
             var closeRange = distanceToGoal < 18f;
             var longRangeOpportunity = distanceToGoal < 27f && opponentDistance > 5.5f;
             var shotChance = Mathf.Lerp(0.28f, 0.72f, controller.ShootingStat);
@@ -166,7 +169,7 @@ namespace FC2026.Gameplay
                 (closeRange || (longRangeOpportunity && Random.value < shotChance)))
             {
                 actionTimer = Random.Range(0.45f, 0.8f);
-                if (controller.AttemptShot(false, Random.value < 0.22f))
+                if (controller.AttemptShot(false, Random.value < 0.22f, shotTargetX))
                     return;
             }
 
