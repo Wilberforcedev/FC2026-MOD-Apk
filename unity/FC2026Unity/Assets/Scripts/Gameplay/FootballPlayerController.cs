@@ -633,7 +633,7 @@ namespace FC2026.Gameplay
                 return false;
             if (ball.Owner == this)
                 return true;
-            if (ball.Owner != null)
+            if (ball.Owner != null || !ball.CanBeControlledBy(this))
                 return false;
 
             var delta = ball.Position - transform.position;
