@@ -145,7 +145,7 @@ namespace FC2026.Gameplay
                 return;
 
             var pressured = opponentDistance < 3.2f;
-            var clearShootingLane = opponentDistance > 2.4f;
+            var clearShootingLane = opponentDistance > 2.4f && HasClearShootingLane(ballFlat, goal);
             var closeRange = distanceToGoal < 18f;
             var longRangeOpportunity = distanceToGoal < 27f && opponentDistance > 5.5f;
             var shotChance = Mathf.Lerp(0.28f, 0.72f, controller.ShootingStat);
@@ -178,6 +178,34 @@ namespace FC2026.Gameplay
                 if (controller.AttemptPass(Random.value < 0.24f))
                     return;
             }
+        }
+
+        private bool HasClearShootingLane(Vector3 ballFlat, Vector3 goal)
+        {
+            var shot = goal - ballFlat;
+            shot.y = 0f;
+            var shotLengthSquared = shot.sqrMagnitude;
+            if (shotLengthSquared < 0.01f)
+                return false;
+
+            foreach (var opponent in FootballPlayerController.All)
+            {
+                if (opponent == null || opponent.TeamDirection == attackDirection || opponent.IsGoalkeeper)
+                    continue;
+
+                var position = Flat(opponent.transform.position);
+                var alongShot = Vector3.Dot(position - ballFlat, shot) / shotLengthSquared;
+                // Ignore players beside the ball or on the goal line; pressure and the
+                // goalkeeper are handled separately by the shot decision.
+                if (alongShot <= 0.05f || alongShot >= 0.92f)
+                    continue;
+
+                var nearestPoint = ballFlat + shot * alongShot;
+                if ((position - nearestPoint).sqrMagnitude < 1.44f)
+                    return false;
+            }
+
+            return true;
         }
 
         private void UpdateAttackingRun(Vector3 ballFlat, float distToBall)
