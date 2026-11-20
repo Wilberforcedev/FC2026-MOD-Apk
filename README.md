@@ -1,4 +1,4 @@
-# Soccer 27 Soccer
+# Soccer 27
 
 Soccer 27 is a mobile-first football game project. The active match build is the 3D Unity project in **Unity 6.3 LTS**.
 
