@@ -43,6 +43,22 @@ Use Unity **6000.3.24f1** with Android Build Support, Android SDK & NDK Tools, a
 
 See [UNITY_3D.md](UNITY_3D.md) for Android builds and the project details.
 
+## Controls
+
+### Windows and Unity Editor
+
+- **WASD / Arrow keys** — move
+- **Shift** — sprint
+- **Space** — shoot
+- **E** — pass
+- **Q** — through ball
+- **X** — tackle
+- **Tab** — switch to the nearest teammate to the ball
+
+### Android
+
+Use the virtual joystick to move and the on-screen action buttons to sprint, shoot, pass, play a through ball, tackle, chip, or finesse. The **Switch** button selects the nearest teammate to the ball.
+
 ## Android builds
 
 The Unity Editor provides **FC2026 > Build Android Debug APK**. Unity GitHub Actions can also build the debug APK and release AAB. Release signing values belong in GitHub Actions secrets; do not commit signing keys or passwords.
