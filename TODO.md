@@ -15,3 +15,11 @@
 - [x] Add a match pause/resume overlay with mobile touch and desktop keyboard controls.
 - [ ] Profile the active Unity scene on a mid-range Android device.
 - [ ] Tune rendering and input responsiveness after the first on-device review.
+
+## Screen UI and Soccer 27 branding
+
+- [x] Add a separate Soccer 27 home screen with routes to match, career, tournaments, squad, kits, and the player market.
+- [x] Share responsive typography, safe-area panels, and button styles across career and match screens.
+- [x] Fix the career match preview team-name clipping and match HUD safe-area collisions.
+- [ ] Capture and review current Unity screens on phone and desktop builds.
+- [ ] Profile rendering and touch response on a mid-range Android device.

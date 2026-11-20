@@ -53,6 +53,8 @@ namespace FC2026.Core
         private bool resultSaved;
         private GUIStyle commentaryStyle;
         private GUIStyle fullTimeStyle;
+        private int styleScreenWidth = -1;
+        private int styleScreenHeight = -1;
 
         private Vector3[] homeFormation;
         private string formationId = "4-3-3";
@@ -1272,45 +1274,38 @@ namespace FC2026.Core
 
         private void OnGUI()
         {
-            scoreStyle ??= new GUIStyle(GUI.skin.label)
+            if (styleScreenWidth != Screen.width || styleScreenHeight != Screen.height)
             {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = Mathf.Clamp(Screen.height / 30, 18, 34),
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = Color.white }
-            };
+                styleScreenWidth = Screen.width;
+                styleScreenHeight = Screen.height;
+                scoreStyle = helpStyle = goalStyle = null;
+                buttonStyle = primaryButtonStyle = flowButtonStyle = panelStyle = null;
+                labelSmallStyle = commentaryStyle = fullTimeStyle = null;
+            }
 
-            helpStyle ??= new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.UpperLeft,
-                fontSize = Mathf.Clamp(Screen.height / 52, 13, 24),
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.82f, 0.92f, 1f) }
-            };
-
-            goalStyle ??= new GUIStyle(scoreStyle)
-            {
-                fontSize = Mathf.Clamp(Screen.height / 12, 38, 82),
-                normal = { textColor = HubTheme.GoldTextColor }
-            };
+            scoreStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(30f, 18, 34), HubTheme.TextColor, TextAnchor.MiddleCenter, true);
+            helpStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(52f, 13, 24), HubTheme.SecondaryTextColor, TextAnchor.UpperLeft, true, true);
+            goalStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(12f, 38, 82), HubTheme.GoldTextColor, TextAnchor.MiddleCenter, true);
 
             var hudButtonFontSize = Mathf.Clamp(
                 Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.105f, 62f, 88f) / 6f), 10, 16);
             buttonStyle ??= HubTheme.SecondaryButton(hudButtonFontSize);
             primaryButtonStyle ??= HubTheme.PrimaryButton(hudButtonFontSize);
-            flowButtonStyle ??= HubTheme.PrimaryButton(Mathf.Clamp(Screen.height / 36, 14, 22));
+            flowButtonStyle ??= HubTheme.PrimaryButton(HubTheme.ResponsiveFontSize(36f, 14, 22));
             panelStyle ??= HubTheme.Panel();
+            labelSmallStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(65f, 11, 18), HubTheme.SecondaryTextColor, TextAnchor.MiddleCenter, true);
+            labelSmallStyle.clipping = TextClipping.Ellipsis;
 
-            labelSmallStyle ??= new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = Mathf.Clamp(Screen.height / 65, 11, 18),
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.78f, 0.88f, 0.98f) }
-            };
-
-            var boardWidth = Mathf.Clamp(Screen.width * 0.46f, 320f, 640f);
-            var boardRect = new Rect((Screen.width - boardWidth) * 0.5f, 10f, boardWidth, 84f);
+            var safeArea = Screen.safeArea;
+            var safeTop = Screen.height - safeArea.yMax;
+            var availableBoardWidth = Mathf.Max(0f, safeArea.width - 24f);
+            var boardWidth = Mathf.Min(Mathf.Max(safeArea.width * 0.46f, 280f), availableBoardWidth);
+            var boardRect = new Rect(
+                safeArea.xMin + (safeArea.width - boardWidth) * 0.5f, safeTop + 8f, boardWidth, 108f);
             GUI.Box(boardRect, string.Empty, panelStyle);
             GUI.Label(new Rect(boardRect.x, boardRect.y + 2f, boardRect.width, 20f),
                 $"{matchLabel}   •   {homeTeamName.ToUpperInvariant()}   •   {awayTeamName.ToUpperInvariant()}", labelSmallStyle);
@@ -1323,15 +1318,13 @@ namespace FC2026.Core
                 $"{(half == 0 ? "1ST HALF" : "2ND HALF")}  {minute:00}'   •   POSSESSION {homePossessionPercent}% - {100 - homePossessionPercent}%",
                 labelSmallStyle);
 
-            DrawStaminaMeter();
+            DrawStaminaMeter(boardRect);
 
             if (Application.isMobilePlatform)
             {
                 if (live && !halfTimePending && !matchFinished)
                 {
-                    var safeArea = Screen.safeArea;
                     var safeRight = safeArea.xMax;
-                    var safeTop = Screen.height - safeArea.yMax;
                     var pauseRect = new Rect(safeRight - 118f, safeTop + 18f, 102f, 44f);
                     if (GUI.Button(pauseRect, "PAUSE", buttonStyle))
                         PauseMatch();
@@ -1339,23 +1332,30 @@ namespace FC2026.Core
                 }
             }
             else
-                GUI.Label(new Rect(18f, Screen.height - 48f, Screen.width - 36f, 36f),
-                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch   •   P / Esc: pause", helpStyle);
+            {
+                var desktopSafeArea = Screen.safeArea;
+                var safeBottom = Screen.height - desktopSafeArea.yMin;
+                GUI.Label(new Rect(desktopSafeArea.xMin + 18f, safeBottom - 48f,
+                    Mathf.Max(0f, desktopSafeArea.width - 36f), 36f),
+                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch   •   P / Esc: pause",
+                    helpStyle);
+            }
 
             if (Time.time < goalBannerUntil)
                 GUI.Label(new Rect(0, Screen.height * 0.33f, Screen.width, 100f), goalBanner, goalStyle);
 
-            commentaryStyle ??= new GUIStyle(GUI.skin.label)
+            // On landscape phones the touch controls occupy the lower half of the
+            // display, so omit the non-essential commentary strip when space is tight.
+            if (!Application.isMobilePlatform || safeArea.height > 480f)
             {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = Mathf.Clamp(Screen.height / 48, 14, 24),
-                wordWrap = true,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = Color.white }
-            };
-            var commentaryRect = new Rect(Screen.width * 0.12f, 100f, Screen.width * 0.76f, 42f);
-            GUI.Box(commentaryRect, string.Empty, panelStyle);
-            GUI.Label(commentaryRect, commentary, commentaryStyle);
+                commentaryStyle ??= HubTheme.Label(
+                    HubTheme.ResponsiveFontSize(48f, 14, 24), HubTheme.TextColor, TextAnchor.MiddleCenter, true, true);
+                var commentaryY = Mathf.Max(boardRect.yMax + 6f, safeTop + 98f);
+                var commentaryRect = new Rect(safeArea.xMin + safeArea.width * 0.12f, commentaryY,
+                    safeArea.width * 0.76f, 42f);
+                GUI.Box(commentaryRect, string.Empty, panelStyle);
+                GUI.Label(commentaryRect, commentary, commentaryStyle);
+            }
 
             if (paused || halfTimePending || matchFinished)
             {
@@ -1366,10 +1366,10 @@ namespace FC2026.Core
             if (paused)
             {
                 fullTimeStyle ??= CreatePanelStyle();
-                var panelWidth = Mathf.Min(Screen.width * 0.84f, 540f);
-                var panelHeight = Mathf.Min(Mathf.Max(Screen.height * 0.82f, 270f), 360f);
-                var panel = new Rect((Screen.width - panelWidth) * 0.5f, (Screen.height - panelHeight) * 0.5f,
-                    panelWidth, panelHeight);
+                var panel = HubTheme.CenteredPanel(
+                    Mathf.Min(Screen.width * 0.84f, 540f),
+                    Mathf.Min(Mathf.Max(Screen.height * 0.82f, 270f), 360f),
+                    12f);
                 GUI.Box(panel, string.Empty, panelStyle);
                 var title = confirmRestart ? "RESTART MATCH?" : confirmAbandon ? "LEAVE MATCH?" : "MATCH PAUSED";
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 10f, panel.width - 24f, 48f), title, fullTimeStyle);
@@ -1421,7 +1421,10 @@ namespace FC2026.Core
             if (halfTimePending)
             {
                 fullTimeStyle ??= CreatePanelStyle();
-                var panel = new Rect(Screen.width * 0.2f, Screen.height * 0.3f, Screen.width * 0.6f, Screen.height * 0.36f);
+                var panel = HubTheme.CenteredPanel(
+                    Mathf.Min(Screen.width * 0.6f, 640f),
+                    Mathf.Min(Screen.height * 0.36f, 300f),
+                    12f);
                 GUI.Box(panel, string.Empty, panelStyle);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 20f, panel.width - 24f, 56f), "HALF TIME", fullTimeStyle);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 84f, panel.width - 24f, 52f),
@@ -1434,7 +1437,10 @@ namespace FC2026.Core
             if (matchFinished)
             {
                 fullTimeStyle ??= CreatePanelStyle();
-                var panel = new Rect(Screen.width * 0.18f, Screen.height * 0.28f, Screen.width * 0.64f, Screen.height * 0.42f);
+                var panel = HubTheme.CenteredPanel(
+                    Mathf.Min(Screen.width * 0.64f, 680f),
+                    Mathf.Min(Screen.height * 0.42f, 360f),
+                    12f);
                 GUI.Box(panel, string.Empty, panelStyle);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 22f, panel.width - 24f, 62f),
                     cupShootoutPending ? "PENALTIES" : "FULL TIME", fullTimeStyle);
@@ -1451,24 +1457,21 @@ namespace FC2026.Core
         }
 
         // Show the selected player's energy so sprinting and fatigue are visible during play.
-        private void DrawStaminaMeter()
+        private void DrawStaminaMeter(Rect boardRect)
         {
             if (userPlayer == null)
                 return;
 
-            var safeArea = Screen.safeArea;
-            var safeTop = Screen.height - safeArea.yMax;
-            var width = Mathf.Clamp(Screen.width * 0.18f, 120f, 190f);
-            var x = safeArea.xMin + 18f;
-            var y = safeTop + 18f;
             var stamina = Mathf.Clamp01(userPlayer.Stamina01);
             var previousColor = GUI.color;
+            var y = boardRect.y + 82f;
+            var labelWidth = Mathf.Clamp(boardRect.width * 0.32f, 60f, 92f);
+            var labelRect = new Rect(boardRect.x + 12f, y, labelWidth, 16f);
+            GUI.Label(labelRect, $"STA  {Mathf.RoundToInt(stamina * 100f)}%", labelSmallStyle);
 
-            GUI.Label(new Rect(x, y, width, 22f),
-                $"STAMINA  {Mathf.RoundToInt(stamina * 100f)}%", labelSmallStyle);
-
-            var bar = new Rect(x, y + 24f, width, 12f);
-            GUI.color = new Color(0.02f, 0.05f, 0.08f, 0.88f);
+            var barWidth = Mathf.Max(16f, boardRect.width - labelWidth - 36f);
+            var bar = new Rect(labelRect.xMax + 4f, y + 5f, barWidth, 7f);
+            GUI.color = new Color(0.02f, 0.05f, 0.08f, 0.9f);
             GUI.DrawTexture(bar, Texture2D.whiteTexture);
 
             GUI.color = stamina < 0.25f
@@ -1482,13 +1485,8 @@ namespace FC2026.Core
 
         private static GUIStyle CreatePanelStyle()
         {
-            return new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = Mathf.Clamp(Screen.height / 16, 28, 54),
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = Color.white }
-            };
+            return HubTheme.Label(
+                HubTheme.ResponsiveFontSize(16f, 28, 54), HubTheme.TextColor, TextAnchor.MiddleCenter, true, true);
         }
 
         private void UpdateCommentary()

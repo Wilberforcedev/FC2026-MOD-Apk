@@ -47,7 +47,7 @@ jobs:
       - name: Upload Unity APK
         uses: actions/upload-artifact@v4
         with:
-          name: FC2026-Unity-3D-Android-APK
-          path: unity/FC2026Unity/Builds/Android/FC2026-3D-debug.apk
+          name: Soccer-27-Unity-3D-Android-APK
+          path: unity/FC2026Unity/Builds/Android/Soccer-27-debug.apk
           if-no-files-found: error
           retention-days: 14

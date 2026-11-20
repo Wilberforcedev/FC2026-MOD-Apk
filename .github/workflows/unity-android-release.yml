@@ -111,7 +111,7 @@ jobs:
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FC2026-Unity-3D-Android-Release-${{ steps.version.outputs.name }}
+          name: Soccer-27-Unity-3D-Android-Release-${{ steps.version.outputs.name }}
           path: |
             unity/FC2026Unity/Builds/Android/*.aab
             unity/FC2026Unity/Builds/Android/*.apk

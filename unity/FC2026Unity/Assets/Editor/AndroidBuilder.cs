@@ -9,7 +9,7 @@ using UnityEngine;
 namespace FC2026.EditorTools
 {
     /// <summary>
-    /// Single source of truth for FC 2026 Android settings and builds.
+    /// Single source of truth for Soccer 27 Android settings and builds.
     /// Settings are re-applied on every clone and before every build so local
     /// machines and CI produce the same package.
     /// </summary>
@@ -57,34 +57,34 @@ namespace FC2026.EditorTools
 
             ApplyProductionSettings(false);
             EditorPrefs.SetString(SettingsStampKey, stamp);
-            Debug.Log("FC 2026: production Android settings applied. Commit ProjectSettings/*.asset after opening the project.");
+            Debug.Log("Soccer 27: production Android settings applied. Commit ProjectSettings/*.asset after opening the project.");
         }
 
-        [MenuItem("FC2026/Configure Android Project", false, 1)]
+        [MenuItem("Soccer 27/Configure Android Project", false, 1)]
         public static void ConfigureAndroid()
         {
             ApplyProductionSettings(true);
         }
 
-        [MenuItem("FC2026/Build Android Debug APK", false, 20)]
+        [MenuItem("Soccer 27/Build Android Debug APK", false, 20)]
         public static void BuildAndroid()
         {
             BuildAndroidPackage(false, true, false);
         }
 
-        [MenuItem("FC2026/Build Android Release APK", false, 21)]
+        [MenuItem("Soccer 27/Build Android Release APK", false, 21)]
         public static void BuildAndroidReleaseApk()
         {
             BuildAndroidPackage(false, false, true);
         }
 
-        [MenuItem("FC2026/Build Android Release AAB", false, 22)]
+        [MenuItem("Soccer 27/Build Android Release AAB", false, 22)]
         public static void BuildAndroidReleaseAab()
         {
             BuildAndroidPackage(true, false, true);
         }
 
-        [MenuItem("FC2026/Validate Android Release Setup", false, 40)]
+        [MenuItem("Soccer 27/Validate Android Release Setup", false, 40)]
         public static void ValidateAndroidReleaseSetup()
         {
             ApplyProductionSettings(true);
@@ -97,7 +97,7 @@ namespace FC2026.EditorTools
                 if (problems.Count > 0)
                     throw new InvalidOperationException("Release setup is incomplete:\n- " + string.Join("\n- ", problems));
 
-                Debug.Log($"FC 2026: release setup OK - {PackageId} {CurrentVersionName} ({CurrentVersionCode}), API {MinimumApiLevel}-{TargetApiLevel}, ARM64/IL2CPP.");
+                Debug.Log($"Soccer 27: release setup OK - {PackageId} {CurrentVersionName} ({CurrentVersionCode}), API {MinimumApiLevel}-{TargetApiLevel}, ARM64/IL2CPP.");
             }
             finally
             {
@@ -111,7 +111,7 @@ namespace FC2026.EditorTools
             var currentVersion = PlayerSettings.bundleVersion;
 
             PlayerSettings.companyName = "Wilberforcedev";
-            PlayerSettings.productName = "FC 2026 3D Soccer";
+            PlayerSettings.productName = "Soccer 27";
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, PackageId);
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.Android, ManagedStrippingLevel.Medium);
@@ -126,7 +126,7 @@ namespace FC2026.EditorTools
             {
                 var normalizedVersion = NormalizeVersionName(requestedVersion);
                 if (normalizedVersion != requestedVersion.Trim().TrimStart('v', 'V'))
-                    Debug.LogWarning($"FC 2026: '{requestedVersion}' is not a valid version name; using {normalizedVersion}.");
+                    Debug.LogWarning($"Soccer 27: '{requestedVersion}' is not a valid version name; using {normalizedVersion}.");
                 PlayerSettings.bundleVersion = normalizedVersion;
             }
             else if (string.IsNullOrWhiteSpace(currentVersion) || currentVersion == "0.1")
@@ -148,14 +148,14 @@ namespace FC2026.EditorTools
             SaveProjectSettings();
 
             if (verbose)
-                Debug.Log($"FC 2026: Android configured for {PackageId} {CurrentVersionName} ({CurrentVersionCode}), API {MinimumApiLevel}-{TargetApiLevel}, ARM64/IL2CPP. Release signing is applied from environment variables at build time.");
+                Debug.Log($"Soccer 27: Android configured for {PackageId} {CurrentVersionName} ({CurrentVersionCode}), API {MinimumApiLevel}-{TargetApiLevel}, ARM64/IL2CPP. Release signing is applied from environment variables at build time.");
         }
 
         private static void SaveProjectSettings()
         {
             AssetDatabase.SaveAssets();
             if (!Application.isBatchMode && !EditorApplication.ExecuteMenuItem("File/Save Project"))
-                Debug.LogWarning("FC 2026: could not persist ProjectSettings automatically. Run File > Save Project once, then commit ProjectSettings/*.asset.");
+                Debug.LogWarning("Soccer 27: could not persist ProjectSettings automatically. Run File > Save Project once, then commit ProjectSettings/*.asset.");
         }
 
         private static void ApplyMobileQualitySettings()
@@ -203,7 +203,7 @@ namespace FC2026.EditorTools
                 {
                     if (required)
                         throw new InvalidOperationException("FC2026_KEYSTORE_BASE64 could not be decoded: " + exception.Message, exception);
-                    Debug.LogWarning("FC 2026: could not decode FC2026_KEYSTORE_BASE64: " + exception.Message);
+                    Debug.LogWarning("Soccer 27: could not decode FC2026_KEYSTORE_BASE64: " + exception.Message);
                     return false;
                 }
             }
@@ -227,7 +227,7 @@ namespace FC2026.EditorTools
             {
                 if (required)
                     throw new FileNotFoundException("Android release keystore was not found.", keystorePath);
-                Debug.LogWarning("FC 2026: Android release keystore was not found at " + keystorePath);
+                Debug.LogWarning("Soccer 27: Android release keystore was not found at " + keystorePath);
                 return false;
             }
 
@@ -278,7 +278,7 @@ namespace FC2026.EditorTools
                         throw new InvalidOperationException("Release setup is incomplete:\n- " + string.Join("\n- ", problems));
 
                     if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FC2026_VERSION_CODE")))
-                        Debug.LogWarning("FC 2026: FC2026_VERSION_CODE is not set. Confirm the Play Console version code before uploading.");
+                        Debug.LogWarning("Soccer 27: FC2026_VERSION_CODE is not set. Confirm the Play Console version code before uploading.");
                 }
 
                 if (!File.Exists(Path.Combine(ProjectRoot, ScenePath)))
@@ -294,8 +294,8 @@ namespace FC2026.EditorTools
                     development ? Il2CppCompilerConfiguration.Debug : Il2CppCompilerConfiguration.Release);
 
                 var fileName = appBundle
-                    ? $"FC2026-{CurrentVersionName}.aab"
-                    : development ? "FC2026-3D-debug.apk" : $"FC2026-{CurrentVersionName}.apk";
+                    ? $"Soccer-27-{CurrentVersionName}.aab"
+                    : development ? "Soccer-27-debug.apk" : $"Soccer-27-{CurrentVersionName}.apk";
                 var outputDirectory = Path.Combine(ProjectRoot, BuildDirectory);
                 Directory.CreateDirectory(outputDirectory);
                 var outputPath = Path.Combine(outputDirectory, fileName);
@@ -312,7 +312,7 @@ namespace FC2026.EditorTools
                 if (report.summary.result != BuildResult.Succeeded)
                     throw new Exception($"Android build failed: {report.summary.result} ({report.summary.totalErrors} errors)");
 
-                Debug.Log($"FC 2026: {(appBundle ? "AAB" : "APK")} built at {outputPath} ({report.summary.totalSize / 1024f / 1024f:F1} MB)");
+                Debug.Log($"Soccer 27: {(appBundle ? "AAB" : "APK")} built at {outputPath} ({report.summary.totalSize / 1024f / 1024f:F1} MB)");
             }
             finally
             {

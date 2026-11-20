@@ -1,4 +1,4 @@
-# FC 2026 — Unity 3D Android Version
+# Soccer 27 — Unity 3D Android Version
 
 The active football match build is the true-3D Unity version at:
 
@@ -109,9 +109,9 @@ Passes select a teammate based on the direction of play; through balls lead the 
 
 ## Android project settings
 
-`Assets/Editor/AndroidBuilder.cs` is the single source of truth for Android settings. It applies them the first time the project is opened (and again from `FC2026 > Configure Android Project`), and before every build so local machines and CI produce the same package:
+`Assets/Editor/AndroidBuilder.cs` is the single source of truth for Android settings. It applies them the first time the project is opened (and again from `Soccer 27 > Configure Android Project`), and before every build so local machines and CI produce the same package:
 
-- Package ID `com.wilberforcedev.fc2026`, product name `FC 2026 3D Soccer`
+- Package ID `com.wilberforcedev.fc2026`, product name `Soccer 27 3D Soccer`
 - Minimum API level 24, target API level 35
 - IL2CPP scripting backend, ARM64 only, managed stripping at Medium
 - Landscape auto-rotation only, no internet or SD-card permission
@@ -119,21 +119,21 @@ Passes select a teammate based on the direction of play; through balls lead the 
 
 After the first open, use **File → Save Project** once (the builder tries this automatically) and commit the generated `ProjectSettings/*.asset` files. Until they are committed, the settings only exist after the editor applies them on load.
 
-`FC2026 > Validate Android Release Setup` re-applies the settings, checks the release requirements and signing variables, and then clears the keystore passwords from the editor session.
+`Soccer 27 > Validate Android Release Setup` re-applies the settings, checks the release requirements and signing variables, and then clears the keystore passwords from the editor session.
 
 ## Build from the Unity Editor
 
 Debug APK:
 
 ```text
-FC2026 > Build Android Debug APK
+Soccer 27 > Build Android Debug APK
 ```
 
 Signed release builds:
 
 ```text
-FC2026 > Build Android Release APK
-FC2026 > Build Android Release AAB
+Soccer 27 > Build Android Release APK
+Soccer 27 > Build Android Release AAB
 ```
 
 Release builds read signing material and version numbers from environment variables. Set them before starting Unity, or in the shell that launches it:
@@ -152,9 +152,9 @@ Keystore passwords are cleared from `PlayerSettings` after each release build so
 
 Outputs in `unity/FC2026Unity/Builds/Android`:
 
-- `FC2026-3D-debug.apk`
-- `FC2026-<version>.apk`
-- `FC2026-<version>.aab`
+- `Soccer-27-debug.apk`
+- `Soccer-27-<version>.apk`
+- `Soccer-27-<version>.aab`
 
 ## Command-line Android build
 
@@ -192,9 +192,9 @@ $env:FC2026_KEY_PASS = "..."
 
 ## Automated Unity Android build
 
-`.github/workflows/unity-android.yml` builds a debug **Unity 3D** APK on Unity project changes or on demand, and uploads `FC2026-Unity-3D-Android-APK` for 14 days.
+`.github/workflows/unity-android.yml` builds a debug **Unity 3D** APK on Unity project changes or on demand, and uploads `Soccer-27-Unity-3D-Android-APK` for 14 days.
 
-`.github/workflows/unity-android-release.yml` builds a signed AAB for the Play Console, and optionally a signed APK. It runs when a `v*` tag is pushed or manually with `version_name`/`version_code` inputs; tag pushes take the version from the tag (`v1.2.0` → `1.2.0`) and the version code from the workflow run number. Uploads `FC2026-Unity-3D-Android-Release-<version>` for 30 days.
+`.github/workflows/unity-android-release.yml` builds a signed AAB for the Play Console, and optionally a signed APK. It runs when a `v*` tag is pushed or manually with `version_name`/`version_code` inputs; tag pushes take the version from the tag (`v1.2.0` → `1.2.0`) and the version code from the workflow run number. Uploads `Soccer-27-Unity-3D-Android-Release-<version>` for 30 days.
 
 Add these to the repository's **Settings → Secrets and variables → Actions** before running either workflow:
 

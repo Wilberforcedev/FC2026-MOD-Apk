@@ -19,6 +19,8 @@ namespace FC2026.Core
 
         private CareerSaveData save;
         private GUIStyle titleStyle;
+        private GUIStyle matchTeamStyle;
+        private GUIStyle matchVsStyle;
         private GUIStyle headingStyle;
         private GUIStyle bodyStyle;
         private GUIStyle smallStyle;
@@ -48,6 +50,8 @@ namespace FC2026.Core
         private string selectedTransferPlayerId = string.Empty;
         private string pendingTransferPlayerId = string.Empty;
         private string pendingTransferAction = string.Empty;
+        private bool showHomeScreen = true;
+        private bool showSettingsScreen;
         private bool showClubBrowser;
         private bool confirmNewCareer;
         private bool showPlayerDetails;
@@ -69,6 +73,8 @@ namespace FC2026.Core
         private Vector2 playerStatsScroll;
         private Vector2 kitScroll;
         private Vector2 competitionScroll;
+        private int styleScreenWidth = -1;
+        private int styleScreenHeight = -1;
 
         private void Awake()
         {
@@ -84,12 +90,14 @@ namespace FC2026.Core
 
             InitStyles();
 
-            var panelWidth = Mathf.Min(Screen.width - 32f, 820f);
-            var panelHeight = Mathf.Min(Screen.height - 32f, 680f);
-            var panel = new Rect((Screen.width - panelWidth) / 2f,
-                (Screen.height - panelHeight) / 2f, panelWidth, panelHeight);
+            var panel = HubTheme.CenteredPanel(820f, 680f, 16f);
             GUI.Box(panel, string.Empty, panelStyle);
 
+            if (showHomeScreen)
+            {
+                DrawHomeScreen(panel);
+                return;
+            }
             if (confirmNewCareer)
             {
                 DrawNewCareerConfirmation(panel);
@@ -140,6 +148,11 @@ namespace FC2026.Core
                 DrawMatchPreview(panel);
                 return;
             }
+            if (showSettingsScreen)
+            {
+                DrawSettingsScreen(panel);
+                return;
+            }
             if (showClubBrowser || save == null)
             {
                 DrawClubBrowser(panel);
@@ -151,36 +164,30 @@ namespace FC2026.Core
 
         private void InitStyles()
         {
-            titleStyle ??= new GUIStyle(GUI.skin.label)
+            if (styleScreenWidth != Screen.width || styleScreenHeight != Screen.height)
             {
-                fontSize = Mathf.Clamp(Screen.height / 18, 26, 50),
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = Color.white }
-            };
-            headingStyle ??= new GUIStyle(GUI.skin.label)
-            {
-                fontSize = Mathf.Clamp(Screen.height / 24, 20, 34),
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter,
-                wordWrap = true,
-                normal = { textColor = Color.white }
-            };
-            bodyStyle ??= new GUIStyle(GUI.skin.label)
-            {
-                fontSize = Mathf.Clamp(Screen.height / 38, 15, 25),
-                alignment = TextAnchor.MiddleCenter,
-                wordWrap = true,
-                normal = { textColor = new Color(0.82f, 0.91f, 0.97f) }
-            };
-            smallStyle ??= new GUIStyle(GUI.skin.label)
-            {
-                fontSize = Mathf.Clamp(Screen.height / 52, 12, 20),
-                alignment = TextAnchor.MiddleCenter,
-                wordWrap = true,
-                normal = { textColor = new Color(0.75f, 0.85f, 0.93f) }
-            };
-            var buttonFontSize = Mathf.Clamp(Screen.height / 42, 15, 24);
+                styleScreenWidth = Screen.width;
+                styleScreenHeight = Screen.height;
+                titleStyle = headingStyle = bodyStyle = smallStyle = null;
+                matchTeamStyle = matchVsStyle = null;
+                buttonStyle = primaryButtonStyle = accentButtonStyle = dangerButtonStyle = null;
+                highlightStyle = rowStyle = selectedRowStyle = panelStyle = null;
+                tableHeaderStyle = tableHeaderNameStyle = tableNameStyle = null;
+            }
+
+            titleStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(18f, 26, 50), HubTheme.TextColor, TextAnchor.MiddleCenter, true, true);
+            headingStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(24f, 20, 34), HubTheme.TextColor, TextAnchor.MiddleCenter, true, true);
+            bodyStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(38f, 15, 25), HubTheme.SecondaryTextColor, TextAnchor.MiddleCenter, false, true);
+            smallStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(52f, 12, 20), HubTheme.SecondaryTextColor, TextAnchor.MiddleCenter, false, true);
+            matchTeamStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(35f, 15, 27), HubTheme.TextColor, TextAnchor.MiddleCenter, true, true);
+            matchVsStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(58f, 14, 20), HubTheme.GoldTextColor, TextAnchor.MiddleCenter, true);
+            var buttonFontSize = HubTheme.ResponsiveFontSize(42f, 15, 24);
             buttonStyle ??= HubTheme.SecondaryButton(buttonFontSize);
             primaryButtonStyle ??= HubTheme.PrimaryButton(buttonFontSize);
             accentButtonStyle ??= HubTheme.AccentButton(buttonFontSize);
@@ -193,7 +200,7 @@ namespace FC2026.Core
             tableHeaderStyle ??= new GUIStyle(smallStyle)
             {
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = Color.white }
+                normal = { textColor = HubTheme.TextColor }
             };
             tableNameStyle ??= new GUIStyle(smallStyle)
             {
@@ -203,9 +210,9 @@ namespace FC2026.Core
             tableHeaderNameStyle ??= new GUIStyle(tableNameStyle)
             {
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = Color.white }
+                normal = { textColor = HubTheme.TextColor }
             };
-            var rowFontSize = Mathf.Clamp(Screen.height / 56, 12, 20);
+            var rowFontSize = HubTheme.ResponsiveFontSize(56f, 12, 20);
             rowStyle ??= HubTheme.Row(rowFontSize, false);
             selectedRowStyle ??= HubTheme.Row(rowFontSize, true);
             panelStyle ??= HubTheme.Panel();
@@ -213,6 +220,121 @@ namespace FC2026.Core
             tableRowTexture ??= HubTheme.SolidTexture(HubTheme.TableRowColor);
             tableAltRowTexture ??= HubTheme.SolidTexture(HubTheme.TableAltRowColor);
             tableHighlightTexture ??= HubTheme.SolidTexture(HubTheme.HighlightColor);
+        }
+
+        private void DrawHomeScreen(Rect panel)
+        {
+            var x = panel.x + 24f;
+            var width = panel.width - 48f;
+            var compact = panel.height < 440f;
+            var brandY = panel.y + (compact ? 12f : 34f);
+            var brandHeight = compact ? 40f : 64f;
+            GUI.Label(new Rect(x, brandY, width, brandHeight), "SOCCER 27", titleStyle);
+            GUI.Label(new Rect(x, brandY + brandHeight, width, compact ? 22f : 30f),
+                "YOUR CLUB. YOUR STORY.", smallStyle);
+
+            var gap = compact ? 7f : 10f;
+            var y = panel.y + (compact ? 80f : 150f);
+            var heroHeight = compact ? 42f : 64f;
+            if (GUI.Button(new Rect(x, y, width, heroHeight), "PLAY MATCH", primaryButtonStyle))
+            {
+                if (save == null)
+                    StartQuickMatch();
+                else
+                {
+                    showHomeScreen = false;
+                    showMatchPreview = true;
+                }
+            }
+
+            y += heroHeight + gap;
+            if (GUI.Button(new Rect(x, y, width, heroHeight), "CAREER  •  BUILD YOUR CLUB", accentButtonStyle))
+            {
+                showHomeScreen = false;
+                if (save == null)
+                    showClubBrowser = true;
+            }
+
+            y += heroHeight + gap + (compact ? 0f : 8f);
+            var cardGap = compact ? 7f : 10f;
+            var cardWidth = (width - cardGap) * 0.5f;
+            var cardHeight = compact ? 36f : 56f;
+            if (GUI.Button(new Rect(x, y, cardWidth, cardHeight), "SQUAD", buttonStyle))
+                OpenCareerPage(() => showSquadManagement = true, "squad management");
+            if (GUI.Button(new Rect(x + cardWidth + cardGap, y, cardWidth, cardHeight), "TOURNAMENTS", buttonStyle))
+                OpenCareerPage(() => showTournamentHub = true, "tournaments");
+
+            y += cardHeight + cardGap;
+            if (GUI.Button(new Rect(x, y, cardWidth, cardHeight), "KIT ROOM", buttonStyle))
+            {
+                selectedKitSlot = 0;
+                OpenCareerPage(() => showKitRoom = true, "the kit room");
+            }
+            if (GUI.Button(new Rect(x + cardWidth + cardGap, y, cardWidth, cardHeight), "PLAYER MARKET", buttonStyle))
+                OpenCareerPage(OpenTransfers, "the player market");
+
+            var settingsHeight = compact ? 32f : 44f;
+            var settingsY = panel.yMax - settingsHeight - (compact ? 12f : 22f);
+            if (GUI.Button(new Rect(x, settingsY, width, settingsHeight), "SETTINGS", buttonStyle))
+            {
+                showHomeScreen = false;
+                showSettingsScreen = true;
+            }
+        }
+
+        private void OpenCareerPage(Action openPage, string pageName)
+        {
+            showHomeScreen = false;
+            if (save == null)
+            {
+                showClubBrowser = true;
+                notice = "Choose a club before opening " + pageName + ".";
+                return;
+            }
+
+            openPage();
+        }
+
+        private void StartQuickMatch()
+        {
+            showHomeScreen = false;
+            enabled = false;
+            if (GetComponent<MatchManager3D>() == null)
+                gameObject.AddComponent<MatchManager3D>();
+        }
+
+        private void DrawSettingsScreen(Rect panel)
+        {
+            var x = panel.x + 24f;
+            var width = panel.width - 48f;
+            GUI.Label(new Rect(x, panel.y + 12f, width, 46f), "SETTINGS", headingStyle);
+
+            var y = panel.y + (panel.height < 440f ? 68f : 92f);
+            var rowHeight = Mathf.Clamp(panel.height * 0.12f, 44f, 72f);
+            var gap = 8f;
+            var settings = new[]
+            {
+                "MATCH CONTROLS",
+                "Mobile: left stick to move, right buttons to pass, shoot, tackle and sprint.",
+                "Desktop: WASD or arrows to move; Shift to sprint; Space to shoot; E to pass; X to tackle.",
+                "MATCH DISPLAY",
+                "The match automatically uses landscape orientation on supported mobile devices."
+            };
+            for (var i = 0; i < settings.Length; i++)
+            {
+                var emphasis = i == 0 || i == 3;
+                var style = emphasis ? accentButtonStyle : buttonStyle;
+                var height = emphasis ? rowHeight : Mathf.Max(38f, rowHeight - 8f);
+                GUI.Box(new Rect(x, y, width, height), settings[i], style);
+                y += height + gap;
+            }
+
+            var footerY = panel.yMax - 54f;
+            if (GUI.Button(new Rect(x, footerY, width, 44f), "BACK TO SOCCER 27", primaryButtonStyle))
+            {
+                showSettingsScreen = false;
+                showHomeScreen = true;
+            }
         }
 
         private void DrawDashboard(Rect panel)
@@ -251,7 +373,7 @@ namespace FC2026.Core
                 DrawCompactDashboard(panel, x, width, club, league, country, position, ranked.Length, next, opponent, competition);
                 return;
             }
-            GUI.Label(new Rect(x, y + 2f, width, 42f), "FC 2026  •  DREAM  •  BUILD  •  WIN", headingStyle);
+            GUI.Label(new Rect(x, y + 2f, width, 42f), "SOCCER 27  •  DREAM  •  BUILD  •  WIN", headingStyle);
             y += 48f;
             GUI.Label(new Rect(x, y, width, 42f), club.Name.ToUpperInvariant(), titleStyle);
             y += 42f;
@@ -421,7 +543,7 @@ namespace FC2026.Core
                 GUI.color = Color.white;
             }
             GUI.EndScrollView();
-            if (GUI.Button(new Rect(x, footerY, width, 46f), "BACK TO HOME", buttonStyle)) showKitRoom = false;
+            if (GUI.Button(new Rect(x, footerY, width, 46f), "BACK TO CAREER", buttonStyle)) showKitRoom = false;
         }
 
         private void DrawTournamentHub(Rect panel)
@@ -441,7 +563,7 @@ namespace FC2026.Core
             if (GUI.Button(new Rect(0f, rowHeight + gap, width - 18f, rowHeight), $"{CareerCupSystem.CompetitionName(save)}\n{(save.cupRound > 0 ? CareerCupSystem.RoundName(save.cupRound) : "Season cup campaign")}", buttonStyle)) showCupCampaign = true;
             if (GUI.Button(new Rect(0f, (rowHeight + gap) * 2f, width - 18f, rowHeight), $"CLUB HONOURS  •  {(save.honours == null ? 0 : save.honours.Length)} TROPHIES\nReview titles won in this save", buttonStyle)) { honoursScroll = Vector2.zero; showHonours = true; }
             GUI.EndScrollView();
-            if (GUI.Button(new Rect(x, footerY, width, 46f), "BACK TO HOME", buttonStyle)) showTournamentHub = false;
+            if (GUI.Button(new Rect(x, footerY, width, 46f), "BACK TO CAREER", buttonStyle)) showTournamentHub = false;
         }
 
         private void DrawMatchPreview(Rect panel)
@@ -452,25 +574,38 @@ namespace FC2026.Core
             var userClub = CareerLeagueSystem.GetManagedClub(save);
             var opponent = WorldDatabase.GetClub(next.OpponentClubId);
             GUI.Label(new Rect(x, panel.y + 12f, width, 46f), "MATCH PREVIEW", headingStyle);
-            var compact = panel.height < 420f;
-            var y = compact ? panel.y + 58f : panel.y + 90f;
-            var teamsHeight = compact ? 82f : 76f;
-            GUI.Label(new Rect(x, y, width, teamsHeight), $"{userClub?.Name ?? "YOUR CLUB"}\nVS\n{opponent?.Name ?? "OPPONENT"}", titleStyle);
-            y += compact ? 90f : 96f;
+
+            var compact = panel.height < 440f || width < 520f;
+            var y = compact ? panel.y + 56f : panel.y + 82f;
+            var teamsHeight = compact ? 74f : 92f;
+            var teamGap = Mathf.Clamp(width * 0.08f, 22f, 48f);
+            var teamWidth = (width - teamGap) * 0.5f;
+            GUI.Label(new Rect(x, y, teamWidth, teamsHeight), userClub?.Name ?? "YOUR CLUB", matchTeamStyle);
+            GUI.Label(new Rect(x + teamWidth, y, teamGap, teamsHeight), "VS", matchVsStyle);
+            GUI.Label(new Rect(x + teamWidth + teamGap, y, teamWidth, teamsHeight),
+                opponent?.Name ?? "OPPONENT", matchTeamStyle);
+            y += teamsHeight + (compact ? 6f : 12f);
+
             var competition = next.Kind == CareerFixtureKind.Cup
                 ? CareerCupSystem.CompetitionName(save)
                 : CareerLeagueSystem.GetManagedLeague(save)?.Name;
-            GUI.Label(new Rect(x, y, width, compact ? 46f : 36f),
+            var competitionHeight = compact ? 38f : 42f;
+            GUI.Label(new Rect(x, y, width, competitionHeight),
                 $"{competition}  •  FIXTURE VENUE: {(next.UserIsHome ? "HOME" : "AWAY")}   •   {save.formationId}", bodyStyle);
-            y += compact ? 48f : 42f;
+            y += competitionHeight + (compact ? 4f : 10f);
             var kitSlot = CareerKitSystem.GetActiveMatchSlot(save.managedClubId);
-            GUI.Label(new Rect(x, y, width, compact ? 36f : 52f),
-                $"TACTIC  {save.tacticalStyle}   •   KIT  {CareerKitSystem.SlotNames[kitSlot]} / {CareerKitSystem.PresetNames[CareerKitSystem.GetPreset(save.managedClubId, kitSlot)]}", smallStyle);
-            var footerY = panel.yMax - (compact ? 58f : 70f);
+            var tacticsHeight = compact ? 34f : 46f;
+            GUI.Label(new Rect(x, y, width, tacticsHeight),
+                $"TACTIC  {save.tacticalStyle}   •   KIT  {CareerKitSystem.SlotNames[kitSlot]} / {CareerKitSystem.PresetNames[CareerKitSystem.GetPreset(save.managedClubId, kitSlot)]}",
+                smallStyle);
+
+            var footerY = panel.yMax - (compact ? 56f : 70f);
             var gap = 10f;
             var half = (width - gap) / 2f;
-            if (GUI.Button(new Rect(x, footerY, half, 52f), "BACK", buttonStyle)) showMatchPreview = false;
-            if (GUI.Button(new Rect(x + half + gap, footerY, half, 52f), "KICK OFF", primaryButtonStyle))
+            var buttonHeight = compact ? 44f : 52f;
+            if (GUI.Button(new Rect(x, footerY, half, buttonHeight), "BACK", buttonStyle))
+                showMatchPreview = false;
+            if (GUI.Button(new Rect(x + half + gap, footerY, half, buttonHeight), "KICK OFF", primaryButtonStyle))
             {
                 showMatchPreview = false;
                 enabled = false;
@@ -540,6 +675,12 @@ namespace FC2026.Core
                 browserCountryId = string.Empty;
                 notice = "Choose another country.";
             }
+            if (save == null && GUI.Button(new Rect(x + footerHeight * 2.6f, footerY,
+                width - footerHeight * 2.6f, footerHeight), "BACK TO SOCCER 27", buttonStyle))
+            {
+                showClubBrowser = false;
+                showHomeScreen = true;
+            }
             if (save != null && GUI.Button(new Rect(x + footerHeight * 2.6f, footerY,
                 width - footerHeight * 2.6f, footerHeight), "CANCEL & RESUME CAREER", buttonStyle))
             {
@@ -594,8 +735,14 @@ namespace FC2026.Core
             }
             GUI.EndScrollView();
 
-            GUI.Label(new Rect(x, footerY, save != null ? width * 0.5f : width, footerHeight),
-                "Top divisions only  •  96 countries", smallStyle);
+            GUI.Label(new Rect(x, footerY, save != null ? width * 0.5f : width * 0.5f, footerHeight),
+                "96 national top divisions", smallStyle);
+            if (save == null && GUI.Button(new Rect(x + width * 0.5f, footerY, width * 0.5f, footerHeight),
+                "BACK TO SOCCER 27", buttonStyle))
+            {
+                showClubBrowser = false;
+                showHomeScreen = true;
+            }
             if (save != null && GUI.Button(new Rect(x + width * 0.5f, footerY, width * 0.5f, footerHeight),
                 "CANCEL & RESUME CAREER", buttonStyle))
             {
@@ -672,7 +819,9 @@ namespace FC2026.Core
             }
 
             pendingClubId = string.Empty;
+            showHomeScreen = false;
             showClubBrowser = false;
+            showSettingsScreen = false;
             confirmNewCareer = false;
             showTransfers = false;
             marketCache = null;
@@ -1183,6 +1332,8 @@ namespace FC2026.Core
         public void RefreshCareer(bool matchResultSaved = true)
         {
             save = CareerSaveSystem.Load();
+            showHomeScreen = true;
+            showSettingsScreen = false;
             showClubBrowser = false;
             showLeagueTable = false;
             showCupCampaign = false;

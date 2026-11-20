@@ -1,6 +1,6 @@
-# FC 2026 Soccer
+# Soccer 27 Soccer
 
-FC 2026 is a mobile-first football game project. The active match build is the 3D Unity project in **Unity 6.3 LTS**.
+Soccer 27 is a mobile-first football game project. The active match build is the 3D Unity project in **Unity 6.3 LTS**.
 
 ## Project status
 
@@ -61,7 +61,7 @@ Use the virtual joystick to move and the on-screen action buttons to sprint, sho
 
 ## Android builds
 
-The Unity Editor provides **FC2026 > Build Android Debug APK**. Unity GitHub Actions can also build the debug APK and release AAB. Release signing values belong in GitHub Actions secrets; do not commit signing keys or passwords.
+The Unity Editor provides **Soccer 27 > Build Android Debug APK**. Unity GitHub Actions can also build the debug APK and release AAB. Release signing values belong in GitHub Actions secrets; do not commit signing keys or passwords.
 
 ## Assets and public release
 

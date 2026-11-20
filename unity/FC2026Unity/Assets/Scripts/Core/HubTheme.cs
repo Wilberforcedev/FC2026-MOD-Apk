@@ -36,6 +36,44 @@ namespace FC2026.Core
         private static readonly Color32 RowActive = new Color32(0x1C, 0x2A, 0x37, 0xFF);
         private static readonly Color32 RowSelectedHover = new Color32(0x56, 0x47, 0x1C, 0xFF);
 
+        public static readonly Color32 SecondaryTextColor = new Color32(0xC5, 0xD3, 0xE1, 0xFF);
+
+        public static int ResponsiveFontSize(float heightDivisor, int minimum, int maximum)
+        {
+            var divisor = Mathf.Max(1f, heightDivisor);
+            return Mathf.Clamp(Mathf.RoundToInt(Screen.height / divisor), minimum, maximum);
+        }
+
+        public static GUIStyle Label(
+            int fontSize,
+            Color textColor,
+            TextAnchor alignment = TextAnchor.MiddleCenter,
+            bool bold = false,
+            bool wordWrap = false)
+        {
+            return new GUIStyle(GUI.skin.label)
+            {
+                alignment = alignment,
+                fontSize = fontSize,
+                fontStyle = bold ? FontStyle.Bold : FontStyle.Normal,
+                wordWrap = wordWrap,
+                normal = { textColor = textColor }
+            };
+        }
+
+        public static Rect CenteredPanel(float maxWidth, float maxHeight, float margin = 16f)
+        {
+            var safe = Screen.safeArea;
+            var width = Mathf.Min(maxWidth, Mathf.Max(0f, safe.width - margin * 2f));
+            var height = Mathf.Min(maxHeight, Mathf.Max(0f, safe.height - margin * 2f));
+            var top = Screen.height - safe.yMax;
+            return new Rect(
+                safe.xMin + (safe.width - width) * 0.5f,
+                top + (safe.height - height) * 0.5f,
+                width,
+                height);
+        }
+
         public static GUIStyle SecondaryButton(int fontSize)
         {
             return BuildButton(fontSize, SecondaryColor, SecondaryHover, SecondaryActive, TextColor);
