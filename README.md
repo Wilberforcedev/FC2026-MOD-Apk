@@ -25,6 +25,13 @@ The current 3D build includes:
 
 The match AI and physics are still being improved. Current work is focused on more deliberate attacking choices, better defensive shape, and less rigid ball control.
 
+## Current priorities
+
+- Establish a shared responsive layout and typography system across the career hub, match HUD, and pause screens.
+- Fix clipped labels and navigation on narrow screens.
+- Capture current screenshots from the actual Unity build at phone and desktop sizes.
+- Complete Android playtesting and profiling, including the remaining items in [TODO.md](TODO.md).
+
 ## Open and run
 
 Use Unity **6000.3.24f1** with Android Build Support, Android SDK & NDK Tools, and OpenJDK installed.
