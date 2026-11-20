@@ -418,7 +418,9 @@ namespace FC2026.Gameplay
             return Mathf.Abs(localX) < 0.12f ? prefersLeftFoot : localX < 0f;
         }
 
-        public bool AttemptShot(bool chip = false, bool finesse = false)
+        public float SelectShotTargetX() => ChooseShotTargetX();
+
+        public bool AttemptShot(bool chip = false, bool finesse = false, float? targetXOverride = null)
         {
             var ball = BallController.Instance;
             if (!CanPlayBall(ball) || kickLock > 0f)
@@ -429,7 +431,7 @@ namespace FC2026.Gameplay
             if (distance > 44f)
                 return false;
 
-            var targetX = ChooseShotTargetX();
+            var targetX = targetXOverride ?? ChooseShotTargetX();
             var flat = new Vector3(targetX - ball.Position.x, 0f, goalZ - ball.Position.z);
             if (flat.sqrMagnitude < 0.01f)
                 return false;
